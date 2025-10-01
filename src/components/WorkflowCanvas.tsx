@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { ImageUploader } from "./ImageUploader";
+import { AIOptimizer } from "./AIOptimizer";
 import { cn } from "@/lib/utils";
 
 export const WorkflowCanvas = () => {
@@ -47,6 +49,31 @@ export const WorkflowCanvas = () => {
       y: Math.random() * 300 + 100,
     };
     setNodes([...nodes, newNode]);
+  };
+
+  const handleWorkflowGenerated = (generatedNodes: WorkflowNodeData[]) => {
+    // Position nodes in a vertical flow
+    const positionedNodes = generatedNodes.map((node, idx) => ({
+      ...node,
+      x: node.x || 100,
+      y: node.y || (100 + idx * 180),
+    }));
+    setNodes(positionedNodes);
+    setSelectedNodeId(null);
+  };
+
+  const handleWorkflowOptimized = (optimizedNodes: WorkflowNodeData[]) => {
+    // Preserve existing positions where possible
+    const updatedNodes = optimizedNodes.map((node, idx) => {
+      const existingNode = nodes.find(n => n.id === node.id);
+      return {
+        ...node,
+        x: existingNode?.x || node.x || (100 + (idx % 3) * 300),
+        y: existingNode?.y || node.y || (100 + Math.floor(idx / 3) * 180),
+      };
+    });
+    setNodes(updatedNodes);
+    setSelectedNodeId(null);
   };
 
   const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
@@ -158,6 +185,13 @@ export const WorkflowCanvas = () => {
 
       {/* Floating Toolbar */}
       <FloatingToolbar onAddNode={handleAddNode} />
+
+      {/* AI Features */}
+      <ImageUploader onWorkflowGenerated={handleWorkflowGenerated} />
+      <AIOptimizer 
+        workflow={{ nodes }} 
+        onOptimized={handleWorkflowOptimized} 
+      />
 
       {/* Status Bar */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in">
