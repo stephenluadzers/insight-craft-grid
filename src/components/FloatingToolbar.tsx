@@ -1,11 +1,14 @@
-import { Plus, Zap, Mail, Database, FileText, Image, Moon, Sun } from "lucide-react";
+import { Plus, Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Upload, Loader2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { NodeType } from "./WorkflowNode";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FloatingToolbarProps {
   onAddNode: (type: NodeType) => void;
+  onWorkflowGenerated: (nodes: any[]) => void;
 }
 
 const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = [
@@ -13,11 +16,13 @@ const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = 
   { type: "action", icon: Mail, label: "Action" },
   { type: "condition", icon: FileText, label: "Condition" },
   { type: "data", icon: Database, label: "Data" },
-  { type: "ai", icon: Image, label: "AI" },
+  { type: "ai", icon: ImageIcon, label: "AI" },
 ];
 
-export const FloatingToolbar = ({ onAddNode }: FloatingToolbarProps) => {
+export const FloatingToolbar = ({ onAddNode, onWorkflowGenerated }: FloatingToolbarProps) => {
   const [isDark, setIsDark] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Check initial theme
@@ -29,6 +34,51 @@ export const FloatingToolbar = ({ onAddNode }: FloatingToolbarProps) => {
     const newTheme = !isDark;
     setIsDark(newTheme);
     document.documentElement.classList.toggle("dark", newTheme);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      const { data, error } = await supabase.functions.invoke('analyze-workflow-image', {
+        body: { image: base64 }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Workflow Generated!",
+        description: data.insights || "Successfully extracted workflow from image",
+      });
+
+      onWorkflowGenerated(data.nodes || []);
+    } catch (error: any) {
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Failed to analyze image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+      e.target.value = '';
+    }
   };
 
   return (
@@ -51,6 +101,43 @@ export const FloatingToolbar = ({ onAddNode }: FloatingToolbarProps) => {
             <span className="text-xs font-medium hidden sm:inline">{label}</span>
           </Button>
         ))}
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-border" />
+
+        {/* Image Upload */}
+        <label htmlFor="image-upload">
+          <Button
+            disabled={isAnalyzing}
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "flex items-center gap-2 rounded-xl cursor-pointer",
+              "hover:bg-accent hover:text-accent-foreground",
+              isAnalyzing && "pointer-events-none opacity-50"
+            )}
+            asChild
+          >
+            <div>
+              {isAnalyzing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              <span className="text-xs font-medium hidden sm:inline">
+                {isAnalyzing ? "Analyzing..." : "Image"}
+              </span>
+            </div>
+          </Button>
+        </label>
+        <input
+          id="image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          className="hidden"
+          disabled={isAnalyzing}
+        />
 
         {/* Divider */}
         <div className="w-px h-6 bg-border" />
