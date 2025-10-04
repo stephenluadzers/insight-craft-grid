@@ -57,7 +57,9 @@ export const WorkflowNode = ({
   onSelect,
   isDragging = false,
 }: WorkflowNodeProps) => {
-  const config = nodeTypeConfig[data.type];
+  // Fallback to 'action' type if invalid type is provided
+  const nodeType = data.type in nodeTypeConfig ? data.type : 'action';
+  const config = nodeTypeConfig[nodeType];
   const Icon = config.icon;
 
   return (

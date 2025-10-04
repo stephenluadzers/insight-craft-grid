@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
 import { FloatingToolbar } from "./FloatingToolbar";
-import { AIOptimizer } from "./AIOptimizer";
 import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -57,24 +56,36 @@ export const WorkflowCanvas = () => {
   };
 
   const handleWorkflowGenerated = (generatedNodes: WorkflowNodeData[]) => {
-    // Position nodes in a vertical flow
+    // Position nodes in visible area, accounting for toolbar at bottom
+    // Center horizontally in viewport, start from top with spacing
+    const viewportWidth = window.innerWidth;
+    const startX = Math.max(100, (viewportWidth - 280) / 2); // Center nodes (280px node width + padding)
+    const startY = 120; // Below status bar
+    
     const positionedNodes = generatedNodes.map((node, idx) => ({
       ...node,
-      x: node.x || 100,
-      y: node.y || (100 + idx * 180),
+      x: node.x || startX,
+      y: node.y || (startY + idx * 200), // 200px spacing between nodes
     }));
     setNodes(positionedNodes);
     setSelectedNodeId(null);
+    
+    // Reset pan to show the nodes
+    setPanOffset({ x: 0, y: 0 });
   };
 
   const handleWorkflowOptimized = (optimizedNodes: WorkflowNodeData[]) => {
-    // Preserve existing positions where possible
+    // Position new/updated nodes in visible area
+    const viewportWidth = window.innerWidth;
+    const startX = Math.max(100, (viewportWidth - 280) / 2);
+    const startY = 120;
+    
     const updatedNodes = optimizedNodes.map((node, idx) => {
       const existingNode = nodes.find(n => n.id === node.id);
       return {
         ...node,
-        x: existingNode?.x || node.x || (100 + (idx % 3) * 300),
-        y: existingNode?.y || node.y || (100 + Math.floor(idx / 3) * 180),
+        x: existingNode?.x || node.x || startX,
+        y: existingNode?.y || node.y || (startY + idx * 200),
       };
     });
     setNodes(updatedNodes);
@@ -244,12 +255,8 @@ export const WorkflowCanvas = () => {
       <FloatingToolbar 
         onAddNode={handleAddNode} 
         onWorkflowGenerated={handleWorkflowGenerated}
-      />
-
-      {/* AI Features */}
-      <AIOptimizer 
-        workflow={{ nodes }} 
-        onOptimized={handleWorkflowOptimized} 
+        workflow={{ nodes }}
+        onOptimized={handleWorkflowOptimized}
       />
 
       {/* Delete Button for Selected Node */}
@@ -268,10 +275,10 @@ export const WorkflowCanvas = () => {
       )}
 
       {/* Status Bar */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in">
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in max-w-[90vw]">
         <div className="px-4 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md">
-          <p className="text-xs font-medium text-muted-foreground">
-            {nodes.length} {nodes.length === 1 ? "node" : "nodes"} • Drag canvas to pan • Drag nodes to move • Del to delete
+          <p className="text-xs font-medium text-muted-foreground text-center">
+            {nodes.length} {nodes.length === 1 ? "node" : "nodes"} • Drag canvas to pan • Touch/drag nodes to move
           </p>
         </div>
       </div>

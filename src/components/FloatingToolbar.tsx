@@ -1,4 +1,4 @@
-import { Plus, Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Upload, Loader2 } from "lucide-react";
+import { Plus, Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Upload, Loader2, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { NodeType } from "./WorkflowNode";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 interface FloatingToolbarProps {
   onAddNode: (type: NodeType) => void;
   onWorkflowGenerated: (nodes: any[]) => void;
+  workflow: any;
+  onOptimized: (nodes: any[]) => void;
 }
 
 const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = [
@@ -19,9 +21,10 @@ const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = 
   { type: "ai", icon: ImageIcon, label: "AI" },
 ];
 
-export const FloatingToolbar = ({ onAddNode, onWorkflowGenerated }: FloatingToolbarProps) => {
+export const FloatingToolbar = ({ onAddNode, onWorkflowGenerated, workflow, onOptimized }: FloatingToolbarProps) => {
   const [isDark, setIsDark] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,6 +81,45 @@ export const FloatingToolbar = ({ onAddNode, onWorkflowGenerated }: FloatingTool
     } finally {
       setIsAnalyzing(false);
       e.target.value = '';
+    }
+  };
+
+  const handleOptimize = async () => {
+    if (!workflow?.nodes?.length) {
+      toast({
+        title: "No workflow",
+        description: "Create some nodes first to optimize",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('optimize-workflow', {
+        body: { 
+          workflow: { nodes: workflow.nodes },
+          userContext: "General workflow automation"
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.optimizedWorkflow?.nodes) {
+        onOptimized(data.optimizedWorkflow.nodes);
+        toast({
+          title: "Workflow Optimized!",
+          description: data.optimizedWorkflow.insights || "AI Genius enhanced your workflow",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Optimization Failed",
+        description: error.message || "Failed to optimize workflow",
+        variant: "destructive",
+      });
+    } finally {
+      setIsOptimizing(false);
     }
   };
 
@@ -138,6 +180,35 @@ export const FloatingToolbar = ({ onAddNode, onWorkflowGenerated }: FloatingTool
           className="hidden"
           disabled={isAnalyzing}
         />
+
+        {/* Divider */}
+        <div className="w-px h-6 bg-border" />
+
+        {/* AI Optimizer */}
+        <Button
+          onClick={handleOptimize}
+          disabled={isOptimizing || !workflow?.nodes?.length}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "flex items-center gap-2 rounded-xl",
+            "bg-gradient-accent hover:shadow-glow",
+            "text-primary-foreground",
+            "disabled:opacity-50 disabled:pointer-events-none"
+          )}
+        >
+          {isOptimizing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-xs font-medium hidden sm:inline">Optimizing...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              <span className="text-xs font-medium hidden sm:inline">AI Genius</span>
+            </>
+          )}
+        </Button>
 
         {/* Divider */}
         <div className="w-px h-6 bg-border" />
