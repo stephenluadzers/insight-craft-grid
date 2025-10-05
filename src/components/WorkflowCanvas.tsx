@@ -117,10 +117,39 @@ export const WorkflowCanvas = () => {
     });
   };
 
+  const handleTouchStart = (e: React.TouchEvent, nodeId: string) => {
+    e.stopPropagation();
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    setIsDragging(true);
+    setDraggedNodeId(nodeId);
+    setSelectedNodeId(nodeId);
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    
+    setDragOffset({
+      x: touch.clientX - rect.left - node.x - panOffset.x,
+      y: touch.clientY - rect.top - node.y - panOffset.y,
+    });
+  };
+
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (e.target === canvasRef.current || e.target === nodesContainerRef.current) {
       setIsPanning(true);
       setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+      setSelectedNodeId(null);
+    }
+  };
+
+  const handleCanvasTouchStart = (e: React.TouchEvent) => {
+    if (e.target === canvasRef.current || e.target === nodesContainerRef.current) {
+      const touch = e.touches[0];
+      setIsPanning(true);
+      setPanStart({ x: touch.clientX - panOffset.x, y: touch.clientY - panOffset.y });
       setSelectedNodeId(null);
     }
   };
@@ -152,7 +181,42 @@ export const WorkflowCanvas = () => {
     );
   };
 
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    
+    if (isPanning) {
+      setPanOffset({
+        x: touch.clientX - panStart.x,
+        y: touch.clientY - panStart.y,
+      });
+      return;
+    }
+
+    if (!isDragging || !draggedNodeId) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left - dragOffset.x - panOffset.x;
+    const y = touch.clientY - rect.top - dragOffset.y - panOffset.y;
+
+    setNodes(
+      nodes.map((node) =>
+        node.id === draggedNodeId
+          ? { ...node, x: Math.max(0, x), y: Math.max(0, y) }
+          : node
+      )
+    );
+  };
+
   const handleMouseUp = () => {
+    setIsDragging(false);
+    setDraggedNodeId(null);
+    setIsPanning(false);
+  };
+
+  const handleTouchEnd = () => {
     setIsDragging(false);
     setDraggedNodeId(null);
     setIsPanning(false);
@@ -196,11 +260,14 @@ export const WorkflowCanvas = () => {
       {/* Canvas */}
       <div
         ref={canvasRef}
-        className="relative w-full h-full"
+        className="relative w-full h-full touch-none"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleCanvasTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{ cursor: isPanning ? "grabbing" : "default" }}
       >
         {/* Nodes Container with pan transform */}
@@ -238,7 +305,8 @@ export const WorkflowCanvas = () => {
             <div
               key={node.id}
               onMouseDown={(e) => handleMouseDown(e, node.id)}
-              className="group"
+              onTouchStart={(e) => handleTouchStart(e, node.id)}
+              className="group touch-none"
             >
               <WorkflowNode
                 data={node}
