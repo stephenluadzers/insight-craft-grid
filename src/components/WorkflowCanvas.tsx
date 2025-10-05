@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { ExecutionPanel } from "./ExecutionPanel";
+import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export const WorkflowCanvas = () => {
   const [nodes, setNodes] = useState<WorkflowNodeData[]>([
@@ -40,8 +44,70 @@ export const WorkflowCanvas = () => {
   const [isPanning, setIsPanning] = useState(false);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Get user's default workspace
+    const fetchWorkspace = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('default_workspace_id')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile?.default_workspace_id) {
+          setWorkspaceId(profile.default_workspace_id);
+        }
+      }
+    };
+    fetchWorkspace();
+  }, []);
+
+  const handleExecuteWorkflow = async () => {
+    if (nodes.length === 0) {
+      toast({
+        title: "No workflow to execute",
+        description: "Add some nodes first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExecuting(true);
+    try {
+      // For demo purposes, we'll execute without saving the workflow
+      // In a real app, you'd save the workflow first and get its ID
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase.functions.invoke('execute-workflow', {
+        body: {
+          workflowId: 'demo-workflow',
+          triggeredBy: user?.id,
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Workflow executed!",
+        description: `Completed in ${data.duration}ms`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Execution failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
 
   const handleAddNode = (type: NodeType) => {
     const newNode: WorkflowNodeData = {
@@ -243,7 +309,8 @@ export const WorkflowCanvas = () => {
   }, [selectedNodeId]);
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-canvas-background">
+    <div className="relative w-full h-screen bg-canvas-background">
+      <ScrollArea className="h-full w-full">
       {/* Grid Background */}
       <div
         className="absolute inset-0"
@@ -342,14 +409,21 @@ export const WorkflowCanvas = () => {
         </div>
       )}
 
-      {/* Status Bar */}
+      {/* Status Bar with Execution Controls */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in max-w-[90vw]">
-        <div className="px-4 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md">
+        <div className="px-4 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md flex items-center gap-4">
           <p className="text-xs font-medium text-muted-foreground text-center">
-            {nodes.length} {nodes.length === 1 ? "node" : "nodes"} • Drag canvas to pan • Touch/drag nodes to move
+            {nodes.length} {nodes.length === 1 ? "node" : "nodes"} • Drag canvas to pan
           </p>
+          <div className="h-4 w-px bg-border" />
+          <ExecutionPanel
+            workspaceId={workspaceId || undefined}
+            onExecute={handleExecuteWorkflow}
+            isExecuting={isExecuting}
+          />
         </div>
       </div>
+      </ScrollArea>
     </div>
   );
 };
