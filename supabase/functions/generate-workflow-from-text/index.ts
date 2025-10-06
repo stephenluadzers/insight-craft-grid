@@ -64,18 +64,20 @@ Return only valid JSON, no markdown.`
     }
 
     const data = await response.json();
-    let content = data.choices[0].message.content;
-    
-    // Strip markdown code fences if present
-    content = content.trim();
-    if (content.startsWith('```json')) {
-      content = content.replace(/^```json\n/, '').replace(/\n```$/, '');
-    } else if (content.startsWith('```')) {
-      content = content.replace(/^```\n/, '').replace(/\n```$/, '');
-    }
+    const content = data.choices[0].message.content;
     
     // Parse the JSON response
-    const parsed = JSON.parse(content.trim());
+    let parsed;
+    try {
+      // Extract JSON from markdown code blocks if present
+      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || 
+                       content.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      parsed = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error('Failed to parse AI response as JSON:', parseError);
+      throw new Error('AI returned invalid JSON format');
+    }
 
     console.log('Generated workflow:', parsed);
 

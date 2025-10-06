@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
-import { FloatingToolbar } from "./FloatingToolbar";
 import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
@@ -13,9 +12,16 @@ import { useToast } from "@/hooks/use-toast";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
+  onToolbarReady?: (callbacks: {
+    onAddNode: (type: NodeType) => void;
+    workflow: any;
+    onOptimized: (nodes: WorkflowNodeData[]) => void;
+    onOpenAIGenerator: () => void;
+    onSave: () => void;
+  }) => void;
 }
 
-export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
+export const WorkflowCanvas = ({ initialNodes = [], onToolbarReady }: WorkflowCanvasProps) => {
   const defaultNodes: WorkflowNodeData[] = [
     {
       id: "1",
@@ -404,6 +410,19 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedNodeId]);
 
+  // Pass toolbar callbacks to parent
+  useEffect(() => {
+    if (onToolbarReady) {
+      onToolbarReady({
+        onAddNode: handleAddNode,
+        workflow: { nodes },
+        onOptimized: handleWorkflowOptimized,
+        onOpenAIGenerator: () => setShowTextGeneration(true),
+        onSave: () => setShowSaveDialog(true),
+      });
+    }
+  }, [nodes, onToolbarReady]);
+
   return (
     <div className="relative w-full h-screen bg-canvas-background overflow-hidden">
       {/* Grid Background */}
@@ -480,15 +499,6 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
           ))}
         </div>
       </div>
-
-      {/* Floating Toolbar */}
-      <FloatingToolbar 
-        onAddNode={handleAddNode} 
-        workflow={{ nodes }}
-        onOptimized={handleWorkflowOptimized}
-        onOpenAIGenerator={() => setShowTextGeneration(true)}
-        onSave={() => setShowSaveDialog(true)}
-      />
 
       {/* Action Buttons for Selected Node */}
       {selectedNodeId && (

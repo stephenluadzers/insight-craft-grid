@@ -79,8 +79,8 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
   };
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 animate-slide-up w-[95vw] sm:w-auto max-w-full">
-      <div className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-2xl bg-card/95 backdrop-blur-xl border border-border shadow-lg overflow-x-auto scrollbar-hide">
+    <div className="flex items-center gap-1 sm:gap-2 ml-auto">
+      <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
         {/* AI Generator */}
         <Button
           onClick={onOpenAIGenerator}
