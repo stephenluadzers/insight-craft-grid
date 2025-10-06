@@ -4,8 +4,11 @@ import { FloatingToolbar } from "./FloatingToolbar";
 import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
+import { WorkflowGenerationDialog } from "./WorkflowGenerationDialog";
+import { WorkflowExport } from "./WorkflowExport";
+import { WorkflowImport } from "./WorkflowImport";
 import { cn } from "@/lib/utils";
-import { Trash2, Save, Settings } from "lucide-react";
+import { Trash2, Save, Settings, FileText } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -54,8 +57,10 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
+  const [currentWorkflowName, setCurrentWorkflowName] = useState<string>("Untitled Workflow");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showNodeConfig, setShowNodeConfig] = useState(false);
+  const [showTextGeneration, setShowTextGeneration] = useState(false);
   const [configuredNode, setConfiguredNode] = useState<WorkflowNodeData | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
@@ -210,6 +215,7 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
 
         if (error) throw error;
 
+        setCurrentWorkflowName(name);
         toast({
           title: "Workflow updated",
           description: "Your workflow has been saved successfully.",
@@ -228,6 +234,7 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
         if (error) throw error;
 
         setCurrentWorkflowId(data.id);
+        setCurrentWorkflowName(name);
         toast({
           title: "Workflow created",
           description: "Your workflow has been created successfully.",
@@ -240,6 +247,16 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleImportWorkflow = (importedNodes: WorkflowNodeData[]) => {
+    setNodes(importedNodes);
+    setSelectedNodeId(null);
+    setPanOffset({ x: 0, y: 0 });
+    toast({
+      title: "Workflow Loaded",
+      description: "All node configurations have been restored",
+    });
   };
 
   const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
@@ -404,7 +421,7 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
       {/* Canvas */}
       <div
         ref={canvasRef}
-        className="relative w-full h-full touch-none"
+        className="relative w-full h-full touch-none workflow-canvas"
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -495,9 +512,20 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
         </div>
       )}
 
-      {/* Save & Execution Controls */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in max-w-[90vw]">
-        <div className="px-4 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md flex items-center gap-4">
+      {/* Save, Export, Import & Execution Controls */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in max-w-[95vw]">
+        <div className="px-3 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md flex items-center gap-2 flex-wrap justify-center">
+          <Button
+            onClick={() => setShowTextGeneration(true)}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Generate from Text</span>
+          </Button>
+          <WorkflowImport onImport={handleImportWorkflow} />
+          <WorkflowExport nodes={nodes} workflowName={currentWorkflowName} />
           <Button
             onClick={() => setShowSaveDialog(true)}
             variant="outline"
@@ -507,11 +535,11 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
             <Save className="w-4 h-4" />
             <span className="hidden sm:inline">Save</span>
           </Button>
-          <div className="h-4 w-px bg-border" />
-          <p className="text-xs font-medium text-muted-foreground text-center">
-            {nodes.length} {nodes.length === 1 ? "node" : "nodes"} • Drag canvas to pan
+          <div className="h-4 w-px bg-border hidden sm:block" />
+          <p className="text-xs font-medium text-muted-foreground text-center hidden sm:block">
+            {nodes.length} {nodes.length === 1 ? "node" : "nodes"}
           </p>
-          <div className="h-4 w-px bg-border" />
+          <div className="h-4 w-px bg-border hidden sm:block" />
           <ExecutionPanel
             workspaceId={workspaceId || undefined}
             workflowId={currentWorkflowId || undefined}
@@ -533,6 +561,12 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
         open={showNodeConfig}
         onOpenChange={setShowNodeConfig}
         onSave={handleSaveNodeConfig}
+      />
+
+      <WorkflowGenerationDialog
+        open={showTextGeneration}
+        onOpenChange={setShowTextGeneration}
+        onWorkflowGenerated={handleWorkflowGenerated}
       />
     </div>
   );
