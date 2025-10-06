@@ -16,7 +16,7 @@ interface Template {
   use_count: number;
 }
 
-export default function Templates() {
+export default function Templates(): JSX.Element {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();

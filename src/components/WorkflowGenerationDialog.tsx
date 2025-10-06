@@ -13,7 +13,7 @@ interface WorkflowGenerationDialogProps {
   onWorkflowGenerated: (nodes: any[]) => void;
 }
 
-export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated }: WorkflowGenerationDialogProps) => {
+export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);

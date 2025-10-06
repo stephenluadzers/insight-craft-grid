@@ -21,7 +21,7 @@ const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = 
   { type: "ai", icon: ImageIcon, label: "AI" },
 ];
 
-export const FloatingToolbar = ({ onAddNode, onWorkflowGenerated, workflow, onOptimized }: FloatingToolbarProps) => {
+export const FloatingToolbar = ({ onAddNode, onWorkflowGenerated, workflow, onOptimized }: FloatingToolbarProps): JSX.Element => {
   const [isDark, setIsDark] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);

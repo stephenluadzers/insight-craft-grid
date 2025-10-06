@@ -8,7 +8,7 @@ interface WorkflowImportProps {
   onImport: (nodes: WorkflowNodeData[]) => void;
 }
 
-export const WorkflowImport = ({ onImport }: WorkflowImportProps) => {
+export const WorkflowImport = ({ onImport }: WorkflowImportProps): JSX.Element => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 

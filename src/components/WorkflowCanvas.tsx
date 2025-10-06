@@ -17,34 +17,36 @@ interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
 }
 
-export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
+export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
+  const defaultNodes: WorkflowNodeData[] = [
+    {
+      id: "1",
+      type: "trigger" as const,
+      title: "Form Submitted",
+      description: "Triggered when a user submits the contact form",
+      x: 100,
+      y: 100,
+    },
+    {
+      id: "2",
+      type: "ai" as const,
+      title: "AI Analysis",
+      description: "Analyze form content for sentiment and priority",
+      x: 100,
+      y: 280,
+    },
+    {
+      id: "3",
+      type: "action" as const,
+      title: "Send Email",
+      description: "Notify team via email with AI insights",
+      x: 100,
+      y: 460,
+    },
+  ];
+
   const [nodes, setNodes] = useState<WorkflowNodeData[]>(
-    initialNodes || [
-      {
-        id: "1",
-        type: "trigger",
-        title: "Form Submitted",
-        description: "Triggered when a user submits the contact form",
-        x: 100,
-        y: 100,
-      },
-      {
-        id: "2",
-        type: "ai",
-        title: "AI Analysis",
-        description: "Analyze form content for sentiment and priority",
-        x: 100,
-        y: 280,
-      },
-      {
-        id: "3",
-        type: "action",
-        title: "Send Email",
-        description: "Notify team via email with AI insights",
-        x: 100,
-        y: 460,
-      },
-    ]
+    initialNodes.length > 0 ? initialNodes : defaultNodes
   );
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -136,7 +138,7 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
     setNodes([...nodes, newNode]);
   };
 
-  const handleWorkflowGenerated = (generatedNodes: WorkflowNodeData[]) => {
+  const handleWorkflowGenerated = (generatedNodes: WorkflowNodeData[]): void => {
     // Position nodes in visible area, accounting for toolbar at bottom
     // Center horizontally in viewport, start from top with spacing
     const viewportWidth = window.innerWidth;
@@ -155,7 +157,7 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
     setPanOffset({ x: 0, y: 0 });
   };
 
-  const handleWorkflowOptimized = (optimizedNodes: WorkflowNodeData[]) => {
+  const handleWorkflowOptimized = (optimizedNodes: WorkflowNodeData[]): void => {
     // Position new/updated nodes in visible area
     const viewportWidth = window.innerWidth;
     const startX = Math.max(100, (viewportWidth - 280) / 2);
@@ -188,7 +190,7 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
     }
   };
 
-  const handleSaveNodeConfig = (updatedNode: WorkflowNodeData) => {
+  const handleSaveNodeConfig = (updatedNode: WorkflowNodeData): void => {
     setNodes(nodes.map(n => n.id === updatedNode.id ? updatedNode : n));
     setConfiguredNode(null);
   };
@@ -249,7 +251,7 @@ export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
     }
   };
 
-  const handleImportWorkflow = (importedNodes: WorkflowNodeData[]) => {
+  const handleImportWorkflow = (importedNodes: WorkflowNodeData[]): void => {
     setNodes(importedNodes);
     setSelectedNodeId(null);
     setPanOffset({ x: 0, y: 0 });

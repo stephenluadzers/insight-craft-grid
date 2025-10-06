@@ -10,7 +10,7 @@ interface WorkflowExportProps {
   workflowName?: string;
 }
 
-export const WorkflowExport = ({ nodes, workflowName = "workflow" }: WorkflowExportProps) => {
+export const WorkflowExport = ({ nodes, workflowName = "workflow" }: WorkflowExportProps): JSX.Element => {
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
