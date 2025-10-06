@@ -1,27 +1,22 @@
 import { useState, useRef, useEffect } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
+import { FloatingToolbar } from "./FloatingToolbar";
 import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
 import { WorkflowGenerationDialog } from "./WorkflowGenerationDialog";
 import { cn } from "@/lib/utils";
-import { Trash2, Save, Settings, Sparkles } from "lucide-react";
+import { Trash2, Settings } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { SidebarTrigger } from "./ui/sidebar";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
-  onToolbarReady?: (callbacks: {
-    onAddNode: (type: NodeType) => void;
-    workflow: any;
-    onOptimized: (nodes: WorkflowNodeData[]) => void;
-    onOpenAIGenerator: () => void;
-    onSave: () => void;
-  }) => void;
 }
 
-export const WorkflowCanvas = ({ initialNodes = [], onToolbarReady }: WorkflowCanvasProps) => {
+export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
   const defaultNodes: WorkflowNodeData[] = [
     {
       id: "1",
@@ -410,21 +405,29 @@ export const WorkflowCanvas = ({ initialNodes = [], onToolbarReady }: WorkflowCa
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedNodeId]);
 
-  // Pass toolbar callbacks to parent
-  useEffect(() => {
-    if (onToolbarReady) {
-      onToolbarReady({
-        onAddNode: handleAddNode,
-        workflow: { nodes },
-        onOptimized: handleWorkflowOptimized,
-        onOpenAIGenerator: () => setShowTextGeneration(true),
-        onSave: () => setShowSaveDialog(true),
-      });
-    }
-  }, [nodes, onToolbarReady]);
-
   return (
-    <div className="relative w-full h-screen bg-canvas-background overflow-hidden">
+    <>
+      {/* Header integrated into canvas */}
+      <header className="h-14 flex items-center border-b bg-background px-4 gap-4 relative z-50">
+        <SidebarTrigger />
+        <h1 className="font-semibold">Workflow Automation Platform</h1>
+        
+        {/* Node count and execution controls */}
+        <div className="ml-auto flex items-center gap-3">
+          <p className="text-xs font-medium text-muted-foreground">
+            {nodes.length} {nodes.length === 1 ? "node" : "nodes"}
+          </p>
+          <div className="h-4 w-px bg-border" />
+          <ExecutionPanel
+            workspaceId={workspaceId || undefined}
+            workflowId={currentWorkflowId || undefined}
+            onExecute={handleExecuteWorkflow}
+            isExecuting={isExecuting}
+          />
+        </div>
+      </header>
+
+      <div className="relative w-full h-[calc(100vh-3.5rem)] bg-canvas-background overflow-hidden">
       {/* Grid Background */}
       <div
         className="absolute inset-0"
@@ -500,6 +503,15 @@ export const WorkflowCanvas = ({ initialNodes = [], onToolbarReady }: WorkflowCa
         </div>
       </div>
 
+      {/* Floating Toolbar */}
+      <FloatingToolbar 
+        onAddNode={handleAddNode} 
+        workflow={{ nodes }}
+        onOptimized={handleWorkflowOptimized}
+        onOpenAIGenerator={() => setShowTextGeneration(true)}
+        onSave={() => setShowSaveDialog(true)}
+      />
+
       {/* Action Buttons for Selected Node */}
       {selectedNodeId && (
         <div className="fixed top-20 right-6 z-40 animate-fade-in flex gap-2">
@@ -524,22 +536,6 @@ export const WorkflowCanvas = ({ initialNodes = [], onToolbarReady }: WorkflowCa
         </div>
       )}
 
-      {/* Status Bar */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in">
-        <div className="px-4 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md flex items-center gap-3">
-          <p className="text-xs font-medium text-muted-foreground">
-            {nodes.length} {nodes.length === 1 ? "node" : "nodes"}
-          </p>
-          <div className="h-4 w-px bg-border" />
-          <ExecutionPanel
-            workspaceId={workspaceId || undefined}
-            workflowId={currentWorkflowId || undefined}
-            onExecute={handleExecuteWorkflow}
-            isExecuting={isExecuting}
-          />
-        </div>
-      </div>
-
       {/* Dialogs */}
       <SaveWorkflowDialog
         open={showSaveDialog}
@@ -562,5 +558,6 @@ export const WorkflowCanvas = ({ initialNodes = [], onToolbarReady }: WorkflowCa
         workflowName={currentWorkflowName}
       />
     </div>
+    </>
   );
 };
