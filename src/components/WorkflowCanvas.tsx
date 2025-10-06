@@ -487,6 +487,10 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
         onAddNode={handleAddNode} 
         workflow={{ nodes }}
         onOptimized={handleWorkflowOptimized}
+        onOpenAIGenerator={() => setShowTextGeneration(true)}
+        onSave={() => setShowSaveDialog(true)}
+        nodes={nodes}
+        workflowName={currentWorkflowName}
       />
 
       {/* Action Buttons for Selected Node */}
@@ -513,38 +517,13 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
         </div>
       )}
 
-      {/* Top Controls - AI Generation, Save, Export */}
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in max-w-[95vw]">
-        <div className="px-3 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md flex items-center gap-2 flex-wrap justify-center">
-          <Button
-            onClick={() => setShowTextGeneration(true)}
-            variant="default"
-            size="sm"
-            className="flex items-center gap-2 bg-gradient-accent"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">AI Generator</span>
-          </Button>
-          
-          <div className="w-px h-6 bg-border" />
-          
-          <Button
-            onClick={() => setShowSaveDialog(true)}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            <span className="hidden sm:inline">Save</span>
-          </Button>
-          
-          <WorkflowExport nodes={nodes} workflowName={currentWorkflowName} />
-          
-          <div className="h-4 w-px bg-border hidden sm:block" />
-          <p className="text-xs font-medium text-muted-foreground text-center hidden sm:block">
+      {/* Status Bar */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in">
+        <div className="px-4 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md flex items-center gap-3">
+          <p className="text-xs font-medium text-muted-foreground">
             {nodes.length} {nodes.length === 1 ? "node" : "nodes"}
           </p>
-          <div className="h-4 w-px bg-border hidden sm:block" />
+          <div className="h-4 w-px bg-border" />
           <ExecutionPanel
             workspaceId={workspaceId || undefined}
             workflowId={currentWorkflowId || undefined}
