@@ -133,13 +133,6 @@ export type Database = {
             referencedRelation: "workflow_webhooks"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "webhook_access_logs_webhook_id_fkey"
-            columns: ["webhook_id"]
-            isOneToOne: false
-            referencedRelation: "workflow_webhooks_safe"
-            referencedColumns: ["id"]
-          },
         ]
       }
       workflow_comments: {
@@ -567,41 +560,7 @@ export type Database = {
       }
     }
     Views: {
-      workflow_webhooks_safe: {
-        Row: {
-          created_at: string | null
-          enabled: boolean | null
-          id: string | null
-          last_triggered_at: string | null
-          webhook_key: string | null
-          workflow_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          enabled?: boolean | null
-          id?: string | null
-          last_triggered_at?: string | null
-          webhook_key?: never
-          workflow_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          enabled?: boolean | null
-          id?: string | null
-          last_triggered_at?: string | null
-          webhook_key?: never
-          workflow_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workflow_webhooks_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       has_role: {
