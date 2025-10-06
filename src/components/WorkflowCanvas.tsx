@@ -6,9 +6,8 @@ import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
 import { WorkflowGenerationDialog } from "./WorkflowGenerationDialog";
 import { WorkflowExport } from "./WorkflowExport";
-import { WorkflowImport } from "./WorkflowImport";
 import { cn } from "@/lib/utils";
-import { Trash2, Save, Settings, FileText } from "lucide-react";
+import { Trash2, Save, Settings, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -255,6 +254,7 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
     setNodes(importedNodes);
     setSelectedNodeId(null);
     setPanOffset({ x: 0, y: 0 });
+    setShowTextGeneration(false); // Close the dialog
     toast({
       title: "Workflow Loaded",
       description: "All node configurations have been restored",
@@ -485,7 +485,6 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
       {/* Floating Toolbar */}
       <FloatingToolbar 
         onAddNode={handleAddNode} 
-        onWorkflowGenerated={handleWorkflowGenerated}
         workflow={{ nodes }}
         onOptimized={handleWorkflowOptimized}
       />
@@ -514,20 +513,21 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
         </div>
       )}
 
-      {/* Save, Export, Import & Execution Controls */}
+      {/* Top Controls - AI Generation, Save, Export */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in max-w-[95vw]">
         <div className="px-3 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md flex items-center gap-2 flex-wrap justify-center">
           <Button
             onClick={() => setShowTextGeneration(true)}
-            variant="outline"
+            variant="default"
             size="sm"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-gradient-accent"
           >
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Generate from Text</span>
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">AI Generator</span>
           </Button>
-          <WorkflowImport onImport={handleImportWorkflow} />
-          <WorkflowExport nodes={nodes} workflowName={currentWorkflowName} />
+          
+          <div className="w-px h-6 bg-border" />
+          
           <Button
             onClick={() => setShowSaveDialog(true)}
             variant="outline"
@@ -537,6 +537,9 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
             <Save className="w-4 h-4" />
             <span className="hidden sm:inline">Save</span>
           </Button>
+          
+          <WorkflowExport nodes={nodes} workflowName={currentWorkflowName} />
+          
           <div className="h-4 w-px bg-border hidden sm:block" />
           <p className="text-xs font-medium text-muted-foreground text-center hidden sm:block">
             {nodes.length} {nodes.length === 1 ? "node" : "nodes"}
