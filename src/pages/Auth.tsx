@@ -25,6 +25,11 @@ const signInSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+// Account lockout tracking (in-memory for demo; use backend in production)
+const loginAttempts = new Map<string, { count: number; lockedUntil?: number }>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -126,6 +131,18 @@ export default function Auth() {
       return;
     }
 
+    // Check if account is locked
+    const attempts = loginAttempts.get(validation.data.email);
+    if (attempts?.lockedUntil && Date.now() < attempts.lockedUntil) {
+      const remainingMinutes = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
+      toast({
+        title: "Account Temporarily Locked",
+        description: `Too many failed login attempts. Please try again in ${remainingMinutes} minute(s).`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -135,20 +152,39 @@ export default function Auth() {
       });
 
       if (error) {
-        // Provide generic error message to prevent account enumeration
+        // Track failed login attempts
+        const currentAttempts = loginAttempts.get(validation.data.email) || { count: 0 };
+        currentAttempts.count += 1;
+
+        if (currentAttempts.count >= MAX_LOGIN_ATTEMPTS) {
+          currentAttempts.lockedUntil = Date.now() + LOCKOUT_DURATION;
+          toast({
+            title: "Account Locked",
+            description: `Too many failed login attempts. Your account has been locked for ${LOCKOUT_DURATION / 60000} minutes.`,
+            variant: "destructive",
+          });
+        } else {
+          const remainingAttempts = MAX_LOGIN_ATTEMPTS - currentAttempts.count;
+          toast({
+            title: "Authentication Failed",
+            description: `Invalid credentials. ${remainingAttempts} attempt(s) remaining.`,
+            variant: "destructive",
+          });
+        }
+
+        loginAttempts.set(validation.data.email, currentAttempts);
         throw new Error("Invalid email or password");
       }
+
+      // Clear login attempts on successful login
+      loginAttempts.delete(validation.data.email);
 
       toast({
         title: "Welcome back!",
         description: "You have successfully signed in.",
       });
     } catch (error: any) {
-      toast({
-        title: "Authentication failed",
-        description: "Invalid email or password",
-        variant: "destructive",
-      });
+      // Error already handled above with specific messages
     } finally {
       setIsLoading(false);
     }

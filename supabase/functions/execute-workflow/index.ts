@@ -12,36 +12,98 @@ serve(async (req) => {
   }
 
   try {
-    const { nodes, triggeredBy, workspaceId, workflowId } = await req.json();
-
-    console.log('Executing workflow with', nodes?.length || 0, 'nodes, triggered by:', triggeredBy);
+    // Verify JWT authentication
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { nodes, triggeredBy, workspaceId, workflowId } = await req.json();
+
+    // Input validation
+    if (!nodes || !Array.isArray(nodes)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid nodes array' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (nodes.length > 100) {
+      return new Response(
+        JSON.stringify({ error: 'Workflow exceeds maximum of 100 nodes' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!workspaceId) {
+      return new Response(
+        JSON.stringify({ error: 'Workspace ID is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify user has access to workspace
+    const { data: membership } = await supabaseClient
+      .from('workspace_members')
+      .select('role')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (!membership) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied to workspace' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Executing workflow with', nodes?.length || 0, 'nodes, triggered by:', user.id);
+
+    // Use authenticated client for RLS enforcement
+    const supabase = supabaseClient;
 
     const startTime = Date.now();
 
-    // Create execution record if workspace is provided
-    let execution = null;
-    if (workspaceId) {
-      const { data, error: executionError } = await supabase
-        .from('workflow_executions')
-        .insert({
-          workflow_id: workflowId || null,
-          workspace_id: workspaceId,
-          triggered_by: triggeredBy,
-          status: 'running',
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+    // Create execution record
+    const { data: execution, error: executionError } = await supabase
+      .from('workflow_executions')
+      .insert({
+        workflow_id: workflowId || null,
+        workspace_id: workspaceId,
+        triggered_by: user.id,
+        status: 'running',
+        started_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
-      if (!executionError) {
-        execution = data;
-        console.log('Execution started:', execution.id);
-      }
+    if (executionError) {
+      console.error('Failed to create execution record:', executionError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to start workflow execution' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    console.log('Execution started:', execution.id);
 
     try {
       // Execute each node in the workflow

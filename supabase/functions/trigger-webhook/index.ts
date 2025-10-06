@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-webhook-key, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
@@ -12,13 +12,21 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const webhookKey = url.searchParams.get('key');
+    // Get webhook key from header (more secure than query params)
+    const webhookKey = req.headers.get('x-webhook-key');
 
     if (!webhookKey) {
       return new Response(
-        JSON.stringify({ error: 'Webhook key is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Webhook key is required in X-Webhook-Key header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate webhook key format
+    if (typeof webhookKey !== 'string' || webhookKey.length < 32) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid webhook key format' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -41,6 +49,19 @@ serve(async (req) => {
       );
     }
 
+    // Get client IP for audit logging
+    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+
+    // Log webhook access
+    await supabase
+      .from('webhook_access_logs')
+      .insert({
+        webhook_id: webhook.id,
+        action: 'triggered',
+        ip_address: clientIp,
+        accessed_at: new Date().toISOString(),
+      });
+
     // Update last triggered timestamp
     await supabase
       .from('workflow_webhooks')
@@ -49,7 +70,22 @@ serve(async (req) => {
 
     // Get workflow data
     const workflow = webhook.workflows;
-    const triggerData = await req.json().catch(() => ({}));
+    
+    // Parse and validate trigger data
+    let triggerData = {};
+    try {
+      const contentType = req.headers.get('content-type');
+      if (contentType?.includes('application/json')) {
+        triggerData = await req.json();
+        // Limit payload size
+        const payloadStr = JSON.stringify(triggerData);
+        if (payloadStr.length > 1024 * 1024) { // 1MB limit
+          throw new Error('Payload exceeds maximum size of 1MB');
+        }
+      }
+    } catch (parseError) {
+      console.warn('Failed to parse trigger data:', parseError);
+    }
 
     // Execute the workflow
     const { data, error } = await supabase.functions.invoke('execute-workflow', {
