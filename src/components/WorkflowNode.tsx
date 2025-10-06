@@ -11,6 +11,7 @@ export interface WorkflowNodeData {
   x: number;
   y: number;
   icon?: string;
+  config?: Record<string, any>;
 }
 
 interface WorkflowNodeProps {

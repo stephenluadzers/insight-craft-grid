@@ -2,40 +2,47 @@ import { useState, useRef, useEffect } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { ExecutionPanel } from "./ExecutionPanel";
-
+import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
+import { NodeConfigDialog } from "./NodeConfigDialog";
 import { cn } from "@/lib/utils";
-import { Trash2 } from "lucide-react";
+import { Trash2, Save, Settings } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-export const WorkflowCanvas = () => {
-  const [nodes, setNodes] = useState<WorkflowNodeData[]>([
-    {
-      id: "1",
-      type: "trigger",
-      title: "Form Submitted",
-      description: "Triggered when a user submits the contact form",
-      x: 100,
-      y: 100,
-    },
-    {
-      id: "2",
-      type: "ai",
-      title: "AI Analysis",
-      description: "Analyze form content for sentiment and priority",
-      x: 100,
-      y: 280,
-    },
-    {
-      id: "3",
-      type: "action",
-      title: "Send Email",
-      description: "Notify team via email with AI insights",
-      x: 100,
-      y: 460,
-    },
-  ]);
+interface WorkflowCanvasProps {
+  initialNodes?: WorkflowNodeData[];
+}
+
+export const WorkflowCanvas = ({ initialNodes }: WorkflowCanvasProps = {}) => {
+  const [nodes, setNodes] = useState<WorkflowNodeData[]>(
+    initialNodes || [
+      {
+        id: "1",
+        type: "trigger",
+        title: "Form Submitted",
+        description: "Triggered when a user submits the contact form",
+        x: 100,
+        y: 100,
+      },
+      {
+        id: "2",
+        type: "ai",
+        title: "AI Analysis",
+        description: "Analyze form content for sentiment and priority",
+        x: 100,
+        y: 280,
+      },
+      {
+        id: "3",
+        type: "action",
+        title: "Send Email",
+        description: "Notify team via email with AI insights",
+        x: 100,
+        y: 460,
+      },
+    ]
+  );
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -46,6 +53,10 @@ export const WorkflowCanvas = () => {
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [isExecuting, setIsExecuting] = useState(false);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [currentWorkflowId, setCurrentWorkflowId] = useState<string | null>(null);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showNodeConfig, setShowNodeConfig] = useState(false);
+  const [configuredNode, setConfiguredNode] = useState<WorkflowNodeData | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -161,6 +172,74 @@ export const WorkflowCanvas = () => {
     if (!selectedNodeId) return;
     setNodes(nodes.filter(n => n.id !== selectedNodeId));
     setSelectedNodeId(null);
+  };
+
+  const handleConfigureNode = () => {
+    if (!selectedNodeId) return;
+    const node = nodes.find(n => n.id === selectedNodeId);
+    if (node) {
+      setConfiguredNode(node);
+      setShowNodeConfig(true);
+    }
+  };
+
+  const handleSaveNodeConfig = (updatedNode: WorkflowNodeData) => {
+    setNodes(nodes.map(n => n.id === updatedNode.id ? updatedNode : n));
+    setConfiguredNode(null);
+  };
+
+  const handleSaveWorkflow = async (name: string, description: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const workflowData: any = {
+        name,
+        description,
+        nodes: nodes,
+        workspace_id: workspaceId,
+        updated_by: user.id,
+      };
+
+      if (currentWorkflowId) {
+        // Update existing
+        const { error } = await supabase
+          .from('workflows')
+          .update(workflowData)
+          .eq('id', currentWorkflowId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Workflow updated",
+          description: "Your workflow has been saved successfully.",
+        });
+      } else {
+        // Create new
+        workflowData.created_by = user.id;
+        workflowData.status = 'draft';
+
+        const { data, error } = await supabase
+          .from('workflows')
+          .insert(workflowData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setCurrentWorkflowId(data.id);
+        toast({
+          title: "Workflow created",
+          description: "Your workflow has been created successfully.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to save workflow",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
@@ -392,9 +471,18 @@ export const WorkflowCanvas = () => {
         onOptimized={handleWorkflowOptimized}
       />
 
-      {/* Delete Button for Selected Node */}
+      {/* Action Buttons for Selected Node */}
       {selectedNodeId && (
-        <div className="fixed top-20 right-6 z-40 animate-fade-in">
+        <div className="fixed top-20 right-6 z-40 animate-fade-in flex gap-2">
+          <Button
+            onClick={handleConfigureNode}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Configure
+          </Button>
           <Button
             onClick={handleDeleteNode}
             variant="destructive"
@@ -402,25 +490,50 @@ export const WorkflowCanvas = () => {
             className="flex items-center gap-2"
           >
             <Trash2 className="w-4 h-4" />
-            Delete Node
+            Delete
           </Button>
         </div>
       )}
 
-      {/* Status Bar with Execution Controls */}
+      {/* Save & Execution Controls */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-40 animate-fade-in max-w-[90vw]">
         <div className="px-4 py-2 rounded-full bg-card/95 backdrop-blur-xl border border-border shadow-md flex items-center gap-4">
+          <Button
+            onClick={() => setShowSaveDialog(true)}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            <span className="hidden sm:inline">Save</span>
+          </Button>
+          <div className="h-4 w-px bg-border" />
           <p className="text-xs font-medium text-muted-foreground text-center">
             {nodes.length} {nodes.length === 1 ? "node" : "nodes"} • Drag canvas to pan
           </p>
           <div className="h-4 w-px bg-border" />
           <ExecutionPanel
             workspaceId={workspaceId || undefined}
+            workflowId={currentWorkflowId || undefined}
             onExecute={handleExecuteWorkflow}
             isExecuting={isExecuting}
           />
         </div>
       </div>
+
+      {/* Dialogs */}
+      <SaveWorkflowDialog
+        open={showSaveDialog}
+        onOpenChange={setShowSaveDialog}
+        onSave={handleSaveWorkflow}
+      />
+      
+      <NodeConfigDialog
+        node={configuredNode}
+        open={showNodeConfig}
+        onOpenChange={setShowNodeConfig}
+        onSave={handleSaveNodeConfig}
+      />
     </div>
   );
 };
