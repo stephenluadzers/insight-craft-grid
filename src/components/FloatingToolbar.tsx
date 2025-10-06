@@ -79,8 +79,8 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
-      <div className="flex items-center gap-2 p-2 rounded-2xl bg-card/95 backdrop-blur-xl border border-border shadow-lg">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 animate-slide-up w-[95vw] sm:w-auto max-w-full">
+      <div className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-2xl bg-card/95 backdrop-blur-xl border border-border shadow-lg overflow-x-auto scrollbar-hide">
         {/* AI Generator */}
         <Button
           onClick={onOpenAIGenerator}
@@ -97,7 +97,7 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
         </Button>
 
         {/* Divider */}
-        <div className="w-px h-6 bg-border" />
+        <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
 
         {/* Add Node Buttons */}
         {nodeButtons.map(({ type, icon: Icon, label }) => (
@@ -118,7 +118,7 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
         ))}
 
         {/* Divider */}
-        <div className="w-px h-6 bg-border" />
+        <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
 
         {/* AI Optimizer */}
         <Button
@@ -146,7 +146,7 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
         </Button>
 
         {/* Divider */}
-        <div className="w-px h-6 bg-border" />
+        <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
 
         {/* Save Button */}
         <Button
@@ -160,7 +160,7 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
         </Button>
 
         {/* Divider */}
-        <div className="w-px h-6 bg-border" />
+        <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
 
         {/* Theme Toggle */}
         <Button
