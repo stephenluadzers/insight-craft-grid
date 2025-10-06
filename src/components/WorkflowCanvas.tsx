@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { ExecutionPanel } from "./ExecutionPanel";
-import { ScrollArea } from "./ui/scroll-area";
+
 import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -81,14 +81,13 @@ export const WorkflowCanvas = () => {
 
     setIsExecuting(true);
     try {
-      // For demo purposes, we'll execute without saving the workflow
-      // In a real app, you'd save the workflow first and get its ID
       const { data: { user } } = await supabase.auth.getUser();
       
       const { data, error } = await supabase.functions.invoke('execute-workflow', {
         body: {
-          workflowId: 'demo-workflow',
+          nodes: nodes,
           triggeredBy: user?.id,
+          workspaceId: workspaceId,
         }
       });
 
@@ -309,8 +308,7 @@ export const WorkflowCanvas = () => {
   }, [selectedNodeId]);
 
   return (
-    <div className="relative w-full h-screen bg-canvas-background">
-      <ScrollArea className="h-full w-full">
+    <div className="relative w-full h-screen bg-canvas-background overflow-hidden">
       {/* Grid Background */}
       <div
         className="absolute inset-0"
@@ -423,7 +421,6 @@ export const WorkflowCanvas = () => {
           />
         </div>
       </div>
-      </ScrollArea>
     </div>
   );
 };

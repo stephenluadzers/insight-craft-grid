@@ -12,50 +12,39 @@ serve(async (req) => {
   }
 
   try {
-    const { workflowId, triggeredBy } = await req.json();
+    const { nodes, triggeredBy, workspaceId, workflowId } = await req.json();
 
-    console.log('Executing workflow:', workflowId, 'triggered by:', triggeredBy);
+    console.log('Executing workflow with', nodes?.length || 0, 'nodes, triggered by:', triggeredBy);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get workflow details
-    const { data: workflow, error: workflowError } = await supabase
-      .from('workflows')
-      .select('*, workspace_id')
-      .eq('id', workflowId)
-      .single();
-
-    if (workflowError || !workflow) {
-      throw new Error('Workflow not found');
-    }
-
     const startTime = Date.now();
 
-    // Create execution record
-    const { data: execution, error: executionError } = await supabase
-      .from('workflow_executions')
-      .insert({
-        workflow_id: workflowId,
-        workspace_id: workflow.workspace_id,
-        triggered_by: triggeredBy,
-        status: 'running',
-        started_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    // Create execution record if workspace is provided
+    let execution = null;
+    if (workspaceId) {
+      const { data, error: executionError } = await supabase
+        .from('workflow_executions')
+        .insert({
+          workflow_id: workflowId || null,
+          workspace_id: workspaceId,
+          triggered_by: triggeredBy,
+          status: 'running',
+          started_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-    if (executionError) {
-      console.error('Failed to create execution record:', executionError);
-      throw new Error('Failed to start execution');
+      if (!executionError) {
+        execution = data;
+        console.log('Execution started:', execution.id);
+      }
     }
-
-    console.log('Execution started:', execution.id);
 
     try {
       // Execute each node in the workflow
-      const nodes = workflow.nodes || [];
       const executionData: any = {
         steps: [],
       };
@@ -77,22 +66,26 @@ serve(async (req) => {
       const duration = Date.now() - startTime;
 
       // Update execution as completed
-      await supabase
-        .from('workflow_executions')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          duration_ms: duration,
-          execution_data: executionData,
-        })
-        .eq('id', execution.id);
+      if (execution) {
+        await supabase
+          .from('workflow_executions')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            duration_ms: duration,
+            execution_data: executionData,
+          })
+          .eq('id', execution.id);
 
-      console.log('Execution completed:', execution.id, 'in', duration, 'ms');
+        console.log('Execution completed:', execution.id, 'in', duration, 'ms');
+      } else {
+        console.log('Execution completed in', duration, 'ms (no record saved)');
+      }
 
       return new Response(
         JSON.stringify({
           success: true,
-          executionId: execution.id,
+          executionId: execution?.id,
           duration,
           result: executionData,
         }),
@@ -103,22 +96,26 @@ serve(async (req) => {
       const duration = Date.now() - startTime;
       
       // Update execution as failed
-      await supabase
-        .from('workflow_executions')
-        .update({
-          status: 'failed',
-          completed_at: new Date().toISOString(),
-          duration_ms: duration,
-          error_message: nodeError.message,
-        })
-        .eq('id', execution.id);
+      if (execution) {
+        await supabase
+          .from('workflow_executions')
+          .update({
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            duration_ms: duration,
+            error_message: nodeError.message,
+          })
+          .eq('id', execution.id);
 
-      console.error('Execution failed:', execution.id, nodeError);
+        console.error('Execution failed:', execution.id, nodeError);
+      } else {
+        console.error('Execution failed:', nodeError);
+      }
 
       return new Response(
         JSON.stringify({
           success: false,
-          executionId: execution.id,
+          executionId: execution?.id,
           error: nodeError.message,
         }),
         { 
