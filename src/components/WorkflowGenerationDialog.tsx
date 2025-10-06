@@ -5,21 +5,25 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText } from "lucide-react";
+import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
+import html2canvas from "html2canvas";
 
 interface WorkflowGenerationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onWorkflowGenerated: (nodes: any[]) => void;
+  nodes: WorkflowNodeData[];
+  workflowName: string;
 }
 
-export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated }: WorkflowGenerationDialogProps): JSX.Element => {
+export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [generatedExplanation, setGeneratedExplanation] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -225,18 +229,92 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     }
   };
 
+  const exportToJSON = () => {
+    const workflowData = {
+      name: workflowName,
+      version: "1.0",
+      nodes: nodes.map(node => ({
+        id: node.id,
+        type: node.type,
+        title: node.title,
+        description: node.description,
+        x: node.x,
+        y: node.y,
+        config: node.config || {},
+      })),
+      exportedAt: new Date().toISOString(),
+    };
+
+    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exported to JSON",
+      description: "Workflow configuration downloaded successfully",
+    });
+  };
+
+  const exportScreenshot = async () => {
+    setIsExporting(true);
+    try {
+      const canvasElement = document.querySelector('.workflow-canvas') as HTMLElement;
+      if (!canvasElement) {
+        throw new Error('Canvas element not found');
+      }
+
+      const canvas = await html2canvas(canvasElement, {
+        backgroundColor: '#1a1a1a',
+        scale: 2,
+        logging: false,
+      });
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}-screenshot.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          toast({
+            title: "Screenshot Captured",
+            description: "Workflow screenshot downloaded successfully",
+          });
+        }
+      });
+    } catch (error: any) {
+      toast({
+        title: "Screenshot Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>AI Workflow Generator</DialogTitle>
+          <DialogTitle>Workflow Manager</DialogTitle>
           <DialogDescription>
-            Generate workflows from text, images, or import existing workflows
+            Generate, import, and export workflows
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="text" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="text">
               <FileText className="w-4 h-4 mr-2" />
               Text
@@ -248,6 +326,10 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             <TabsTrigger value="import">
               <Upload className="w-4 h-4 mr-2" />
               Import
+            </TabsTrigger>
+            <TabsTrigger value="export">
+              <Download className="w-4 h-4 mr-2" />
+              Export
             </TabsTrigger>
           </TabsList>
 
@@ -387,6 +469,55 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </ScrollArea>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="export" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
+                <FileJson className="w-12 h-12 text-muted-foreground" />
+                <div className="text-center space-y-2">
+                  <p className="text-sm font-medium">Export as JSON</p>
+                  <p className="text-xs text-muted-foreground">
+                    Download workflow with all node configurations
+                  </p>
+                </div>
+                <Button
+                  onClick={exportToJSON}
+                  className="w-full max-w-xs"
+                  disabled={nodes.length === 0}
+                >
+                  <FileJson className="w-4 h-4 mr-2" />
+                  Export JSON
+                </Button>
+              </div>
+
+              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
+                <Camera className="w-12 h-12 text-muted-foreground" />
+                <div className="text-center space-y-2">
+                  <p className="text-sm font-medium">Export as Screenshot</p>
+                  <p className="text-xs text-muted-foreground">
+                    Capture a high-quality image of your workflow
+                  </p>
+                </div>
+                <Button
+                  onClick={exportScreenshot}
+                  disabled={isExporting || nodes.length === 0}
+                  className="w-full max-w-xs"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Capturing...
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4 mr-2" />
+                      Capture Screenshot
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>

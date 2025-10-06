@@ -5,7 +5,6 @@ import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
 import { WorkflowGenerationDialog } from "./WorkflowGenerationDialog";
-import { WorkflowExport } from "./WorkflowExport";
 import { cn } from "@/lib/utils";
 import { Trash2, Save, Settings, Sparkles } from "lucide-react";
 import { Button } from "./ui/button";
@@ -489,8 +488,6 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
         onOptimized={handleWorkflowOptimized}
         onOpenAIGenerator={() => setShowTextGeneration(true)}
         onSave={() => setShowSaveDialog(true)}
-        nodes={nodes}
-        workflowName={currentWorkflowName}
       />
 
       {/* Action Buttons for Selected Node */}
@@ -551,6 +548,8 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
         open={showTextGeneration}
         onOpenChange={setShowTextGeneration}
         onWorkflowGenerated={handleWorkflowGenerated}
+        nodes={nodes}
+        workflowName={currentWorkflowName}
       />
     </div>
   );

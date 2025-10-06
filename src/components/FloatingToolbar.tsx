@@ -1,12 +1,10 @@
-import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Download } from "lucide-react";
+import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save } from "lucide-react";
 import { Button } from "./ui/button";
 import { NodeType } from "./WorkflowNode";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { WorkflowNodeData } from "./WorkflowNode";
-import { WorkflowExport } from "./WorkflowExport";
 
 interface FloatingToolbarProps {
   onAddNode: (type: NodeType) => void;
@@ -14,8 +12,6 @@ interface FloatingToolbarProps {
   onOptimized: (nodes: any[]) => void;
   onOpenAIGenerator: () => void;
   onSave: () => void;
-  nodes: WorkflowNodeData[];
-  workflowName: string;
 }
 
 const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = [
@@ -26,7 +22,7 @@ const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = 
   { type: "ai", icon: ImageIcon, label: "AI" },
 ];
 
-export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGenerator, onSave, nodes, workflowName }: FloatingToolbarProps): JSX.Element => {
+export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGenerator, onSave }: FloatingToolbarProps): JSX.Element => {
   const [isDark, setIsDark] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
@@ -162,9 +158,6 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
           <Save className="w-4 h-4" />
           <span className="text-xs font-medium hidden sm:inline">Save</span>
         </Button>
-
-        {/* Export */}
-        <WorkflowExport nodes={nodes} workflowName={workflowName} />
 
         {/* Divider */}
         <div className="w-px h-6 bg-border" />
