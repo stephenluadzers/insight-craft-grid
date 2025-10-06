@@ -206,6 +206,91 @@ export type Database = {
           },
         ]
       }
+      workflow_schedules: {
+        Row: {
+          created_at: string | null
+          cron_expression: string
+          enabled: boolean | null
+          id: string
+          last_run_at: string | null
+          next_run_at: string | null
+          updated_at: string | null
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          cron_expression: string
+          enabled?: boolean | null
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          updated_at?: string | null
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string | null
+          cron_expression?: string
+          enabled?: boolean | null
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          updated_at?: string | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_schedules_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          nodes: Json
+          use_count: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          nodes: Json
+          use_count?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          nodes?: Json
+          use_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_versions: {
         Row: {
           created_at: string
@@ -251,12 +336,49 @@ export type Database = {
           },
         ]
       }
+      workflow_webhooks: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          last_triggered_at: string | null
+          webhook_key: string
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          last_triggered_at?: string | null
+          webhook_key: string
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          last_triggered_at?: string | null
+          webhook_key?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_webhooks_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflows: {
         Row: {
+          category: string | null
           created_at: string
           created_by: string
           description: string | null
           id: string
+          is_template: boolean | null
           name: string
           nodes: Json
           published_at: string | null
@@ -266,10 +388,12 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           created_by: string
           description?: string | null
           id?: string
+          is_template?: boolean | null
           name: string
           nodes?: Json
           published_at?: string | null
@@ -279,10 +403,12 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
           id?: string
+          is_template?: boolean | null
           name?: string
           nodes?: Json
           published_at?: string | null
