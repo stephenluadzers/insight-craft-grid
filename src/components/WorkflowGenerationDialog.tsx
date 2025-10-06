@@ -309,11 +309,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         <DialogHeader>
           <DialogTitle>Workflow Manager</DialogTitle>
           <DialogDescription>
-            Generate, import, and export workflows
+            Generate, import, and export workflows using AI or manual import
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="text" className="flex-1 overflow-hidden flex flex-col">
+        <Tabs defaultValue="text" className="flex-1 overflow-hidden flex flex-col space-y-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="text">
               <FileText className="w-4 h-4 mr-2" />
