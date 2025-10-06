@@ -9,6 +9,19 @@ import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, 
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
+import { z } from "zod";
+
+const workflowIdeaSchema = z.string().trim().min(10, "Description must be at least 10 characters").max(5000, "Description must be less than 5000 characters");
+
+const workflowNodeSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  title: z.string().max(100),
+  description: z.string().max(500),
+  x: z.number(),
+  y: z.number(),
+  config: z.record(z.unknown()),
+});
 
 interface WorkflowGenerationDialogProps {
   open: boolean;
@@ -30,10 +43,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const { toast } = useToast();
 
   const handleGenerate = async () => {
-    if (!workflowIdea.trim()) {
+    // Validate input
+    const validation = workflowIdeaSchema.safeParse(workflowIdea);
+    if (!validation.success) {
       toast({
-        title: "Input required",
-        description: "Please describe your workflow idea",
+        title: "Input Invalid",
+        description: validation.error.errors[0].message,
         variant: "destructive",
       });
       return;
@@ -44,7 +59,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
     try {
       const { data, error } = await supabase.functions.invoke('generate-workflow-from-text', {
-        body: { description: workflowIdea }
+        body: { description: validation.data }
       });
 
       if (error) throw error;
@@ -53,7 +68,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       
       if (data.nodes && data.nodes.length > 0) {
         onWorkflowGenerated(data.nodes);
-        onOpenChange(false); // Close the dialog
+        onOpenChange(false);
         toast({
           title: "Workflow Generated!",
           description: `Created ${data.nodes.length} nodes from your description`,
@@ -139,10 +154,21 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: "Invalid file",
         description: "Please upload an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Image must be less than 10MB",
         variant: "destructive",
       });
       return;
@@ -168,7 +194,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       
       if (data.nodes && data.nodes.length > 0) {
         onWorkflowGenerated(data.nodes);
-        onOpenChange(false); // Close the dialog
+        onOpenChange(false);
         toast({
           title: "Workflow Generated!",
           description: `Created ${data.nodes.length} nodes from your image`,
@@ -190,27 +216,50 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file size (max 1MB)
+    if (file.size > 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "JSON file must be less than 1MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const text = await file.text();
       const data = JSON.parse(text);
 
       if (!data.nodes || !Array.isArray(data.nodes)) {
-        throw new Error('Invalid workflow file format');
+        throw new Error('Invalid workflow file format - missing nodes array');
       }
 
-      const validatedNodes: WorkflowNodeData[] = data.nodes.map((node: any) => ({
-        id: node.id || Date.now().toString(),
-        type: node.type,
-        title: node.title,
-        description: node.description,
-        x: node.x,
-        y: node.y,
-        config: node.config || {},
-      }));
+      if (data.nodes.length > 100) {
+        throw new Error('Too many nodes - maximum 100 nodes allowed');
+      }
+
+      // Validate each node
+      const validatedNodes: WorkflowNodeData[] = data.nodes.map((node: any, index: number) => {
+        const validation = workflowNodeSchema.safeParse({
+          id: node.id || `node-${Date.now()}-${index}`,
+          type: node.type,
+          title: node.title,
+          description: node.description,
+          x: node.x || 0,
+          y: node.y || 0,
+          config: node.config || {},
+        });
+
+        if (!validation.success) {
+          throw new Error(`Invalid node at index ${index}: ${validation.error.errors[0].message}`);
+        }
+
+        return validation.data as WorkflowNodeData;
+      });
 
       onWorkflowGenerated(validatedNodes);
       setGeneratedExplanation(`Imported ${validatedNodes.length} nodes with configurations`);
-      onOpenChange(false); // Close the dialog
+      onOpenChange(false);
 
       toast({
         title: "Workflow Imported",
@@ -219,7 +268,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     } catch (error: any) {
       toast({
         title: "Import Failed",
-        description: error.message,
+        description: error.message || "Invalid JSON format",
         variant: "destructive",
       });
     }

@@ -100,6 +100,48 @@ export type Database = {
           },
         ]
       }
+      webhook_access_logs: {
+        Row: {
+          accessed_at: string | null
+          accessed_by: string | null
+          action: string
+          id: string
+          ip_address: unknown | null
+          webhook_id: string | null
+        }
+        Insert: {
+          accessed_at?: string | null
+          accessed_by?: string | null
+          action: string
+          id?: string
+          ip_address?: unknown | null
+          webhook_id?: string | null
+        }
+        Update: {
+          accessed_at?: string | null
+          accessed_by?: string | null
+          action?: string
+          id?: string
+          ip_address?: unknown | null
+          webhook_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_access_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_webhooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_access_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_webhooks_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_comments: {
         Row: {
           content: string
@@ -525,10 +567,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      workflow_webhooks_safe: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          id: string | null
+          last_triggered_at: string | null
+          webhook_key: string | null
+          workflow_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string | null
+          last_triggered_at?: string | null
+          webhook_key?: never
+          workflow_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string | null
+          last_triggered_at?: string | null
+          webhook_key?: never
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_webhooks_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_workspace_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: boolean
+      }
+      is_workspace_member: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "owner" | "admin" | "editor" | "viewer"

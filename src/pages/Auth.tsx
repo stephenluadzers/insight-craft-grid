@@ -8,12 +8,29 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Workflow } from "lucide-react";
+import { z } from "zod";
+
+const signUpSchema = z.object({
+  fullName: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters"),
+  email: z.string().trim().email("Invalid email address").max(255, "Email must be less than 255 characters"),
+  password: z.string().min(12, "Password must be at least 12 characters").max(100, "Password must be less than 100 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+});
+
+const signInSchema = z.object({
+  email: z.string().trim().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -36,16 +53,36 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validate input
+    const validation = signUpSchema.safeParse({ fullName, email, password });
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      toast({
+        title: "Validation Error",
+        description: "Please check the form for errors",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const { error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: validation.data.email,
+        password: validation.data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            full_name: fullName,
+            full_name: validation.data.fullName,
           }
         }
       });
@@ -59,7 +96,7 @@ export default function Auth() {
     } catch (error: any) {
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description: error.message || "An error occurred during sign up",
         variant: "destructive",
       });
     } finally {
@@ -69,15 +106,38 @@ export default function Auth() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
+    // Validate input
+    const validation = signInSchema.safeParse({ email, password });
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      toast({
+        title: "Validation Error",
+        description: "Please check the form for errors",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: validation.data.email,
+        password: validation.data.password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Provide generic error message to prevent account enumeration
+        throw new Error("Invalid email or password");
+      }
 
       toast({
         title: "Welcome back!",
@@ -85,8 +145,8 @@ export default function Auth() {
       });
     } catch (error: any) {
       toast({
-        title: "Sign in failed",
-        description: error.message,
+        title: "Authentication failed",
+        description: "Invalid email or password",
         variant: "destructive",
       });
     } finally {
@@ -124,6 +184,7 @@ export default function Auth() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signin-password">Password</Label>
@@ -134,6 +195,7 @@ export default function Auth() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 </div>
               </CardContent>
               <CardFooter>
@@ -164,6 +226,7 @@ export default function Auth() {
                     onChange={(e) => setFullName(e.target.value)}
                     required
                   />
+                  {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
@@ -175,6 +238,7 @@ export default function Auth() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
@@ -184,8 +248,12 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    minLength={6}
+                    minLength={12}
                   />
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    Must be 12+ characters with uppercase, lowercase, number, and special character
+                  </p>
                 </div>
               </CardContent>
               <CardFooter>
