@@ -180,6 +180,35 @@ export type Database = {
           },
         ]
       }
+      workflow_execution_secrets: {
+        Row: {
+          created_at: string | null
+          execution_id: string
+          id: string
+          sensitive_data: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          execution_id: string
+          id?: string
+          sensitive_data?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          execution_id?: string
+          id?: string
+          sensitive_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_execution_secrets_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_executions: {
         Row: {
           completed_at: string | null
@@ -581,6 +610,10 @@ export type Database = {
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
+      }
+      sanitize_execution_data: {
+        Args: { execution_data: Json; workspace_id: string }
+        Returns: Json
       }
     }
     Enums: {
