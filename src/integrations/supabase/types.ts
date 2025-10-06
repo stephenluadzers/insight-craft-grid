@@ -112,6 +112,7 @@ export type Database = {
           accessed_at: string | null
           accessed_by: string | null
           action: string
+          expires_at: string | null
           id: string
           ip_address: unknown | null
           webhook_id: string | null
@@ -120,6 +121,7 @@ export type Database = {
           accessed_at?: string | null
           accessed_by?: string | null
           action: string
+          expires_at?: string | null
           id?: string
           ip_address?: unknown | null
           webhook_id?: string | null
@@ -128,6 +130,7 @@ export type Database = {
           accessed_at?: string | null
           accessed_by?: string | null
           action?: string
+          expires_at?: string | null
           id?: string
           ip_address?: unknown | null
           webhook_id?: string | null
@@ -197,25 +200,69 @@ export type Database = {
       workflow_execution_secrets: {
         Row: {
           created_at: string | null
+          created_by: string | null
           execution_id: string
+          expires_at: string | null
           id: string
           sensitive_data: Json | null
         }
         Insert: {
           created_at?: string | null
+          created_by?: string | null
           execution_id: string
+          expires_at?: string | null
           id?: string
           sensitive_data?: Json | null
         }
         Update: {
           created_at?: string | null
+          created_by?: string | null
           execution_id?: string
+          expires_at?: string | null
           id?: string
           sensitive_data?: Json | null
         }
         Relationships: [
           {
             foreignKeyName: "workflow_execution_secrets_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_execution_secrets_audit: {
+        Row: {
+          access_type: string
+          accessed_at: string
+          accessed_by: string
+          execution_id: string
+          id: string
+          ip_address: unknown | null
+          user_agent: string | null
+        }
+        Insert: {
+          access_type: string
+          accessed_at?: string
+          accessed_by: string
+          execution_id: string
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+        }
+        Update: {
+          access_type?: string
+          accessed_at?: string
+          accessed_by?: string
+          execution_id?: string
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_execution_secrets_audit_execution_id_fkey"
             columns: ["execution_id"]
             isOneToOne: false
             referencedRelation: "workflow_executions"
@@ -334,6 +381,9 @@ export type Database = {
       }
       workflow_templates: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           category: string | null
           created_at: string | null
           created_by: string | null
@@ -342,9 +392,13 @@ export type Database = {
           is_public: boolean | null
           name: string
           nodes: Json
+          rejection_reason: string | null
           use_count: number | null
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           category?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -353,9 +407,13 @@ export type Database = {
           is_public?: boolean | null
           name: string
           nodes: Json
+          rejection_reason?: string | null
           use_count?: number | null
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           category?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -364,6 +422,7 @@ export type Database = {
           is_public?: boolean | null
           name?: string
           nodes?: Json
+          rejection_reason?: string | null
           use_count?: number | null
         }
         Relationships: [
@@ -379,6 +438,50 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_templates_audit: {
+        Row: {
+          change_reason: string | null
+          changed_at: string
+          changed_by: string
+          id: string
+          new_is_public: boolean | null
+          new_status: string | null
+          old_is_public: boolean | null
+          old_status: string | null
+          template_id: string
+        }
+        Insert: {
+          change_reason?: string | null
+          changed_at?: string
+          changed_by: string
+          id?: string
+          new_is_public?: boolean | null
+          new_status?: string | null
+          old_is_public?: boolean | null
+          old_status?: string | null
+          template_id: string
+        }
+        Update: {
+          change_reason?: string | null
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          new_is_public?: boolean | null
+          new_status?: string | null
+          old_is_public?: boolean | null
+          old_status?: string | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_templates_audit_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -689,6 +792,17 @@ export type Database = {
       }
     }
     Functions: {
+      get_webhook_logs: {
+        Args: { _limit?: number; _webhook_id: string }
+        Returns: {
+          accessed_at: string
+          accessed_by: string
+          action: string
+          id: string
+          ip_address: unknown
+          webhook_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -707,6 +821,10 @@ export type Database = {
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
+      }
+      purge_old_webhook_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       sanitize_execution_data: {
         Args: { execution_data: Json; workspace_id: string }

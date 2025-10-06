@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
-import { BookTemplate, Download } from "lucide-react";
+import { CheckCircle, XCircle, Clock, FileEdit } from "lucide-react";
+import { TemplateApprovalDialog } from "@/components/TemplateApprovalDialog";
 
 interface Template {
   id: string;
@@ -13,14 +13,16 @@ interface Template {
   description: string | null;
   category: string | null;
   nodes: any;
-  use_count: number;
+  approval_status: string;
+  created_by: string;
+  rejection_reason: string | null;
 }
 
-export default function Templates(): JSX.Element {
+export default function TemplateReview(): JSX.Element {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     loadTemplates();
@@ -31,9 +33,8 @@ export default function Templates(): JSX.Element {
       const { data, error } = await supabase
         .from('workflow_templates')
         .select('*')
-        .eq('is_public', true)
-        .eq('approval_status', 'approved')
-        .order('use_count', { ascending: false });
+        .in('approval_status', ['pending', 'draft'])
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setTemplates(data || []);
@@ -48,49 +49,33 @@ export default function Templates(): JSX.Element {
     }
   };
 
-  const handleUseTemplate = async (template: Template) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="w-4 h-4" />;
+      case 'approved':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'rejected':
+        return <XCircle className="w-4 h-4" />;
+      case 'draft':
+        return <FileEdit className="w-4 h-4" />;
+      default:
+        return null;
+    }
+  };
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('default_workspace_id')
-        .eq('id', user.id)
-        .single();
-
-      // Create workflow from template
-      const { error } = await supabase
-        .from('workflows')
-        .insert({
-          name: template.name,
-          description: template.description,
-          nodes: template.nodes,
-          workspace_id: profile?.default_workspace_id,
-          created_by: user.id,
-          status: 'draft',
-        });
-
-      if (error) throw error;
-
-      // Increment use count
-      await supabase
-        .from('workflow_templates')
-        .update({ use_count: template.use_count + 1 })
-        .eq('id', template.id);
-
-      toast({
-        title: "Template applied",
-        description: "A new workflow has been created from this template.",
-      });
-
-      navigate("/");
-    } catch (error: any) {
-      toast({
-        title: "Failed to use template",
-        description: error.message,
-        variant: "destructive",
-      });
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'secondary';
+      case 'approved':
+        return 'default';
+      case 'rejected':
+        return 'destructive';
+      case 'draft':
+        return 'outline';
+      default:
+        return 'secondary';
     }
   };
 
@@ -105,17 +90,17 @@ export default function Templates(): JSX.Element {
   return (
     <div className="container mx-auto p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Workflow Templates</h1>
+        <h1 className="text-3xl font-bold mb-2">Template Review</h1>
         <p className="text-muted-foreground">
-          Start with pre-built templates for common automation scenarios
+          Review and approve templates for publication
         </p>
       </div>
 
       {templates.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <BookTemplate className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No public templates available yet</p>
+            <CheckCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">No templates pending review</p>
           </CardContent>
         </Card>
       ) : (
@@ -124,13 +109,21 @@ export default function Templates(): JSX.Element {
             <Card key={template.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between mb-2">
+                  <Badge variant={getStatusColor(template.approval_status) as any}>
+                    <span className="flex items-center gap-1">
+                      {getStatusIcon(template.approval_status)}
+                      {template.approval_status}
+                    </span>
+                  </Badge>
                   <Badge variant="secondary">{template.category || "General"}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {template.use_count} uses
-                  </span>
                 </div>
                 <CardTitle>{template.name}</CardTitle>
                 <CardDescription>{template.description}</CardDescription>
+                {template.rejection_reason && (
+                  <p className="text-xs text-destructive mt-2">
+                    Reason: {template.rejection_reason}
+                  </p>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -139,16 +132,26 @@ export default function Templates(): JSX.Element {
                   </span>
                   <Button
                     size="sm"
-                    onClick={() => handleUseTemplate(template)}
+                    onClick={() => setSelectedTemplate(template)}
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Use Template
+                    Review
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
+      )}
+
+      {selectedTemplate && (
+        <TemplateApprovalDialog
+          isOpen={!!selectedTemplate}
+          onClose={() => setSelectedTemplate(null)}
+          templateId={selectedTemplate.id}
+          templateName={selectedTemplate.name}
+          currentStatus={selectedTemplate.approval_status}
+          onStatusChanged={loadTemplates}
+        />
       )}
     </div>
   );
