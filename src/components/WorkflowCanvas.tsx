@@ -410,7 +410,7 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
       {/* Header integrated into canvas */}
       <header className="h-14 flex items-center border-b bg-background px-4 gap-4 relative z-50">
         <SidebarTrigger />
-        <h1 className="font-semibold">Workflow Automation Platform</h1>
+        <h1 className="font-semibold">FlowFuse</h1>
         
         {/* Node count and execution controls */}
         <div className="ml-auto flex items-center gap-3">
