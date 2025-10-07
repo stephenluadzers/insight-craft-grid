@@ -238,15 +238,57 @@ export default function Settings(): JSX.Element {
                 </TabsContent>
 
                 <TabsContent value="credentials">
-                  {workspaceId && <CredentialsManager workspaceId={workspaceId} />}
+                  {workspaceId ? (
+                    <CredentialsManager workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Credentials</CardTitle>
+                        <CardDescription>
+                          Manage your API keys and integration credentials
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found. Please create a workspace first.</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="history">
-                  {workspaceId && <EnhancedExecutionTimeline workspaceId={workspaceId} />}
+                  {workspaceId ? (
+                    <EnhancedExecutionTimeline workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Execution History</CardTitle>
+                        <CardDescription>
+                          View your workflow execution timeline
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found. Please create a workspace first.</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="activity">
-                  {workspaceId && <ActivityFeed workspaceId={workspaceId} />}
+                  {workspaceId ? (
+                    <ActivityFeed workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Activity Feed</CardTitle>
+                        <CardDescription>
+                          Track recent activity in your workspace
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found. Please create a workspace first.</p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="security">
