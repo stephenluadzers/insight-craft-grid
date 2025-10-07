@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Bell, Shield, Loader2, Key, History, Activity } from "lucide-react";
+import { User, Bell, Shield, Loader2, Key, History, Activity, Building2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CredentialsManager } from "@/components/CredentialsManager";
 import { ExecutionHistoryPanel } from "@/components/ExecutionHistoryPanel";
 import { EnhancedExecutionTimeline } from "@/components/EnhancedExecutionTimeline";
 import { ActivityFeed } from "@/components/ActivityFeed";
+import { EnterpriseReadinessGuide } from "@/components/EnterpriseReadinessGuide";
 
 export default function Settings(): JSX.Element {
   const [loading, setLoading] = useState(true);
@@ -124,7 +125,7 @@ export default function Settings(): JSX.Element {
               </div>
 
               <Tabs defaultValue="profile" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-6 gap-1 h-auto p-1">
+                <TabsList className="grid w-full grid-cols-7 gap-1 h-auto p-1">
                   <TabsTrigger value="profile" className="flex items-center justify-center gap-2">
                     <User className="w-4 h-4" />
                     <span className="hidden md:inline">Profile</span>
@@ -144,6 +145,10 @@ export default function Settings(): JSX.Element {
                   <TabsTrigger value="activity" className="flex items-center justify-center gap-2">
                     <Activity className="w-4 h-4" />
                     <span className="hidden md:inline">Activity</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="enterprise" className="flex items-center justify-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    <span className="hidden md:inline">Enterprise</span>
                   </TabsTrigger>
                   <TabsTrigger value="security" className="flex items-center justify-center gap-2">
                     <Shield className="w-4 h-4" />
@@ -289,6 +294,10 @@ export default function Settings(): JSX.Element {
                       </CardContent>
                     </Card>
                   )}
+                </TabsContent>
+
+                <TabsContent value="enterprise">
+                  <EnterpriseReadinessGuide />
                 </TabsContent>
 
                 <TabsContent value="security">

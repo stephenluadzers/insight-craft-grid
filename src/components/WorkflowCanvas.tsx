@@ -229,6 +229,13 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
     });
     setNodes(updatedNodes);
     setSelectedNodeId(null);
+    
+    // Clear current workflow ID to force "Save As New" for optimized workflow
+    setCurrentWorkflowId(null);
+    // Append "-optimized" to the name to differentiate
+    if (currentWorkflowName) {
+      setCurrentWorkflowName(currentWorkflowName + " (Optimized)");
+    }
   };
 
   const handleDeleteNode = () => {
