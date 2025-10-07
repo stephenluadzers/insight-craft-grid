@@ -172,10 +172,13 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: finalStatus === 'success',
+        status: finalStatus,
         executionId,
         executionData,
         duration: totalDuration,
-        completedAt: new Date().toISOString()
+        completedAt: new Date().toISOString(),
+        error: errorMessage || undefined,
+        failedNodeId: finalStatus === 'failed' ? executionData.previousResults.find((r: any) => r.error)?.nodeId : undefined
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

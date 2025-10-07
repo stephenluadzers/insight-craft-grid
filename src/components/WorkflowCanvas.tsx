@@ -5,12 +5,16 @@ import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
 import { WorkflowGenerationDialog } from "./WorkflowGenerationDialog";
+import { WorkflowValidationDialog } from "./WorkflowValidationDialog";
+import { ExecutionErrorDialog } from "./ExecutionErrorDialog";
+import { IntegrationSetupDialog } from "./IntegrationSetupDialog";
 import { cn } from "@/lib/utils";
 import { Trash2, Settings } from "lucide-react";
 import { Button } from "./ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SidebarTrigger } from "./ui/sidebar";
+import { validateWorkflow, ValidationResult } from "@/lib/workflowValidation";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
@@ -63,6 +67,17 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
   const [showNodeConfig, setShowNodeConfig] = useState(false);
   const [showTextGeneration, setShowTextGeneration] = useState(false);
   const [configuredNode, setConfiguredNode] = useState<WorkflowNodeData | null>(null);
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [executionError, setExecutionError] = useState<{
+    nodeTitle: string;
+    nodeType: string;
+    errorMessage: string;
+    fullLog?: string;
+  } | null>(null);
+  const [showIntegrationSetup, setShowIntegrationSetup] = useState(false);
+  const [requiredIntegrations, setRequiredIntegrations] = useState<any[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -105,7 +120,23 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
       return;
     }
 
+    // Run validation check first
+    const validation = validateWorkflow(nodes);
+    setValidationResult(validation);
+
+    if (!validation.isValid) {
+      setShowValidationDialog(true);
+      return;
+    }
+
+    // Execute directly if valid
+    executeWorkflow();
+  };
+
+  const executeWorkflow = async () => {
     setIsExecuting(true);
+    setShowValidationDialog(false);
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -120,16 +151,31 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
 
       if (error) throw error;
 
-      toast({
-        title: "Workflow executed!",
-        description: `Completed in ${data.duration}ms`,
-      });
+      if (data.status === 'failed') {
+        // Show detailed error dialog
+        const failedNode = nodes.find(n => n.id === data.failedNodeId);
+        setExecutionError({
+          nodeTitle: failedNode?.title || 'Unknown Node',
+          nodeType: failedNode?.type || 'unknown',
+          errorMessage: data.error || 'Unknown error occurred',
+          fullLog: JSON.stringify(data.executionData, null, 2),
+        });
+        setShowErrorDialog(true);
+      } else {
+        toast({
+          title: "Workflow executed!",
+          description: `Completed in ${data.duration}ms`,
+        });
+      }
     } catch (error: any) {
-      toast({
-        title: "Execution failed",
-        description: error.message,
-        variant: "destructive",
+      // Network or other errors
+      setExecutionError({
+        nodeTitle: 'Execution Error',
+        nodeType: 'system',
+        errorMessage: error.message || 'Failed to execute workflow',
+        fullLog: error.stack,
       });
+      setShowErrorDialog(true);
     } finally {
       setIsExecuting(false);
     }
@@ -578,6 +624,51 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
         onWorkflowGenerated={handleWorkflowGenerated}
         nodes={nodes}
         workflowName={currentWorkflowName}
+      />
+
+      <WorkflowValidationDialog
+        open={showValidationDialog}
+        onOpenChange={setShowValidationDialog}
+        validation={validationResult}
+        onRunAnyway={executeWorkflow}
+        onFixIssues={() => {
+          setShowValidationDialog(false);
+          toast({
+            title: "Fix node configurations",
+            description: "Configure nodes by clicking Configure button",
+          });
+        }}
+      />
+
+      <ExecutionErrorDialog
+        open={showErrorDialog}
+        onOpenChange={setShowErrorDialog}
+        error={executionError}
+        onRetry={executeWorkflow}
+        onReconfigure={() => {
+          setShowErrorDialog(false);
+          if (executionError) {
+            const failedNode = nodes.find(n => n.title === executionError.nodeTitle);
+            if (failedNode) {
+              setSelectedNodeId(failedNode.id);
+              setConfiguredNode(failedNode);
+              setShowNodeConfig(true);
+            }
+          }
+        }}
+      />
+
+      <IntegrationSetupDialog
+        open={showIntegrationSetup}
+        onOpenChange={setShowIntegrationSetup}
+        requiredIntegrations={requiredIntegrations}
+        onSetupLater={() => {
+          setShowIntegrationSetup(false);
+          toast({
+            title: "Integration setup skipped",
+            description: "You can configure integrations later in Settings",
+          });
+        }}
       />
     </div>
     </>
