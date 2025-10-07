@@ -124,30 +124,30 @@ export default function Settings(): JSX.Element {
               </div>
 
               <Tabs defaultValue="profile" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-6">
-                  <TabsTrigger value="profile">
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
+                <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 gap-2 h-auto p-2">
+                  <TabsTrigger value="profile" className="flex items-center justify-center gap-2 py-3">
+                    <User className="w-4 h-4" />
+                    <span className="hidden sm:inline">Profile</span>
                   </TabsTrigger>
-                  <TabsTrigger value="notifications">
-                    <Bell className="w-4 h-4 mr-2" />
-                    Notifications
+                  <TabsTrigger value="notifications" className="flex items-center justify-center gap-2 py-3">
+                    <Bell className="w-4 h-4" />
+                    <span className="hidden sm:inline">Notifications</span>
                   </TabsTrigger>
-                  <TabsTrigger value="credentials">
-                    <Key className="w-4 h-4 mr-2" />
-                    Credentials
+                  <TabsTrigger value="credentials" className="flex items-center justify-center gap-2 py-3">
+                    <Key className="w-4 h-4" />
+                    <span className="hidden sm:inline">Credentials</span>
                   </TabsTrigger>
-                  <TabsTrigger value="history">
-                    <History className="w-4 h-4 mr-2" />
-                    History
+                  <TabsTrigger value="history" className="flex items-center justify-center gap-2 py-3">
+                    <History className="w-4 h-4" />
+                    <span className="hidden sm:inline">History</span>
                   </TabsTrigger>
-                  <TabsTrigger value="activity">
-                    <Activity className="w-4 h-4 mr-2" />
-                    Activity
+                  <TabsTrigger value="activity" className="flex items-center justify-center gap-2 py-3">
+                    <Activity className="w-4 h-4" />
+                    <span className="hidden sm:inline">Activity</span>
                   </TabsTrigger>
-                  <TabsTrigger value="security">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Security
+                  <TabsTrigger value="security" className="flex items-center justify-center gap-2 py-3">
+                    <Shield className="w-4 h-4" />
+                    <span className="hidden sm:inline">Security</span>
                   </TabsTrigger>
                 </TabsList>
 
