@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Library, Search, Mail, MessageSquare, Globe, Brain, Webhook, RefreshCw, GitBranch, Clock } from "lucide-react";
+import { Library, Search, Mail, MessageSquare, Globe, Brain, Webhook, RefreshCw, GitBranch, Clock, Settings, Merge, Split, Code, Network, Timer, Terminal, Send, Hash, Sheet, FileText, Database } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,8 @@ interface IntegrationLibraryProps {
 }
 
 const iconMap: Record<string, any> = {
-  Mail, MessageSquare, Globe, Brain, Webhook, RefreshCw, GitBranch, Clock
+  Mail, MessageSquare, Globe, Brain, Webhook, RefreshCw, GitBranch, Clock,
+  Settings, Merge, Split, Code, Network, Timer, Terminal, Send, Hash, Sheet, FileText, Database
 };
 
 export const IntegrationLibrary = ({ onAddNode }: IntegrationLibraryProps) => {
