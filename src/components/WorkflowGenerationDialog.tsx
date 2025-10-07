@@ -328,9 +328,37 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     });
   };
 
-  const exportScreenshot = async () => {
+  const exportCombined = async () => {
     setIsExporting(true);
+    
     try {
+      // Export JSON first
+      const workflowData = {
+        name: workflowName,
+        version: "1.0",
+        nodes: nodes.map(node => ({
+          id: node.id,
+          type: node.type,
+          title: node.title,
+          description: node.description,
+          x: node.x,
+          y: node.y,
+          config: node.config || {},
+        })),
+        exportedAt: new Date().toISOString(),
+      };
+
+      const jsonBlob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+      const jsonUrl = URL.createObjectURL(jsonBlob);
+      const jsonLink = document.createElement('a');
+      jsonLink.href = jsonUrl;
+      jsonLink.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}.json`;
+      document.body.appendChild(jsonLink);
+      jsonLink.click();
+      document.body.removeChild(jsonLink);
+      URL.revokeObjectURL(jsonUrl);
+
+      // Then capture screenshot
       const canvasElement = document.querySelector('.workflow-canvas') as HTMLElement;
       if (!canvasElement) {
         throw new Error('Canvas element not found');
@@ -354,14 +382,14 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           URL.revokeObjectURL(url);
 
           toast({
-            title: "Screenshot Captured",
-            description: "Workflow screenshot downloaded successfully",
+            title: "Export Complete",
+            description: "JSON and screenshot downloaded successfully",
           });
         }
       });
     } catch (error: any) {
       toast({
-        title: "Screenshot Failed",
+        title: "Export Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -540,51 +568,31 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           </TabsContent>
 
           <TabsContent value="export" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
-                <FileJson className="w-12 h-12 text-muted-foreground" />
-                <div className="text-center space-y-2">
-                  <p className="text-sm font-medium">Export as JSON</p>
-                  <p className="text-xs text-muted-foreground">
-                    Download workflow with all node configurations
-                  </p>
-                </div>
-                <Button
-                  onClick={exportToJSON}
-                  className="w-full max-w-xs"
-                  disabled={nodes.length === 0}
-                >
-                  <FileJson className="w-4 h-4 mr-2" />
-                  Export JSON
-                </Button>
+            <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
+              <Download className="w-12 h-12 text-muted-foreground" />
+              <div className="text-center space-y-2">
+                <p className="text-sm font-medium">Export Workflow</p>
+                <p className="text-xs text-muted-foreground">
+                  Download JSON configuration and screenshot together
+                </p>
               </div>
-
-              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
-                <Camera className="w-12 h-12 text-muted-foreground" />
-                <div className="text-center space-y-2">
-                  <p className="text-sm font-medium">Export as Screenshot</p>
-                  <p className="text-xs text-muted-foreground">
-                    Capture a high-quality image of your workflow
-                  </p>
-                </div>
-                <Button
-                  onClick={exportScreenshot}
-                  disabled={isExporting || nodes.length === 0}
-                  className="w-full max-w-xs"
-                >
-                  {isExporting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Capturing...
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-4 h-4 mr-2" />
-                      Capture Screenshot
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Button
+                onClick={exportCombined}
+                disabled={isExporting || nodes.length === 0}
+                className="w-full max-w-xs"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export JSON + Screenshot
+                  </>
+                )}
+              </Button>
             </div>
           </TabsContent>
         </Tabs>
