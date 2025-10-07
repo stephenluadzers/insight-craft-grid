@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Bell, Shield, Loader2, Key, History, Activity, Building2, TrendingUp, AlertTriangle } from "lucide-react";
+import { User, Bell, Shield, Loader2, Key, History, Activity, Building2, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CredentialsManager } from "@/components/CredentialsManager";
 import { ExecutionHistoryPanel } from "@/components/ExecutionHistoryPanel";
@@ -20,6 +20,7 @@ import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 import { DeadLetterQueuePanel } from "@/components/DeadLetterQueuePanel";
 import { CircuitBreakerStatus } from "@/components/CircuitBreakerStatus";
 import { ErrorAggregationDashboard } from "@/components/ErrorAggregationDashboard";
+import { SecurityMonitoringDashboard } from "@/components/SecurityMonitoringDashboard";
 
 export default function Settings(): JSX.Element {
   const [loading, setLoading] = useState(true);
@@ -129,7 +130,7 @@ export default function Settings(): JSX.Element {
               </div>
 
               <Tabs defaultValue="profile" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 gap-1 h-auto p-1">
+                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 gap-1 h-auto p-1">
                   <TabsTrigger value="profile" className="flex items-center justify-center gap-2">
                     <User className="w-4 h-4" />
                     <span className="hidden md:inline">Profile</span>
@@ -158,13 +159,17 @@ export default function Settings(): JSX.Element {
                     <AlertTriangle className="w-4 h-4" />
                     <span className="hidden md:inline">Errors</span>
                   </TabsTrigger>
+                  <TabsTrigger value="security-monitoring" className="flex items-center justify-center gap-2">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span className="hidden md:inline">Security</span>
+                  </TabsTrigger>
                   <TabsTrigger value="enterprise" className="flex items-center justify-center gap-2">
                     <Building2 className="w-4 h-4" />
                     <span className="hidden md:inline">Enterprise</span>
                   </TabsTrigger>
                   <TabsTrigger value="security" className="flex items-center justify-center gap-2">
                     <Shield className="w-4 h-4" />
-                    <span className="hidden md:inline">Security</span>
+                    <span className="hidden md:inline">Settings</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -339,6 +344,24 @@ export default function Settings(): JSX.Element {
                         <CardTitle>Error Monitoring</CardTitle>
                         <CardDescription>
                           Track and resolve workflow errors
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found. Please create a workspace first.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="security-monitoring">
+                  {workspaceId ? (
+                    <SecurityMonitoringDashboard workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Security Monitoring</CardTitle>
+                        <CardDescription>
+                          Real-time security threat detection and prevention
                         </CardDescription>
                       </CardHeader>
                       <CardContent>

@@ -129,7 +129,36 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
       return;
     }
 
-    // Execute directly if valid
+    // Security scan before execution
+    const { scanWorkflowSecurity } = await import("@/lib/securityScanner");
+    const securityScan = scanWorkflowSecurity(nodes);
+    
+    if (securityScan.risk_level === 'critical') {
+      toast({
+        title: "Critical Security Risk",
+        description: "This workflow contains critical security vulnerabilities and cannot be executed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (securityScan.risk_level === 'high') {
+      toast({
+        title: "High Security Risk",
+        description: "This workflow contains high security risks. Please review or request admin approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (securityScan.risk_level === 'medium') {
+      toast({
+        title: "Medium Security Risk",
+        description: `${securityScan.issues.length} security issue(s) detected. Proceeding with caution.`,
+      });
+    }
+
+    // Execute directly if valid and safe
     executeWorkflow();
   };
 

@@ -172,6 +172,70 @@ export type Database = {
           },
         ]
       }
+      dangerous_operations_log: {
+        Row: {
+          action_taken: Database["public"]["Enums"]["operation_action"]
+          detected_at: string
+          execution_id: string | null
+          id: string
+          operation_details: Json
+          operation_type: string
+          reason: string
+          risk_level: Database["public"]["Enums"]["security_risk_level"]
+          user_id: string | null
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          action_taken: Database["public"]["Enums"]["operation_action"]
+          detected_at?: string
+          execution_id?: string | null
+          id?: string
+          operation_details: Json
+          operation_type: string
+          reason: string
+          risk_level: Database["public"]["Enums"]["security_risk_level"]
+          user_id?: string | null
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          action_taken?: Database["public"]["Enums"]["operation_action"]
+          detected_at?: string
+          execution_id?: string | null
+          id?: string
+          operation_details?: Json
+          operation_type?: string
+          reason?: string
+          risk_level?: Database["public"]["Enums"]["security_risk_level"]
+          user_id?: string | null
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dangerous_operations_log_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dangerous_operations_log_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dangerous_operations_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       error_aggregation: {
         Row: {
           error_message: string
@@ -358,6 +422,101 @@ export type Database = {
           },
         ]
       }
+      security_rules: {
+        Row: {
+          auto_block: boolean
+          created_at: string
+          description: string
+          enabled: boolean
+          id: string
+          pattern: string
+          remediation: string
+          risk_level: Database["public"]["Enums"]["security_risk_level"]
+          rule_name: string
+          rule_type: string
+          updated_at: string
+        }
+        Insert: {
+          auto_block?: boolean
+          created_at?: string
+          description: string
+          enabled?: boolean
+          id?: string
+          pattern: string
+          remediation: string
+          risk_level: Database["public"]["Enums"]["security_risk_level"]
+          rule_name: string
+          rule_type: string
+          updated_at?: string
+        }
+        Update: {
+          auto_block?: boolean
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          pattern?: string
+          remediation?: string
+          risk_level?: Database["public"]["Enums"]["security_risk_level"]
+          rule_name?: string
+          rule_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      suspicious_activity_log: {
+        Row: {
+          activity_details: Json
+          activity_type: string
+          detected_at: string
+          id: string
+          investigated: boolean
+          investigation_notes: string | null
+          ip_address: unknown | null
+          severity: Database["public"]["Enums"]["security_risk_level"]
+          triggered_rules: string[] | null
+          user_agent: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          activity_details: Json
+          activity_type: string
+          detected_at?: string
+          id?: string
+          investigated?: boolean
+          investigation_notes?: string | null
+          ip_address?: unknown | null
+          severity: Database["public"]["Enums"]["security_risk_level"]
+          triggered_rules?: string[] | null
+          user_agent?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          activity_details?: Json
+          activity_type?: string
+          detected_at?: string
+          id?: string
+          investigated?: boolean
+          investigation_notes?: string | null
+          ip_address?: unknown | null
+          severity?: Database["public"]["Enums"]["security_risk_level"]
+          triggered_rules?: string[] | null
+          user_agent?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suspicious_activity_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_access_logs: {
         Row: {
           accessed_at: string | null
@@ -392,6 +551,70 @@ export type Database = {
             columns: ["webhook_id"]
             isOneToOne: false
             referencedRelation: "workflow_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_approval_queue: {
+        Row: {
+          id: string
+          requested_at: string
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
+          risk_assessment: string | null
+          security_scan_id: string | null
+          status: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          id?: string
+          requested_at?: string
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          risk_assessment?: string | null
+          security_scan_id?: string | null
+          status?: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          id?: string
+          requested_at?: string
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          risk_assessment?: string | null
+          security_scan_id?: string | null
+          status?: string
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_approval_queue_security_scan_id_fkey"
+            columns: ["security_scan_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_security_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_approval_queue_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_approval_queue_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -913,6 +1136,69 @@ export type Database = {
           },
         ]
       }
+      workflow_security_scans: {
+        Row: {
+          approval_notes: string | null
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
+          id: string
+          issues_found: number
+          risk_level: Database["public"]["Enums"]["security_risk_level"]
+          scan_results: Json
+          scan_status: Database["public"]["Enums"]["scan_status"]
+          scanned_at: string
+          scanned_by: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          id?: string
+          issues_found?: number
+          risk_level?: Database["public"]["Enums"]["security_risk_level"]
+          scan_results?: Json
+          scan_status?: Database["public"]["Enums"]["scan_status"]
+          scanned_at?: string
+          scanned_by?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          approval_notes?: string | null
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          id?: string
+          issues_found?: number
+          risk_level?: Database["public"]["Enums"]["security_risk_level"]
+          scan_results?: Json
+          scan_status?: Database["public"]["Enums"]["scan_status"]
+          scanned_at?: string
+          scanned_by?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_security_scans_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_security_scans_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_templates: {
         Row: {
           approval_status: string
@@ -1163,6 +1449,59 @@ export type Database = {
           },
         ]
       }
+      workspace_execution_limits: {
+        Row: {
+          allow_external_urls: boolean
+          allowed_domains: string[] | null
+          blocked_domains: string[] | null
+          created_at: string
+          id: string
+          max_api_calls_per_execution: number
+          max_concurrent_executions: number
+          max_data_size_kb: number
+          max_execution_time_seconds: number
+          max_memory_mb: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          allow_external_urls?: boolean
+          allowed_domains?: string[] | null
+          blocked_domains?: string[] | null
+          created_at?: string
+          id?: string
+          max_api_calls_per_execution?: number
+          max_concurrent_executions?: number
+          max_data_size_kb?: number
+          max_execution_time_seconds?: number
+          max_memory_mb?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          allow_external_urls?: boolean
+          allowed_domains?: string[] | null
+          blocked_domains?: string[] | null
+          created_at?: string
+          id?: string
+          max_api_calls_per_execution?: number
+          max_concurrent_executions?: number
+          max_data_size_kb?: number
+          max_execution_time_seconds?: number
+          max_memory_mb?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_execution_limits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           id: string
@@ -1355,6 +1694,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      requires_security_approval: {
+        Args: { _workflow_id: string }
+        Returns: boolean
+      }
       sanitize_execution_data: {
         Args: { execution_data: Json; workspace_id: string }
         Returns: Json
@@ -1369,6 +1712,7 @@ export type Database = {
         | "success"
         | "failed"
         | "cancelled"
+      operation_action: "allowed" | "blocked" | "flagged"
       queue_priority: "low" | "normal" | "high" | "critical"
       queue_status:
         | "pending"
@@ -1376,6 +1720,8 @@ export type Database = {
         | "completed"
         | "failed"
         | "dead_letter"
+      scan_status: "pending" | "scanning" | "completed" | "failed"
+      security_risk_level: "safe" | "low" | "medium" | "high" | "critical"
       workflow_status: "draft" | "published" | "archived"
       workspace_plan: "free" | "pro" | "enterprise"
     }
@@ -1514,6 +1860,7 @@ export const Constants = {
         "failed",
         "cancelled",
       ],
+      operation_action: ["allowed", "blocked", "flagged"],
       queue_priority: ["low", "normal", "high", "critical"],
       queue_status: [
         "pending",
@@ -1522,6 +1869,8 @@ export const Constants = {
         "failed",
         "dead_letter",
       ],
+      scan_status: ["pending", "scanning", "completed", "failed"],
+      security_risk_level: ["safe", "low", "medium", "high", "critical"],
       workflow_status: ["draft", "published", "archived"],
       workspace_plan: ["free", "pro", "enterprise"],
     },
