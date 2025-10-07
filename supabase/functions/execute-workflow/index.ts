@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,30 +11,6 @@ serve(async (req) => {
   }
 
   try {
-    // Verify JWT authentication
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const { nodes, triggeredBy, workspaceId, workflowId } = await req.json();
 
     // Input validation
@@ -60,50 +35,9 @@ serve(async (req) => {
       );
     }
 
-    // Verify user has access to workspace
-    const { data: membership } = await supabaseClient
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', workspaceId)
-      .eq('user_id', user.id)
-      .single();
-
-    if (!membership) {
-      return new Response(
-        JSON.stringify({ error: 'Access denied to workspace' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Executing workflow with', nodes?.length || 0, 'nodes, triggered by:', user.id);
-
-    // Use authenticated client for RLS enforcement
-    const supabase = supabaseClient;
+    console.log('Executing workflow with', nodes?.length || 0, 'nodes');
 
     const startTime = Date.now();
-
-    // Create execution record
-    const { data: execution, error: executionError } = await supabase
-      .from('workflow_executions')
-      .insert({
-        workflow_id: workflowId || null,
-        workspace_id: workspaceId,
-        triggered_by: user.id,
-        status: 'running',
-        started_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (executionError) {
-      console.error('Failed to create execution record:', executionError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to start workflow execution' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Execution started:', execution.id);
 
     try {
       // Execute each node in the workflow
@@ -127,28 +61,12 @@ serve(async (req) => {
 
       const duration = Date.now() - startTime;
 
-      // Update execution as completed
-      if (execution) {
-        await supabase
-          .from('workflow_executions')
-          .update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            duration_ms: duration,
-            execution_data: executionData,
-          })
-          .eq('id', execution.id);
-
-        console.log('Execution completed:', execution.id, 'in', duration, 'ms');
-      } else {
-        console.log('Execution completed in', duration, 'ms (no record saved)');
-      }
+      console.log('Execution completed in', duration, 'ms');
 
       return new Response(
         JSON.stringify({
           success: true,
-          executionId: execution?.id,
-          duration,
+          duration: `${duration}ms`,
           result: executionData,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -157,27 +75,11 @@ serve(async (req) => {
     } catch (nodeError: any) {
       const duration = Date.now() - startTime;
       
-      // Update execution as failed
-      if (execution) {
-        await supabase
-          .from('workflow_executions')
-          .update({
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-            duration_ms: duration,
-            error_message: nodeError.message,
-          })
-          .eq('id', execution.id);
-
-        console.error('Execution failed:', execution.id, nodeError);
-      } else {
-        console.error('Execution failed:', nodeError);
-      }
+      console.error('Execution failed:', nodeError);
 
       return new Response(
         JSON.stringify({
           success: false,
-          executionId: execution?.id,
           error: nodeError.message,
         }),
         { 

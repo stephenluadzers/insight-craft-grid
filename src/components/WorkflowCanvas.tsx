@@ -464,10 +464,17 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
           }}
         >
           {/* Connection Lines */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none">
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
             {nodes.map((node, index) => {
               if (index === nodes.length - 1) return null;
               const nextNode = nodes[index + 1];
+              
+              // Debug log to verify line data
+              console.log('Drawing line from', node.id, 'to', nextNode.id, {
+                from: { x: node.x + 128, y: node.y + 60 },
+                to: { x: nextNode.x + 128, y: nextNode.y }
+              });
+              
               return (
                 <line
                   key={`line-${node.id}`}
@@ -479,6 +486,7 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
                   strokeWidth="2"
                   strokeDasharray="5,5"
                   className="animate-pulse"
+                  opacity="1"
                 />
               );
             })}
@@ -491,6 +499,7 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
               onMouseDown={(e) => handleMouseDown(e, node.id)}
               onTouchStart={(e) => handleTouchStart(e, node.id)}
               className="group touch-none"
+              style={{ position: 'relative', zIndex: 10 }}
             >
               <WorkflowNode
                 data={node}
