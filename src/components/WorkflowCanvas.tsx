@@ -96,6 +96,15 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
       return;
     }
 
+    if (!workspaceId) {
+      toast({
+        title: "Workspace not found",
+        description: "Please ensure you have a workspace set up",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsExecuting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -105,6 +114,7 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
           nodes: nodes,
           triggeredBy: user?.id,
           workspaceId: workspaceId,
+          workflowId: currentWorkflowId,
         }
       });
 
