@@ -68,21 +68,23 @@ Your responsibilities:
 
 Context: ${userContext || 'General workflow automation'}
 
-Return ONLY valid JSON in this exact format:
+CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no code blocks. Just pure JSON.
+
+Format (ensure all strings are properly escaped and no trailing commas):
 {
   "optimizedWorkflow": {
-    "nodes": [...], // Enhanced node array with new/modified nodes
-    "insights": "Detailed explanation of all optimizations made"
+    "nodes": [],
+    "insights": "string"
   },
   "suggestions": [
     {
-      "type": "mandatory|recommended|optional",
-      "title": "Suggestion title",
-      "description": "Why this improves the workflow",
-      "impact": "high|medium|low"
+      "type": "string",
+      "title": "string",
+      "description": "string",
+      "impact": "string"
     }
   ],
-  "innovations": ["List of beyond-industry-standard improvements applied"]
+  "innovations": []
 }`
           },
           {
@@ -90,8 +92,8 @@ Return ONLY valid JSON in this exact format:
             content: `Analyze and optimize this workflow. Make it complete, robust, and exceptional:\n\n${JSON.stringify(workflow, null, 2)}`
           }
         ],
-        temperature: 0.4,
-        max_tokens: 8000
+        temperature: 0.3,
+        max_tokens: 6000
       }),
     });
 
@@ -122,16 +124,40 @@ Return ONLY valid JSON in this exact format:
 
     console.log('AI optimization response received');
 
-    // Parse the JSON response
+    // Parse the JSON response with improved extraction
     let optimizationData;
     try {
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || 
-                       content.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      // Try to extract JSON from markdown code blocks first
+      let jsonStr = content;
+      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1];
+      } else {
+        // Try to find JSON object boundaries
+        const firstBrace = content.indexOf('{');
+        const lastBrace = content.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          jsonStr = content.substring(firstBrace, lastBrace + 1);
+        }
+      }
+
+      // Clean up common JSON issues
+      jsonStr = jsonStr
+        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+        .replace(/\n/g, ' ')           // Remove newlines that might break strings
+        .trim();
+
       optimizationData = JSON.parse(jsonStr);
+      
+      // Validate required structure
+      if (!optimizationData.optimizedWorkflow || !optimizationData.suggestions) {
+        throw new Error('Missing required fields in response');
+      }
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
-      throw new Error('AI returned invalid JSON format');
+      console.error('Raw content:', content);
+      throw new Error('AI returned invalid JSON format. Please try again.');
     }
 
     return new Response(
