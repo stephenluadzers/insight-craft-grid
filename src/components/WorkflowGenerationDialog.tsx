@@ -10,6 +10,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
 import { z } from "zod";
+import { generateWorkflowName } from "@/lib/workflowUtils";
 
 const workflowIdeaSchema = z.string().trim().min(10, "Description must be at least 10 characters").max(5000, "Description must be less than 5000 characters");
 
@@ -316,7 +317,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}.json`;
+    
+    // Generate intelligent filename
+    const filename = generateWorkflowName(nodes);
+    a.download = `${filename}.json`;
+    
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -332,6 +337,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     setIsExporting(true);
     
     try {
+      // Generate intelligent filename
+      const filename = generateWorkflowName(nodes);
+      
       // Export JSON first
       const workflowData = {
         name: workflowName,
@@ -352,7 +360,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       const jsonUrl = URL.createObjectURL(jsonBlob);
       const jsonLink = document.createElement('a');
       jsonLink.href = jsonUrl;
-      jsonLink.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}.json`;
+      jsonLink.download = `${filename}.json`;
       document.body.appendChild(jsonLink);
       jsonLink.click();
       document.body.removeChild(jsonLink);
@@ -375,7 +383,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}-screenshot.png`;
+          a.download = `${filename}-screenshot.png`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);

@@ -551,6 +551,8 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
         open={showSaveDialog}
         onOpenChange={setShowSaveDialog}
         onSave={handleSaveWorkflow}
+        initialName={currentWorkflowName}
+        nodes={nodes}
       />
       
       <NodeConfigDialog

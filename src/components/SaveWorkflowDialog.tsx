@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Loader2 } from "lucide-react";
+import { WorkflowNodeData } from "./WorkflowNode";
+import { generateWorkflowName } from "@/lib/workflowUtils";
 
 interface SaveWorkflowDialogProps {
   open: boolean;
@@ -12,6 +14,7 @@ interface SaveWorkflowDialogProps {
   onSave: (name: string, description: string) => Promise<void>;
   initialName?: string;
   initialDescription?: string;
+  nodes?: WorkflowNodeData[];
 }
 
 export const SaveWorkflowDialog = ({ 
@@ -19,11 +22,23 @@ export const SaveWorkflowDialog = ({
   onOpenChange, 
   onSave,
   initialName = "",
-  initialDescription = ""
+  initialDescription = "",
+  nodes = []
 }: SaveWorkflowDialogProps) => {
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Generate intelligent default name when dialog opens with new workflow
+  useEffect(() => {
+    if (open && !initialName && nodes.length > 0) {
+      const suggestedName = generateWorkflowName(nodes)
+        .split("-")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+      setName(suggestedName);
+    }
+  }, [open, initialName, nodes]);
 
   const handleSave = async () => {
     if (!name.trim()) return;
