@@ -45,47 +45,89 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.id);
     
-    const { image } = await req.json();
+    const { images, image } = await req.json();
+    
+    // Support both single image (legacy) and multiple images
+    const imageArray = images || (image ? [image] : []);
     
     // Input validation
-    if (!image) {
+    if (!imageArray || imageArray.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'No image provided' }),
+        JSON.stringify({ error: 'No images provided' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (typeof image !== 'string') {
+    if (!Array.isArray(imageArray)) {
       return new Response(
-        JSON.stringify({ error: 'Image must be a string (base64 or URL)' }),
+        JSON.stringify({ error: 'Images must be an array' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check image size for base64 images
-    if (image.startsWith('data:')) {
-      const base64Data = image.split(',')[1];
-      const sizeInBytes = (base64Data.length * 3) / 4;
-      if (sizeInBytes > MAX_IMAGE_SIZE) {
+    if (imageArray.length > 5) {
+      return new Response(
+        JSON.stringify({ error: 'Maximum 5 images allowed per request' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate each image
+    for (let i = 0; i < imageArray.length; i++) {
+      const img = imageArray[i];
+      
+      if (typeof img !== 'string') {
         return new Response(
-          JSON.stringify({ error: `Image exceeds maximum size of ${MAX_IMAGE_SIZE / 1024 / 1024}MB` }),
+          JSON.stringify({ error: `Image ${i + 1} must be a string (base64 or URL)` }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // Check image size for base64 images
+      if (img.startsWith('data:')) {
+        const base64Data = img.split(',')[1];
+        const sizeInBytes = (base64Data.length * 3) / 4;
+        if (sizeInBytes > MAX_IMAGE_SIZE) {
+          return new Response(
+            JSON.stringify({ error: `Image ${i + 1} exceeds maximum size of ${MAX_IMAGE_SIZE / 1024 / 1024}MB` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     }
+
+    console.log(`Analyzing ${imageArray.length} workflow image(s)...`);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    console.log('Analyzing workflow image with Gemini vision...');
-
     // Create AbortController for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s timeout (Edge Functions have 60s limit)
 
     try {
+      // Build the content array with all images
+      const userContent: any[] = [
+        {
+          type: 'text',
+          text: imageArray.length > 1 
+            ? `Analyze these ${imageArray.length} workflow images and combine them into a single cohesive workflow. Extract all nodes, connections, and workflow logic from all images. If there are overlapping or related concepts, merge them intelligently. Return structured JSON data.`
+            : 'Analyze this workflow image and extract all nodes, connections, and workflow logic. Return structured JSON data.'
+        }
+      ];
+
+      // Add all images to the content
+      imageArray.forEach((img: string) => {
+        userContent.push({
+          type: 'image_url',
+          image_url: {
+            url: img // base64 data URL or https URL
+          }
+        });
+      });
+
       // Use Gemini 2.5 Flash for vision analysis (free during promo)
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -97,16 +139,18 @@ serve(async (req) => {
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash',
           messages: [
-          {
-            role: 'system',
-            content: `You are an Expert Workflow Understanding Engine. Analyze images containing workflows, diagrams, sketches, or process descriptions and extract structured workflow data.
+            {
+              role: 'system',
+              content: `You are an Expert Workflow Understanding Engine. Analyze images containing workflows, diagrams, sketches, or process descriptions and extract structured workflow data.
 
 Your task:
-1. Identify all workflow nodes (triggers, actions, conditions, data operations, AI steps)
-2. Detect connections and flow between nodes
+1. Identify all workflow nodes (triggers, actions, conditions, data operations, AI steps) across ALL provided images
+2. Detect connections and flow between nodes, even across different images
 3. Extract node properties (titles, descriptions, types)
 4. Infer logical relationships and dependencies
-5. Generate a complete, executable workflow JSON
+5. If multiple images are provided, intelligently combine them into a single cohesive workflow
+6. Position nodes logically to show the combined flow
+7. Generate a complete, executable workflow JSON
 
 Return ONLY valid JSON in this exact format:
 {
@@ -120,29 +164,18 @@ Return ONLY valid JSON in this exact format:
       "y": 100
     }
   ],
-  "insights": "AI analysis of the workflow - what it does, potential improvements, missing steps"
+  "insights": "AI analysis of the workflow - what it does, how the images were combined, potential improvements, missing steps"
 }`
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Analyze this workflow image and extract all nodes, connections, and workflow logic. Return structured JSON data.'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: image // base64 data URL or https URL
-                }
-              }
-            ]
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 4000
-      }),
-    });
+            },
+            {
+              role: 'user',
+              content: userContent
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 4000
+        }),
+      });
 
     clearTimeout(timeoutId);
 

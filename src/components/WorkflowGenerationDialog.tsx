@@ -151,26 +151,39 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file",
-        description: "Please upload an image file",
-        variant: "destructive",
-      });
-      return;
+    // Validate each file
+    const validFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid file",
+          description: `${file.name} is not an image file`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      // Validate file size (max 10MB per image)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: `${file.name} must be less than 10MB`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      validFiles.push(file);
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Image must be less than 10MB",
-        variant: "destructive",
-      });
+    if (validFiles.length === 0) {
+      e.target.value = '';
       return;
     }
 
@@ -178,32 +191,37 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     setGeneratedExplanation("");
 
     try {
-      const base64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
+      // Convert all files to base64
+      const base64Images = await Promise.all(
+        validFiles.map(file => 
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          })
+        )
+      );
 
       const { data, error } = await supabase.functions.invoke('analyze-workflow-image', {
-        body: { image: base64 }
+        body: { images: base64Images }
       });
 
       if (error) throw error;
 
-      setGeneratedExplanation(data.insights || "Successfully extracted workflow from image");
+      setGeneratedExplanation(data.insights || "Successfully extracted workflow from images");
       
       if (data.nodes && data.nodes.length > 0) {
         onWorkflowGenerated(data.nodes);
         onOpenChange(false);
         toast({
           title: "Workflow Generated!",
-          description: `Created ${data.nodes.length} nodes from your image`,
+          description: `Created ${data.nodes.length} nodes from ${validFiles.length} image${validFiles.length > 1 ? 's' : ''}`,
         });
       }
     } catch (error: any) {
       toast({
         title: "Analysis Failed",
-        description: error.message || "Failed to analyze image",
+        description: error.message || "Failed to analyze images",
         variant: "destructive",
       });
     } finally {
@@ -444,15 +462,16 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
               <ImageIcon className="w-12 h-12 text-muted-foreground" />
               <div className="text-center space-y-2">
-                <p className="text-sm font-medium">Upload a workflow diagram or screenshot</p>
+                <p className="text-sm font-medium">Upload workflow diagrams or screenshots</p>
                 <p className="text-xs text-muted-foreground">
-                  AI will analyze the image and generate a workflow
+                  Select multiple images to combine into a single workflow
                 </p>
               </div>
               <input
                 ref={imageInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageUpload}
                 className="hidden"
               />
@@ -469,7 +488,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 ) : (
                   <>
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload Image
+                    Upload Images
                   </>
                 )}
               </Button>
