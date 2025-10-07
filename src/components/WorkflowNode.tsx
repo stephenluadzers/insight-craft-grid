@@ -67,20 +67,23 @@ export const WorkflowNode = ({
     <div
       onClick={onSelect}
       className={cn(
-        "absolute w-64 rounded-lg border-2 bg-card backdrop-blur-sm transition-all cursor-move",
-        "hover:shadow-lg hover:scale-[1.02]",
+        "absolute w-64 rounded-lg border-2 bg-card backdrop-blur-sm transition-all duration-300 cursor-move group",
+        "hover:shadow-glow hover:scale-105",
         config.border,
-        isSelected && "ring-2 ring-primary shadow-glow scale-[1.02]",
-        isDragging && "opacity-50 cursor-grabbing"
+        isSelected && "ring-2 ring-primary shadow-glow-lg scale-105 z-10",
+        isDragging && "opacity-60 cursor-grabbing scale-95"
       )}
       style={{
         left: `${data.x}px`,
         top: `${data.y}px`,
+        transition: isDragging ? "none" : "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       }}
     >
       {/* Drag Handle */}
-      <div className="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <GripVertical className="w-6 h-6 text-muted-foreground" />
+      <div className="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+        <div className="p-1 rounded bg-background/90 shadow-sm border">
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </div>
       </div>
 
       {/* Node Header */}
@@ -106,9 +109,9 @@ export const WorkflowNode = ({
         </div>
       )}
 
-      {/* Connection Points */}
-      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background" />
-      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background" />
+      {/* Connection Points with pulse animation */}
+      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background transition-all duration-200 group-hover:scale-110 group-hover:shadow-glow" />
+      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background transition-all duration-200 group-hover:scale-110 group-hover:shadow-glow" />
     </div>
   );
 };

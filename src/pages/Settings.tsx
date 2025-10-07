@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Bell, Shield, Loader2, Key, History } from "lucide-react";
+import { User, Bell, Shield, Loader2, Key, History, Activity } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CredentialsManager } from "@/components/CredentialsManager";
 import { ExecutionHistoryPanel } from "@/components/ExecutionHistoryPanel";
+import { EnhancedExecutionTimeline } from "@/components/EnhancedExecutionTimeline";
+import { ActivityFeed } from "@/components/ActivityFeed";
 
 export default function Settings(): JSX.Element {
   const [loading, setLoading] = useState(true);
@@ -122,7 +124,7 @@ export default function Settings(): JSX.Element {
               </div>
 
               <Tabs defaultValue="profile" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="profile">
                     <User className="w-4 h-4 mr-2" />
                     Profile
@@ -138,6 +140,10 @@ export default function Settings(): JSX.Element {
                   <TabsTrigger value="history">
                     <History className="w-4 h-4 mr-2" />
                     History
+                  </TabsTrigger>
+                  <TabsTrigger value="activity">
+                    <Activity className="w-4 h-4 mr-2" />
+                    Activity
                   </TabsTrigger>
                   <TabsTrigger value="security">
                     <Shield className="w-4 h-4 mr-2" />
@@ -236,7 +242,11 @@ export default function Settings(): JSX.Element {
                 </TabsContent>
 
                 <TabsContent value="history">
-                  {workspaceId && <ExecutionHistoryPanel workspaceId={workspaceId} />}
+                  {workspaceId && <EnhancedExecutionTimeline workspaceId={workspaceId} />}
+                </TabsContent>
+
+                <TabsContent value="activity">
+                  {workspaceId && <ActivityFeed workspaceId={workspaceId} />}
                 </TabsContent>
 
                 <TabsContent value="security">

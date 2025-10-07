@@ -155,6 +155,18 @@ All colors MUST be HSL.
 
 /* Utility classes for canvas and animations */
 @layer utilities {
+  .shadow-glow {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  }
+  
+  .shadow-glow-lg {
+    box-shadow: 0 0 40px hsl(var(--primary) / 0.4);
+  }
+  
+  .transition-smooth {
+    transition: var(--transition-smooth);
+  }
+
   .animate-fade-in {
     animation: fadeIn 0.3s ease-in-out;
   }

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { BookTemplate, Download } from "lucide-react";
+import { BookTemplate, Download, TrendingUp, Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Template {
   id: string;
@@ -121,28 +122,48 @@ export default function Templates(): JSX.Element {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {templates.map((template) => (
-            <Card key={template.id} className="hover:shadow-lg transition-shadow">
+            <Card 
+              key={template.id} 
+              className={cn(
+                "group hover:shadow-glow transition-all duration-300 cursor-pointer",
+                "hover:scale-105 hover:border-primary/50"
+              )}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between mb-2">
-                  <Badge variant="secondary">{template.category || "General"}</Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {template.use_count} uses
-                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    {template.category || "General"}
+                  </Badge>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <TrendingUp className="w-3 h-3" />
+                    {template.use_count}
+                  </div>
                 </div>
-                <CardTitle>{template.name}</CardTitle>
-                <CardDescription>{template.description}</CardDescription>
+                <CardTitle className="group-hover:text-primary transition-colors">
+                  {template.name}
+                </CardTitle>
+                <CardDescription className="line-clamp-2">
+                  {template.description}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    {template.nodes?.length || 0} nodes
-                  </span>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{template.nodes?.length || 0} nodes</span>
+                    {template.use_count > 10 && (
+                      <Badge variant="outline" className="text-xs">
+                        <Star className="w-3 h-3 mr-1 fill-yellow-400 text-yellow-400" />
+                        Popular
+                      </Badge>
+                    )}
+                  </div>
                   <Button
                     size="sm"
                     onClick={() => handleUseTemplate(template)}
+                    className="gap-2"
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Use Template
+                    <Download className="w-4 h-4" />
+                    Use
                   </Button>
                 </div>
               </CardContent>
