@@ -1,13 +1,14 @@
-import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save } from "lucide-react";
+import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library } from "lucide-react";
 import { Button } from "./ui/button";
 import { NodeType } from "./WorkflowNode";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { IntegrationLibrary } from "./IntegrationLibrary";
 
 interface FloatingToolbarProps {
-  onAddNode: (type: NodeType) => void;
+  onAddNode: (type: NodeType, title?: string, config?: any) => void;
   workflow: any;
   onOptimized: (nodes: any[]) => void;
   onOpenAIGenerator: () => void;
@@ -95,6 +96,12 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
           <Sparkles className="w-4 h-4" />
           <span className="text-xs font-medium hidden sm:inline">AI Generator</span>
         </Button>
+
+        {/* Divider */}
+        <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
+
+        {/* Integration Library */}
+        <IntegrationLibrary onAddNode={onAddNode} />
 
         {/* Divider */}
         <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />

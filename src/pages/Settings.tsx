@@ -9,12 +9,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Bell, Shield, Loader2 } from "lucide-react";
+import { User, Bell, Shield, Loader2, Key, History } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { CredentialsManager } from "@/components/CredentialsManager";
+import { ExecutionHistoryPanel } from "@/components/ExecutionHistoryPanel";
 
 export default function Settings(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [profile, setProfile] = useState({
     full_name: "",
     email: "",
@@ -42,6 +45,17 @@ export default function Settings(): JSX.Element {
         full_name: user.user_metadata?.full_name || "",
         email: user.email || "",
       });
+
+      // Get default workspace
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("default_workspace_id")
+        .eq("id", user.id)
+        .single();
+
+      if (profileData?.default_workspace_id) {
+        setWorkspaceId(profileData.default_workspace_id);
+      }
     } catch (error: any) {
       toast({
         title: "Error loading settings",
@@ -108,7 +122,7 @@ export default function Settings(): JSX.Element {
               </div>
 
               <Tabs defaultValue="profile" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="profile">
                     <User className="w-4 h-4 mr-2" />
                     Profile
@@ -116,6 +130,14 @@ export default function Settings(): JSX.Element {
                   <TabsTrigger value="notifications">
                     <Bell className="w-4 h-4 mr-2" />
                     Notifications
+                  </TabsTrigger>
+                  <TabsTrigger value="credentials">
+                    <Key className="w-4 h-4 mr-2" />
+                    Credentials
+                  </TabsTrigger>
+                  <TabsTrigger value="history">
+                    <History className="w-4 h-4 mr-2" />
+                    History
                   </TabsTrigger>
                   <TabsTrigger value="security">
                     <Shield className="w-4 h-4 mr-2" />
@@ -207,6 +229,14 @@ export default function Settings(): JSX.Element {
                       </div>
                     </CardContent>
                   </Card>
+                </TabsContent>
+
+                <TabsContent value="credentials">
+                  {workspaceId && <CredentialsManager workspaceId={workspaceId} />}
+                </TabsContent>
+
+                <TabsContent value="history">
+                  {workspaceId && <ExecutionHistoryPanel workspaceId={workspaceId} />}
                 </TabsContent>
 
                 <TabsContent value="security">

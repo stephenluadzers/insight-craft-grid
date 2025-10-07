@@ -125,14 +125,15 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
     }
   };
 
-  const handleAddNode = (type: NodeType) => {
+  const handleAddNode = (type: NodeType, title?: string, config?: any) => {
     const newNode: WorkflowNodeData = {
       id: Date.now().toString(),
       type,
-      title: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      title: title || `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
       description: `Configure your ${type} node`,
       x: Math.random() * 300 + 100,
       y: Math.random() * 300 + 100,
+      config: config || {},
     };
     setNodes([...nodes, newNode]);
   };

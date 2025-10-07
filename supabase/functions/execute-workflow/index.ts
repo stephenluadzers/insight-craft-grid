@@ -1,15 +1,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let executionId: string | null = null;
+  
   try {
     const { nodes, triggeredBy, workspaceId, workflowId } = await req.json();
 
@@ -35,64 +43,163 @@ serve(async (req) => {
       );
     }
 
-    console.log('Executing workflow with', nodes?.length || 0, 'nodes');
+    console.log('Starting workflow execution:', { nodeCount: nodes.length, workspaceId, workflowId });
 
-    const startTime = Date.now();
+    // Create execution record
+    const { data: execution, error: execError } = await supabaseAdmin
+      .from('workflow_executions')
+      .insert({
+        workflow_id: workflowId,
+        workspace_id: workspaceId,
+        triggered_by: triggeredBy,
+        status: 'running',
+        execution_data: { triggeredAt: new Date().toISOString() }
+      })
+      .select()
+      .single();
 
-    try {
-      // Execute each node in the workflow
-      const executionData: any = {
-        steps: [],
-      };
-
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i];
-        console.log(`Executing node ${i + 1}/${nodes.length}:`, node.type, node.title);
-
-        const stepResult = await executeNode(node, executionData);
-        executionData.steps.push({
-          nodeId: node.id,
-          nodeType: node.type,
-          nodeTitle: node.title,
-          result: stepResult,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      const duration = Date.now() - startTime;
-
-      console.log('Execution completed in', duration, 'ms');
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          duration: `${duration}ms`,
-          result: executionData,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-
-    } catch (nodeError: any) {
-      const duration = Date.now() - startTime;
-      
-      console.error('Execution failed:', nodeError);
-
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: nodeError.message,
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
+    if (execError || !execution) {
+      throw new Error('Failed to create execution record');
     }
 
-  } catch (error: any) {
-    console.error('Error in execute-workflow function:', error);
+    executionId = execution.id;
+    const startTime = Date.now();
+
+    const executionData: Record<string, any> = {
+      previousResults: [],
+      triggeredAt: new Date().toISOString(),
+      triggeredBy: triggeredBy || 'manual'
+    };
+
+    let finalStatus = 'success';
+    let errorMessage = '';
+
+    // Execute each node with detailed logging and retry logic
+    for (const node of nodes) {
+      const nodeStartTime = Date.now();
+      console.log(`Executing node: ${node.id} (${node.type})`);
+      
+      let retryCount = 0;
+      const maxRetries = 3;
+      let nodeSuccess = false;
+      let nodeError = '';
+      let result: any = null;
+
+      // Log node as running
+      await supabaseAdmin.from('workflow_execution_logs').insert({
+        execution_id: executionId,
+        node_id: node.id,
+        node_type: node.type,
+        status: 'running',
+        input_data: { config: node.config, previousResults: executionData.previousResults }
+      });
+
+      while (retryCount < maxRetries && !nodeSuccess) {
+        try {
+          result = await executeNode(node, executionData);
+          nodeSuccess = true;
+          
+          executionData.previousResults.push({
+            nodeId: node.id,
+            nodeType: node.type,
+            result
+          });
+          
+          console.log(`Node ${node.id} completed successfully`);
+          
+          // Update log as success
+          await supabaseAdmin.from('workflow_execution_logs').insert({
+            execution_id: executionId,
+            node_id: node.id,
+            node_type: node.type,
+            status: 'success',
+            input_data: { config: node.config },
+            output_data: result,
+            completed_at: new Date().toISOString(),
+            duration_ms: Date.now() - nodeStartTime,
+            retry_count: retryCount
+          });
+          
+        } catch (error: any) {
+          retryCount++;
+          nodeError = error.message;
+          console.error(`Error executing node ${node.id} (attempt ${retryCount}):`, error);
+          
+          if (retryCount >= maxRetries) {
+            finalStatus = 'error';
+            errorMessage = `Node ${node.id} failed after ${maxRetries} retries: ${nodeError}`;
+            
+            // Log final error
+            await supabaseAdmin.from('workflow_execution_logs').insert({
+              execution_id: executionId,
+              node_id: node.id,
+              node_type: node.type,
+              status: 'error',
+              input_data: { config: node.config },
+              error_message: nodeError,
+              completed_at: new Date().toISOString(),
+              duration_ms: Date.now() - nodeStartTime,
+              retry_count: retryCount
+            });
+            
+            executionData.previousResults.push({
+              nodeId: node.id,
+              nodeType: node.type,
+              error: nodeError
+            });
+          } else {
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
+          }
+        }
+      }
+    }
+
+    const totalDuration = Date.now() - startTime;
+
+    // Update execution record with final status
+    await supabaseAdmin
+      .from('workflow_executions')
+      .update({
+        status: finalStatus,
+        completed_at: new Date().toISOString(),
+        duration_ms: totalDuration,
+        error_message: errorMessage || null,
+        execution_data: executionData
+      })
+      .eq('id', executionId);
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({
+        success: finalStatus === 'success',
+        executionId,
+        executionData,
+        duration: totalDuration,
+        completedAt: new Date().toISOString()
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error: any) {
+    console.error('Error in execute-workflow:', error);
+    
+    // Update execution as failed if we have an ID
+    if (executionId) {
+      await supabaseAdmin
+        .from('workflow_executions')
+        .update({
+          status: 'error',
+          error_message: error.message,
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', executionId);
+    }
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
