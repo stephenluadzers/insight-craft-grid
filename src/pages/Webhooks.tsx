@@ -8,19 +8,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Copy, Trash2, Webhook } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { CreateWebhookDialog } from "@/components/CreateWebhookDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface WebhookItem {
   id: string;
-  name: string;
-  url: string;
   workflow_id: string;
+  webhook_key: string;
   created_at: string;
-  is_active: boolean;
+  enabled: boolean;
+  workflow_name: string;
+  last_triggered_at: string | null;
 }
 
 export default function Webhooks(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [webhooks, setWebhooks] = useState<WebhookItem[]>([]);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [deleteWebhookId, setDeleteWebhookId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -36,8 +51,32 @@ export default function Webhooks(): JSX.Element {
         return;
       }
 
-      // For now, show empty state - webhook functionality to be implemented
-      setWebhooks([]);
+      const { data, error } = await supabase
+        .from("workflow_webhooks")
+        .select(`
+          id,
+          workflow_id,
+          webhook_key,
+          created_at,
+          enabled,
+          last_triggered_at,
+          workflows!inner(name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const formattedWebhooks = (data || []).map((webhook: any) => ({
+        id: webhook.id,
+        workflow_id: webhook.workflow_id,
+        webhook_key: webhook.webhook_key,
+        created_at: webhook.created_at,
+        enabled: webhook.enabled,
+        last_triggered_at: webhook.last_triggered_at,
+        workflow_name: webhook.workflows.name,
+      }));
+
+      setWebhooks(formattedWebhooks);
     } catch (error: any) {
       toast({
         title: "Error loading webhooks",
@@ -49,12 +88,48 @@ export default function Webhooks(): JSX.Element {
     }
   };
 
-  const copyWebhookUrl = (url: string) => {
+  const getWebhookUrl = (webhookKey: string) => {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    return `${supabaseUrl}/functions/v1/trigger-webhook?key=${webhookKey}`;
+  };
+
+  const copyWebhookUrl = (webhookKey: string) => {
+    const url = getWebhookUrl(webhookKey);
     navigator.clipboard.writeText(url);
     toast({
       title: "Copied to clipboard",
       description: "Webhook URL has been copied",
     });
+  };
+
+  const handleDelete = async () => {
+    if (!deleteWebhookId) return;
+
+    try {
+      setDeleting(true);
+      const { error } = await supabase
+        .from("workflow_webhooks")
+        .delete()
+        .eq("id", deleteWebhookId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Webhook deleted",
+        description: "The webhook has been deleted successfully.",
+      });
+
+      setDeleteWebhookId(null);
+      loadWebhooks();
+    } catch (error: any) {
+      toast({
+        title: "Error deleting webhook",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
@@ -85,7 +160,7 @@ export default function Webhooks(): JSX.Element {
                     Create and manage webhook triggers for your workflows
                   </p>
                 </div>
-                <Button>
+                <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Webhook
                 </Button>
@@ -99,7 +174,7 @@ export default function Webhooks(): JSX.Element {
                     <p className="text-muted-foreground text-center mb-4">
                       Create your first webhook to trigger workflows from external services
                     </p>
-                    <Button>
+                    <Button onClick={() => setCreateDialogOpen(true)}>
                       <Plus className="w-4 h-4 mr-2" />
                       Create Your First Webhook
                     </Button>
@@ -111,40 +186,79 @@ export default function Webhooks(): JSX.Element {
                     <Card key={webhook.id}>
                       <CardHeader>
                         <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="flex items-center gap-2">
-                              {webhook.name}
-                              <Badge variant={webhook.is_active ? "default" : "secondary"}>
-                                {webhook.is_active ? "Active" : "Inactive"}
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="flex items-center gap-2 mb-2">
+                              {webhook.workflow_name}
+                              <Badge variant={webhook.enabled ? "default" : "secondary"}>
+                                {webhook.enabled ? "Enabled" : "Disabled"}
                               </Badge>
                             </CardTitle>
-                            <CardDescription className="mt-2 font-mono text-xs">
-                              {webhook.url}
+                            <CardDescription className="mt-2 font-mono text-xs break-all">
+                              {getWebhookUrl(webhook.webhook_key)}
                             </CardDescription>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 ml-4">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => copyWebhookUrl(webhook.url)}
+                              onClick={() => copyWebhookUrl(webhook.webhook_key)}
                             >
                               <Copy className="w-4 h-4" />
                             </Button>
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDeleteWebhookId(webhook.id)}
+                            >
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm text-muted-foreground">
-                          Created {new Date(webhook.created_at).toLocaleDateString()}
-                        </p>
+                        <div className="flex gap-4 text-sm text-muted-foreground">
+                          <span>Created {new Date(webhook.created_at).toLocaleDateString()}</span>
+                          {webhook.last_triggered_at && (
+                            <span>
+                              Last triggered {new Date(webhook.last_triggered_at).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               )}
+
+              <CreateWebhookDialog
+                open={createDialogOpen}
+                onOpenChange={setCreateDialogOpen}
+                onWebhookCreated={loadWebhooks}
+              />
+
+              <AlertDialog open={!!deleteWebhookId} onOpenChange={() => setDeleteWebhookId(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Webhook</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this webhook? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+                      {deleting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        "Delete"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </main>
         </div>

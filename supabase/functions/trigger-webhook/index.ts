@@ -12,12 +12,18 @@ serve(async (req) => {
   }
 
   try {
-    // Get webhook key from header (more secure than query params)
-    const webhookKey = req.headers.get('x-webhook-key');
+    // Get webhook key from header or query param
+    let webhookKey = req.headers.get('x-webhook-key');
+    
+    // Also support query parameter for easier testing
+    if (!webhookKey) {
+      const url = new URL(req.url);
+      webhookKey = url.searchParams.get('key');
+    }
 
     if (!webhookKey) {
       return new Response(
-        JSON.stringify({ error: 'Webhook key is required in X-Webhook-Key header' }),
+        JSON.stringify({ error: 'Webhook key is required in X-Webhook-Key header or key query parameter' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
