@@ -62,6 +62,231 @@ export type Database = {
           },
         ]
       }
+      backup_metadata: {
+        Row: {
+          backup_type: string
+          completed_at: string
+          created_by: string | null
+          error_message: string | null
+          execution_count: number
+          id: string
+          size_bytes: number
+          started_at: string
+          status: string
+          storage_path: string
+          verified: boolean
+          verified_at: string | null
+          workflow_count: number
+          workspace_id: string
+        }
+        Insert: {
+          backup_type: string
+          completed_at: string
+          created_by?: string | null
+          error_message?: string | null
+          execution_count: number
+          id?: string
+          size_bytes: number
+          started_at: string
+          status: string
+          storage_path: string
+          verified?: boolean
+          verified_at?: string | null
+          workflow_count: number
+          workspace_id: string
+        }
+        Update: {
+          backup_type?: string
+          completed_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          execution_count?: number
+          id?: string
+          size_bytes?: number
+          started_at?: string
+          status?: string
+          storage_path?: string
+          verified?: boolean
+          verified_at?: string | null
+          workflow_count?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "backup_metadata_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credential_rotation_log: {
+        Row: {
+          credential_id: string
+          id: string
+          old_credential_hash: string
+          reason: string | null
+          rotated_at: string
+          rotated_by: string
+          rotation_type: string
+          success: boolean
+          workspace_id: string
+        }
+        Insert: {
+          credential_id: string
+          id?: string
+          old_credential_hash: string
+          reason?: string | null
+          rotated_at?: string
+          rotated_by: string
+          rotation_type: string
+          success?: boolean
+          workspace_id: string
+        }
+        Update: {
+          credential_id?: string
+          id?: string
+          old_credential_hash?: string
+          reason?: string | null
+          rotated_at?: string
+          rotated_by?: string
+          rotation_type?: string
+          success?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credential_rotation_log_credential_id_fkey"
+            columns: ["credential_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_credentials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credential_rotation_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      error_aggregation: {
+        Row: {
+          error_message: string
+          error_type: string
+          fingerprint: string
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          node_ids: string[] | null
+          occurrence_count: number
+          resolution_notes: string | null
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          workflow_ids: string[] | null
+          workspace_id: string
+        }
+        Insert: {
+          error_message: string
+          error_type: string
+          fingerprint: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          node_ids?: string[] | null
+          occurrence_count?: number
+          resolution_notes?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          workflow_ids?: string[] | null
+          workspace_id: string
+        }
+        Update: {
+          error_message?: string
+          error_type?: string
+          fingerprint?: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          node_ids?: string[] | null
+          occurrence_count?: number
+          resolution_notes?: string | null
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          workflow_ids?: string[] | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "error_aggregation_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_circuit_breakers: {
+        Row: {
+          created_at: string
+          failure_count: number
+          failure_threshold: number
+          half_open_at: string | null
+          id: string
+          integration_type: string
+          last_failure_at: string | null
+          opened_at: string | null
+          state: Database["public"]["Enums"]["circuit_state"]
+          success_count: number
+          timeout_duration_seconds: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          failure_count?: number
+          failure_threshold?: number
+          half_open_at?: string | null
+          id?: string
+          integration_type: string
+          last_failure_at?: string | null
+          opened_at?: string | null
+          state?: Database["public"]["Enums"]["circuit_state"]
+          success_count?: number
+          timeout_duration_seconds?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          failure_count?: number
+          failure_threshold?: number
+          half_open_at?: string | null
+          id?: string
+          integration_type?: string
+          last_failure_at?: string | null
+          opened_at?: string | null
+          state?: Database["public"]["Enums"]["circuit_state"]
+          success_count?: number
+          timeout_duration_seconds?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_circuit_breakers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_templates: {
         Row: {
           category: string
@@ -257,6 +482,73 @@ export type Database = {
           },
         ]
       }
+      workflow_dead_letter_queue: {
+        Row: {
+          execution_data: Json | null
+          failed_at: string
+          failure_count: number
+          id: string
+          investigated: boolean
+          last_error: string
+          queue_item_id: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          execution_data?: Json | null
+          failed_at?: string
+          failure_count: number
+          id?: string
+          investigated?: boolean
+          last_error: string
+          queue_item_id: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          execution_data?: Json | null
+          failed_at?: string
+          failure_count?: number
+          id?: string
+          investigated?: boolean
+          last_error?: string
+          queue_item_id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_dead_letter_queue_queue_item_id_fkey"
+            columns: ["queue_item_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_execution_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_dead_letter_queue_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_dead_letter_queue_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_execution_logs: {
         Row: {
           completed_at: string | null
@@ -306,6 +598,75 @@ export type Database = {
             columns: ["execution_id"]
             isOneToOne: false
             referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_execution_queue: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          error_message: string | null
+          execution_data: Json | null
+          id: string
+          max_retries: number
+          next_retry_at: string | null
+          priority: Database["public"]["Enums"]["queue_priority"]
+          retry_count: number
+          scheduled_at: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["queue_status"]
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          error_message?: string | null
+          execution_data?: Json | null
+          id?: string
+          max_retries?: number
+          next_retry_at?: string | null
+          priority?: Database["public"]["Enums"]["queue_priority"]
+          retry_count?: number
+          scheduled_at?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["queue_status"]
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error_message?: string | null
+          execution_data?: Json | null
+          id?: string
+          max_retries?: number
+          next_retry_at?: string | null
+          priority?: Database["public"]["Enums"]["queue_priority"]
+          retry_count?: number
+          scheduled_at?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["queue_status"]
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_execution_queue_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_execution_queue_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -437,6 +798,73 @@ export type Database = {
           },
           {
             foreignKeyName: "workflow_executions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_performance_metrics: {
+        Row: {
+          api_calls: number | null
+          cpu_usage_percent: number | null
+          data_transferred_kb: number | null
+          execution_id: string | null
+          execution_time_ms: number
+          id: string
+          memory_usage_mb: number | null
+          node_id: string
+          node_type: string
+          recorded_at: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          api_calls?: number | null
+          cpu_usage_percent?: number | null
+          data_transferred_kb?: number | null
+          execution_id?: string | null
+          execution_time_ms: number
+          id?: string
+          memory_usage_mb?: number | null
+          node_id: string
+          node_type: string
+          recorded_at?: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          api_calls?: number | null
+          cpu_usage_percent?: number | null
+          data_transferred_kb?: number | null
+          execution_id?: string | null
+          execution_time_ms?: number
+          id?: string
+          memory_usage_mb?: number | null
+          node_id?: string
+          node_type?: string
+          recorded_at?: string
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_performance_metrics_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_performance_metrics_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_performance_metrics_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -784,6 +1212,62 @@ export type Database = {
           },
         ]
       }
+      workspace_rate_limits: {
+        Row: {
+          current_day_count: number
+          current_hour_count: number
+          current_minute_count: number
+          day_reset_at: string
+          hour_reset_at: string
+          id: string
+          limit_per_day: number
+          limit_per_hour: number
+          limit_per_minute: number
+          minute_reset_at: string
+          resource_type: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          current_day_count?: number
+          current_hour_count?: number
+          current_minute_count?: number
+          day_reset_at?: string
+          hour_reset_at?: string
+          id?: string
+          limit_per_day?: number
+          limit_per_hour?: number
+          limit_per_minute?: number
+          minute_reset_at?: string
+          resource_type: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          current_day_count?: number
+          current_hour_count?: number
+          current_minute_count?: number
+          day_reset_at?: string
+          hour_reset_at?: string
+          id?: string
+          limit_per_day?: number
+          limit_per_hour?: number
+          limit_per_minute?: number
+          minute_reset_at?: string
+          resource_type?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_rate_limits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspaces: {
         Row: {
           created_at: string
@@ -822,6 +1306,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_next_retry: {
+        Args: { base_delay_seconds?: number; retry_count: number }
+        Returns: string
+      }
       get_webhook_logs: {
         Args: { _limit?: number; _webhook_id: string }
         Returns: {
@@ -874,12 +1362,20 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "admin" | "editor" | "viewer"
+      circuit_state: "closed" | "open" | "half_open"
       execution_status:
         | "pending"
         | "running"
         | "success"
         | "failed"
         | "cancelled"
+      queue_priority: "low" | "normal" | "high" | "critical"
+      queue_status:
+        | "pending"
+        | "processing"
+        | "completed"
+        | "failed"
+        | "dead_letter"
       workflow_status: "draft" | "published" | "archived"
       workspace_plan: "free" | "pro" | "enterprise"
     }
@@ -1010,12 +1506,21 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "admin", "editor", "viewer"],
+      circuit_state: ["closed", "open", "half_open"],
       execution_status: [
         "pending",
         "running",
         "success",
         "failed",
         "cancelled",
+      ],
+      queue_priority: ["low", "normal", "high", "critical"],
+      queue_status: [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "dead_letter",
       ],
       workflow_status: ["draft", "published", "archived"],
       workspace_plan: ["free", "pro", "enterprise"],

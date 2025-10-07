@@ -9,13 +9,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Bell, Shield, Loader2, Key, History, Activity, Building2 } from "lucide-react";
+import { User, Bell, Shield, Loader2, Key, History, Activity, Building2, TrendingUp, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CredentialsManager } from "@/components/CredentialsManager";
 import { ExecutionHistoryPanel } from "@/components/ExecutionHistoryPanel";
 import { EnhancedExecutionTimeline } from "@/components/EnhancedExecutionTimeline";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { EnterpriseReadinessGuide } from "@/components/EnterpriseReadinessGuide";
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
+import { DeadLetterQueuePanel } from "@/components/DeadLetterQueuePanel";
+import { CircuitBreakerStatus } from "@/components/CircuitBreakerStatus";
+import { ErrorAggregationDashboard } from "@/components/ErrorAggregationDashboard";
 
 export default function Settings(): JSX.Element {
   const [loading, setLoading] = useState(true);
@@ -125,7 +129,7 @@ export default function Settings(): JSX.Element {
               </div>
 
               <Tabs defaultValue="profile" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-7 gap-1 h-auto p-1">
+                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 gap-1 h-auto p-1">
                   <TabsTrigger value="profile" className="flex items-center justify-center gap-2">
                     <User className="w-4 h-4" />
                     <span className="hidden md:inline">Profile</span>
@@ -145,6 +149,14 @@ export default function Settings(): JSX.Element {
                   <TabsTrigger value="activity" className="flex items-center justify-center gap-2">
                     <Activity className="w-4 h-4" />
                     <span className="hidden md:inline">Activity</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="performance" className="flex items-center justify-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    <span className="hidden md:inline">Performance</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="errors" className="flex items-center justify-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span className="hidden md:inline">Errors</span>
                   </TabsTrigger>
                   <TabsTrigger value="enterprise" className="flex items-center justify-center gap-2">
                     <Building2 className="w-4 h-4" />
@@ -287,6 +299,46 @@ export default function Settings(): JSX.Element {
                         <CardTitle>Activity Feed</CardTitle>
                         <CardDescription>
                           Track recent activity in your workspace
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found. Please create a workspace first.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="performance">
+                  {workspaceId ? (
+                    <PerformanceMonitor workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Performance Monitoring</CardTitle>
+                        <CardDescription>
+                          Real-time workflow performance analytics
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found. Please create a workspace first.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="errors">
+                  {workspaceId ? (
+                    <div className="space-y-6">
+                      <ErrorAggregationDashboard workspaceId={workspaceId} />
+                      <DeadLetterQueuePanel workspaceId={workspaceId} />
+                      <CircuitBreakerStatus workspaceId={workspaceId} />
+                    </div>
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Error Monitoring</CardTitle>
+                        <CardDescription>
+                          Track and resolve workflow errors
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
