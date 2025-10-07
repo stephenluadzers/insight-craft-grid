@@ -15,11 +15,14 @@ serve(async (req) => {
   }
 
   try {
-    // Verify JWT authentication
+    console.log('Received image analysis request');
+    
+    // Verify JWT authentication for security
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
+      console.error('Missing authorization header');
       return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
+        JSON.stringify({ error: 'Authentication required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -33,12 +36,15 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
+      console.error('Authentication failed:', authError);
       return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
+        JSON.stringify({ error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('User authenticated:', user.id);
+    
     const { image } = await req.json();
     
     // Input validation
@@ -75,16 +81,22 @@ serve(async (req) => {
 
     console.log('Analyzing workflow image with Gemini vision...');
 
-    // Use Gemini 2.5 Flash for vision analysis (free during promo)
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s timeout (Edge Functions have 60s limit)
+
+    try {
+      // Use Gemini 2.5 Flash for vision analysis (free during promo)
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
           {
             role: 'system',
             content: `You are an Expert Workflow Understanding Engine. Analyze images containing workflows, diagrams, sketches, or process descriptions and extract structured workflow data.
@@ -132,6 +144,8 @@ Return ONLY valid JSON in this exact format:
       }),
     });
 
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(
@@ -177,10 +191,26 @@ Return ONLY valid JSON in this exact format:
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
+    } catch (aiError) {
+      clearTimeout(timeoutId);
+      if (aiError instanceof Error && aiError.name === 'AbortError') {
+        console.error('AI request timed out');
+        return new Response(
+          JSON.stringify({ error: 'Request timed out. Please try with a smaller image.' }),
+          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      throw aiError;
+    }
+
   } catch (error) {
     console.error('Error in analyze-workflow-image:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? error.stack : undefined
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
