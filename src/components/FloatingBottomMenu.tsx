@@ -133,124 +133,122 @@ export function FloatingBottomMenu({
 
       {/* Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t shadow-lg z-50">
-        <div className="px-4 py-2.5 flex items-center gap-3 overflow-x-auto">
-          {/* Menu Button */}
-          <Button
-            size="lg"
-            className="h-10 w-10 rounded-full shadow-lg p-0 flex-shrink-0"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </Button>
-          
-          {/* Current View Label */}
-          {currentItem && (
-            <>
-              <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="px-3 py-3 flex items-center gap-2 overflow-x-auto">
+          {/* Navigation Section */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 rounded-lg shadow-sm"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? (
+                <>
+                  <X className="h-4 w-4 mr-1.5" />
+                  <span className="text-xs font-medium">Close</span>
+                </>
+              ) : (
+                <>
+                  <Menu className="h-4 w-4 mr-1.5" />
+                  <span className="text-xs font-medium">Menu</span>
+                </>
+              )}
+            </Button>
+            
+            {currentItem && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/50">
                 <Icon className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm font-medium">{currentItem.label}</p>
+                <span className="text-xs font-medium">{currentItem.label}</span>
               </div>
-              <div className="w-px h-6 bg-border flex-shrink-0" />
-            </>
-          )}
+            )}
+          </div>
 
-          {/* Canvas Controls - Only show when on canvas view */}
-          {currentView === 'canvas' && onAddNode && (
+          {/* Canvas Tools - Only visible on canvas view */}
+          {currentView === 'canvas' && (
             <>
-              {/* AI Generator */}
-              <Button
-                onClick={onOpenAIGenerator}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "flex items-center gap-2 rounded-xl flex-shrink-0",
-                  "bg-gradient-accent hover:shadow-glow",
-                  "text-primary-foreground"
-                )}
-              >
-                <Sparkles className="w-4 h-4" />
-                <span className="text-xs font-medium hidden sm:inline">AI Generator</span>
-              </Button>
+              <div className="w-px h-6 bg-border flex-shrink-0 mx-1" />
+              
+              {/* AI Tools Group */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  onClick={onOpenAIGenerator}
+                  size="sm"
+                  className={cn(
+                    "h-9 rounded-lg shadow-sm",
+                    "bg-gradient-accent hover:shadow-glow",
+                    "text-primary-foreground"
+                  )}
+                >
+                  <Sparkles className="w-4 h-4 mr-1.5" />
+                  <span className="text-xs font-medium">AI Generator</span>
+                </Button>
 
-              <div className="w-px h-6 bg-border flex-shrink-0" />
+                <Button
+                  onClick={onOptimize}
+                  disabled={isOptimizing || !workflow?.nodes?.length}
+                  size="sm"
+                  variant="outline"
+                  className="h-9 rounded-lg shadow-sm"
+                >
+                  {isOptimizing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      <span className="text-xs font-medium">Optimizing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 mr-1.5" />
+                      <span className="text-xs font-medium">AI Optimize</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="w-px h-6 bg-border flex-shrink-0 mx-1" />
 
               {/* Integration Library */}
               <IntegrationLibrary onAddNode={onAddNode} />
 
-              <div className="w-px h-6 bg-border flex-shrink-0" />
+              <div className="w-px h-6 bg-border flex-shrink-0 mx-1" />
 
-              {/* Add Node Buttons */}
-              {nodeButtons.map(({ type, icon: NodeIcon, label }) => (
-                <Button
-                  key={type}
-                  onClick={() => onAddNode(type)}
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "flex items-center gap-2 rounded-xl transition-all flex-shrink-0",
-                    "hover:bg-primary hover:text-primary-foreground",
-                    "active:scale-95"
-                  )}
-                >
-                  <NodeIcon className="w-4 h-4" />
-                  <span className="text-xs font-medium hidden sm:inline">{label}</span>
-                </Button>
-              ))}
+              {/* Node Types Group */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {nodeButtons.map(({ type, icon: NodeIcon, label }) => (
+                  <Button
+                    key={type}
+                    onClick={() => onAddNode(type)}
+                    variant="outline"
+                    size="sm"
+                    className="h-9 rounded-lg shadow-sm hover:bg-primary hover:text-primary-foreground transition-all"
+                  >
+                    <NodeIcon className="w-4 h-4 mr-1.5" />
+                    <span className="text-xs font-medium">{label}</span>
+                  </Button>
+                ))}
+              </div>
 
-              <div className="w-px h-6 bg-border flex-shrink-0" />
-
-              {/* AI Optimizer */}
-              <Button
-                onClick={onOptimize}
-                disabled={isOptimizing || !workflow?.nodes?.length}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "flex items-center gap-2 rounded-xl flex-shrink-0",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  "disabled:opacity-50 disabled:pointer-events-none"
-                )}
-              >
-                {isOptimizing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-xs font-medium hidden sm:inline">Optimizing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span className="text-xs font-medium hidden sm:inline">AI Optimize</span>
-                  </>
-                )}
-              </Button>
-
-              <div className="w-px h-6 bg-border flex-shrink-0" />
+              <div className="w-px h-6 bg-border flex-shrink-0 mx-1" />
 
               {/* Save Button */}
               <Button
                 onClick={onSave}
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="flex items-center gap-2 rounded-xl hover:bg-accent hover:text-accent-foreground flex-shrink-0"
+                className="h-9 rounded-lg shadow-sm hover:bg-accent hover:text-accent-foreground flex-shrink-0"
               >
-                <Save className="w-4 h-4" />
-                <span className="text-xs font-medium hidden sm:inline">Save</span>
+                <Save className="w-4 h-4 mr-1.5" />
+                <span className="text-xs font-medium">Save</span>
               </Button>
-
-              <div className="w-px h-6 bg-border flex-shrink-0" />
             </>
           )}
 
-          {/* Theme Toggle - Always visible */}
+          {/* Theme Toggle - Always visible at the end */}
+          <div className="w-px h-6 bg-border flex-shrink-0 mx-1 ml-auto" />
           <Button
             onClick={toggleTheme}
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="rounded-xl hover:bg-accent hover:text-accent-foreground flex-shrink-0 ml-auto"
+            className="h-9 rounded-lg shadow-sm hover:bg-accent hover:text-accent-foreground flex-shrink-0"
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
