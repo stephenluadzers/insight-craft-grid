@@ -4,8 +4,10 @@ import { AppSidebar } from "@/components/AppSidebar";
 import AIAgentBuilder from '@/components/AIAgentBuilder';
 import TemplateMarketplace from '@/components/TemplateMarketplace';
 import CollaborativeWorkspace from '@/components/CollaborativeWorkspace';
+import TriggerConfiguration from '@/components/TriggerConfiguration';
+import EmbeddableAgent from '@/components/EmbeddableAgent';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, Store, Users } from 'lucide-react';
+import { Sparkles, Store, Users, Zap, Code2 } from 'lucide-react';
 
 const Index = (): JSX.Element => {
   const handleAIWorkflowGenerated = (workflow: any) => {
@@ -30,11 +32,19 @@ const Index = (): JSX.Element => {
           </div>
 
           <Tabs defaultValue="canvas" className="flex-1">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="canvas">Canvas</TabsTrigger>
               <TabsTrigger value="ai-builder">
                 <Sparkles className="h-4 w-4 mr-2" />
                 AI Builder
+              </TabsTrigger>
+              <TabsTrigger value="triggers">
+                <Zap className="h-4 w-4 mr-2" />
+                Triggers
+              </TabsTrigger>
+              <TabsTrigger value="embed">
+                <Code2 className="h-4 w-4 mr-2" />
+                Embed
               </TabsTrigger>
               <TabsTrigger value="marketplace">
                 <Store className="h-4 w-4 mr-2" />
@@ -52,6 +62,17 @@ const Index = (): JSX.Element => {
 
             <TabsContent value="ai-builder" className="mt-6">
               <AIAgentBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />
+            </TabsContent>
+
+            <TabsContent value="triggers" className="mt-6">
+              <TriggerConfiguration 
+                workflowId="demo-workflow" 
+                onTriggerCreated={(trigger) => console.log('Trigger created:', trigger)} 
+              />
+            </TabsContent>
+
+            <TabsContent value="embed" className="mt-6">
+              <EmbeddableAgent workflowId="demo-workflow" />
             </TabsContent>
 
             <TabsContent value="marketplace" className="mt-6">
