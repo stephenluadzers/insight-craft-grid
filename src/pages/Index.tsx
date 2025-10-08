@@ -35,7 +35,7 @@ const Index = (): JSX.Element => {
             <p className="text-muted-foreground mt-1">AI-powered automation with enterprise security</p>
           </div>
 
-          <div className="flex-1 p-6 overflow-auto">
+          <div className="flex-1 p-6 pb-20 overflow-auto">
             {currentView === 'canvas' && <WorkflowCanvas />}
             {currentView === 'ai-builder' && <AIAgentBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />}
             {currentView === 'triggers' && <TriggerConfiguration workflowId="demo-workflow" onTriggerCreated={(trigger) => console.log('Trigger created:', trigger)} />}
