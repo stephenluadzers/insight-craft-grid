@@ -40,20 +40,21 @@ export function FloatingBottomMenu({ onSelectView, currentView }: FloatingBottom
         />
       )}
 
-      {/* Expanded Menu Panel */}
+      {/* Menu Panel - positioned above the floating button */}
       <div 
         className={`
-          fixed bottom-16 left-0 right-0 bg-card border-t shadow-2xl z-50 
-          transition-all duration-300 ease-out mx-auto max-w-4xl
-          ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full pointer-events-none'}
+          fixed bottom-24 left-6 bg-card border rounded-lg shadow-2xl z-50 
+          transition-all duration-300 ease-out
+          ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
         `}
+        style={{ width: '360px' }}
       >
         <div className="p-4 border-b">
           <h3 className="font-semibold text-lg">Quick Navigation</h3>
           <p className="text-sm text-muted-foreground">Switch between views</p>
         </div>
-        <ScrollArea className="h-[400px]">
-          <div className="p-2 grid grid-cols-2 gap-2">
+        <ScrollArea className="h-[500px]">
+          <div className="p-2">
             {menuItems.map((item) => {
               const ItemIcon = item.icon;
               const isActive = currentView === item.id;
@@ -66,7 +67,7 @@ export function FloatingBottomMenu({ onSelectView, currentView }: FloatingBottom
                     setIsOpen(false);
                   }}
                   className={`
-                    flex items-start gap-3 p-3 rounded-lg
+                    w-full flex items-start gap-3 p-3 rounded-lg mb-1
                     transition-colors duration-200
                     ${isActive 
                       ? 'bg-primary text-primary-foreground' 
@@ -88,28 +89,25 @@ export function FloatingBottomMenu({ onSelectView, currentView }: FloatingBottom
         </ScrollArea>
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              size="sm"
-              variant={isOpen ? "secondary" : "ghost"}
-              onClick={() => setIsOpen(!isOpen)}
-              className="gap-2"
-            >
-              {isOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-              <span className="hidden sm:inline">Quick Nav</span>
-            </Button>
-            {currentItem && (
-              <div className="flex items-center gap-2 text-sm">
-                <Icon className="h-4 w-4" />
-                <span className="font-medium">{currentItem.label}</span>
-              </div>
-            )}
-          </div>
+      {/* Floating Button */}
+      <Button
+        size="lg"
+        className="fixed bottom-6 left-6 z-50 h-14 w-14 rounded-full shadow-2xl p-0"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {isOpen ? (
+          <X className="h-6 w-6" />
+        ) : (
+          <Icon className="h-6 w-6" />
+        )}
+      </Button>
+
+      {/* Label when closed */}
+      {!isOpen && currentItem && (
+        <div className="fixed bottom-6 left-24 z-50 bg-card border rounded-lg shadow-lg px-4 py-2.5 pointer-events-none">
+          <p className="text-sm font-medium">{currentItem.label}</p>
         </div>
-      </div>
+      )}
     </>
   );
 }

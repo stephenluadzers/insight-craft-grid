@@ -30,12 +30,7 @@ const Index = (): JSX.Element => {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
-          <div className="p-6 border-b bg-card">
-            <h1 className="text-3xl font-bold tracking-tight">Enterprise Workflow Platform</h1>
-            <p className="text-muted-foreground mt-1">AI-powered automation with enterprise security</p>
-          </div>
-
-          <div className="flex-1 p-6 pb-20 overflow-auto">
+          <div className="flex-1 p-6 overflow-auto">
             {currentView === 'canvas' && <WorkflowCanvas />}
             {currentView === 'ai-builder' && <AIAgentBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />}
             {currentView === 'triggers' && <TriggerConfiguration workflowId="demo-workflow" onTriggerCreated={(trigger) => console.log('Trigger created:', trigger)} />}
