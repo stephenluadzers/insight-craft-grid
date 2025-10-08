@@ -3,7 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Wand2, FileCode, Image, Mic } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sparkles, Wand2, FileCode, Image, Mic, Eye, Code2, MessageSquare, Lightbulb, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -14,6 +17,8 @@ interface AIAgentBuilderProps {
 const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedWorkflow, setGeneratedWorkflow] = useState<any>(null);
+  const [explanation, setExplanation] = useState('');
   const { toast } = useToast();
 
   const handleGenerate = async () => {
@@ -34,17 +39,18 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
 
       if (error) throw error;
 
-      toast({
-        title: "Workflow Generated",
-        description: "Your AI-powered workflow is ready",
-      });
-
-      onWorkflowGenerated({
+      const workflow = {
         nodes: data.nodes || [],
         explanation: data.explanation || ''
-      });
+      };
+      
+      setGeneratedWorkflow(workflow);
+      setExplanation(data.explanation || '');
 
-      setPrompt('');
+      toast({
+        title: "Workflow Generated",
+        description: "Review your AI-powered workflow in the preview panel",
+      });
     } catch (error: any) {
       console.error('Error generating workflow:', error);
       toast({
@@ -85,18 +91,33 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
     }
   ];
 
+  const handleApplyWorkflow = () => {
+    if (generatedWorkflow) {
+      onWorkflowGenerated(generatedWorkflow);
+      toast({
+        title: "Workflow Applied",
+        description: "The workflow has been added to your canvas",
+      });
+      setPrompt('');
+      setGeneratedWorkflow(null);
+      setExplanation('');
+    }
+  };
+
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <CardTitle>AI Workflow Builder</CardTitle>
-        </div>
-        <CardDescription>
-          Describe your workflow in plain English and let AI build it for you
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+      {/* Input Panel */}
+      <Card className="border-primary/20 bg-gradient-to-br from-background to-primary/5">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <CardTitle>AI Workflow Builder</CardTitle>
+          </div>
+          <CardDescription>
+            Describe your workflow in plain English and let AI build it for you
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
         {/* Quick Prompts */}
         <div className="space-y-3">
           <label className="text-sm font-medium">Quick Start Templates</label>
@@ -149,23 +170,149 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
           )}
         </Button>
 
-        {/* Features Badge */}
-        <div className="flex flex-wrap gap-2 pt-4 border-t">
-          <Badge variant="secondary" className="text-xs">
-            Multi-Model Support
-          </Badge>
-          <Badge variant="secondary" className="text-xs">
-            Security Scanning
-          </Badge>
-          <Badge variant="secondary" className="text-xs">
-            Enterprise Ready
-          </Badge>
-          <Badge variant="secondary" className="text-xs">
-            Version Control
-          </Badge>
-        </div>
-      </CardContent>
-    </Card>
+          {/* Helpful Tips */}
+          <Alert className="bg-primary/5 border-primary/20">
+            <Lightbulb className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-sm">
+              <strong>Tips:</strong> Be specific about inputs, conditions, and desired outputs. 
+              Mention integrations by name (e.g., "send via Slack", "store in database").
+            </AlertDescription>
+          </Alert>
+
+          {/* Features Badge */}
+          <div className="flex flex-wrap gap-2 pt-4 border-t">
+            <Badge variant="secondary" className="text-xs">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Multi-Model Support
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Security Scanning
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Enterprise Ready
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview Panel */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-primary" />
+              <CardTitle>Workflow Preview</CardTitle>
+            </div>
+            {generatedWorkflow && (
+              <Button onClick={handleApplyWorkflow} size="sm">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Apply to Canvas
+              </Button>
+            )}
+          </div>
+          <CardDescription>
+            Review and understand your generated workflow
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!generatedWorkflow ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+              <div className="rounded-full bg-primary/10 p-6">
+                <MessageSquare className="h-12 w-12 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-semibold text-lg">No Workflow Generated Yet</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Describe your workflow using the builder on the left, and watch as AI generates 
+                  a complete automation workflow for you.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <Tabs defaultValue="explanation" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="explanation">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Explanation
+                </TabsTrigger>
+                <TabsTrigger value="structure">
+                  <Code2 className="h-4 w-4 mr-2" />
+                  Structure
+                </TabsTrigger>
+                <TabsTrigger value="nodes">
+                  <FileCode className="h-4 w-4 mr-2" />
+                  Nodes ({generatedWorkflow.nodes.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="explanation" className="mt-4">
+                <ScrollArea className="h-[500px] pr-4">
+                  <div className="space-y-4">
+                    <Alert className="bg-primary/5 border-primary/20">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <AlertDescription className="text-sm leading-relaxed">
+                        {explanation || 'AI-generated workflow ready to use'}
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm">Workflow Steps:</h4>
+                      {generatedWorkflow.nodes.map((node: any, idx: number) => (
+                        <div key={idx} className="p-4 rounded-lg border bg-card space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              Step {idx + 1}
+                            </Badge>
+                            <span className="font-medium text-sm">{node.type}</span>
+                          </div>
+                          {node.config?.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {node.config.description}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="structure" className="mt-4">
+                <ScrollArea className="h-[500px]">
+                  <pre className="text-xs bg-muted p-4 rounded-lg overflow-x-auto">
+                    {JSON.stringify(generatedWorkflow, null, 2)}
+                  </pre>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="nodes" className="mt-4">
+                <ScrollArea className="h-[500px] pr-4">
+                  <div className="space-y-3">
+                    {generatedWorkflow.nodes.map((node: any, idx: number) => (
+                      <Card key={idx}>
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm">{node.type}</CardTitle>
+                            <Badge>{node.id}</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="text-xs">
+                          <pre className="bg-muted p-3 rounded overflow-x-auto">
+                            {JSON.stringify(node, null, 2)}
+                          </pre>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
