@@ -1,18 +1,60 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Sparkles, Store, Users, Zap, Code2, Bug, TestTube, 
-  BarChart3, DollarSign, Menu, X, Layout
+  BarChart3, DollarSign, Menu, X, Layout, Mail, Database, 
+  FileText, Image as ImageIcon, Moon, Sun, Loader2, Save
 } from "lucide-react";
+import { NodeType } from "./WorkflowNode";
+import { cn } from "@/lib/utils";
+import { IntegrationLibrary } from "./IntegrationLibrary";
 
 interface FloatingBottomMenuProps {
   onSelectView: (view: string) => void;
   currentView: string;
+  // Canvas-specific props
+  onAddNode?: (type: NodeType, title?: string, config?: any) => void;
+  workflow?: any;
+  onOptimized?: (nodes: any[]) => void;
+  onOpenAIGenerator?: () => void;
+  onSave?: () => void;
+  isOptimizing?: boolean;
+  onOptimize?: () => void;
 }
 
-export function FloatingBottomMenu({ onSelectView, currentView }: FloatingBottomMenuProps) {
+const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = [
+  { type: "trigger", icon: Zap, label: "Trigger" },
+  { type: "action", icon: Mail, label: "Action" },
+  { type: "condition", icon: FileText, label: "Condition" },
+  { type: "data", icon: Database, label: "Data" },
+  { type: "ai", icon: ImageIcon, label: "AI" },
+];
+
+export function FloatingBottomMenu({ 
+  onSelectView, 
+  currentView,
+  onAddNode,
+  workflow,
+  onOptimized,
+  onOpenAIGenerator,
+  onSave,
+  isOptimizing = false,
+  onOptimize
+}: FloatingBottomMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const dark = document.documentElement.classList.contains("dark");
+    setIsDark(dark);
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDark;
+    setIsDark(newTheme);
+    document.documentElement.classList.toggle("dark", newTheme);
+  };
 
   const menuItems = [
     { id: 'canvas', label: 'Canvas', icon: Layout, description: 'Visual workflow builder' },
@@ -90,11 +132,12 @@ export function FloatingBottomMenu({ onSelectView, currentView }: FloatingBottom
       </div>
 
       {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg z-50">
-        <div className="px-4 py-3 flex items-center gap-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t shadow-lg z-50">
+        <div className="px-4 py-2.5 flex items-center gap-3 overflow-x-auto">
+          {/* Menu Button */}
           <Button
             size="lg"
-            className="h-12 w-12 rounded-full shadow-lg p-0 flex-shrink-0"
+            className="h-10 w-10 rounded-full shadow-lg p-0 flex-shrink-0"
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? (
@@ -104,15 +147,113 @@ export function FloatingBottomMenu({ onSelectView, currentView }: FloatingBottom
             )}
           </Button>
           
+          {/* Current View Label */}
           {currentItem && (
-            <div className="flex items-center gap-2">
-              <Icon className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium leading-none">{currentItem.label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{currentItem.description}</p>
+            <>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm font-medium">{currentItem.label}</p>
               </div>
-            </div>
+              <div className="w-px h-6 bg-border flex-shrink-0" />
+            </>
           )}
+
+          {/* Canvas Controls - Only show when on canvas view */}
+          {currentView === 'canvas' && onAddNode && (
+            <>
+              {/* AI Generator */}
+              <Button
+                onClick={onOpenAIGenerator}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "flex items-center gap-2 rounded-xl flex-shrink-0",
+                  "bg-gradient-accent hover:shadow-glow",
+                  "text-primary-foreground"
+                )}
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="text-xs font-medium hidden sm:inline">AI Generator</span>
+              </Button>
+
+              <div className="w-px h-6 bg-border flex-shrink-0" />
+
+              {/* Integration Library */}
+              <IntegrationLibrary onAddNode={onAddNode} />
+
+              <div className="w-px h-6 bg-border flex-shrink-0" />
+
+              {/* Add Node Buttons */}
+              {nodeButtons.map(({ type, icon: NodeIcon, label }) => (
+                <Button
+                  key={type}
+                  onClick={() => onAddNode(type)}
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl transition-all flex-shrink-0",
+                    "hover:bg-primary hover:text-primary-foreground",
+                    "active:scale-95"
+                  )}
+                >
+                  <NodeIcon className="w-4 h-4" />
+                  <span className="text-xs font-medium hidden sm:inline">{label}</span>
+                </Button>
+              ))}
+
+              <div className="w-px h-6 bg-border flex-shrink-0" />
+
+              {/* AI Optimizer */}
+              <Button
+                onClick={onOptimize}
+                disabled={isOptimizing || !workflow?.nodes?.length}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "flex items-center gap-2 rounded-xl flex-shrink-0",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  "disabled:opacity-50 disabled:pointer-events-none"
+                )}
+              >
+                {isOptimizing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-xs font-medium hidden sm:inline">Optimizing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-xs font-medium hidden sm:inline">AI Optimize</span>
+                  </>
+                )}
+              </Button>
+
+              <div className="w-px h-6 bg-border flex-shrink-0" />
+
+              {/* Save Button */}
+              <Button
+                onClick={onSave}
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-2 rounded-xl hover:bg-accent hover:text-accent-foreground flex-shrink-0"
+              >
+                <Save className="w-4 h-4" />
+                <span className="text-xs font-medium hidden sm:inline">Save</span>
+              </Button>
+
+              <div className="w-px h-6 bg-border flex-shrink-0" />
+            </>
+          )}
+
+          {/* Theme Toggle - Always visible */}
+          <Button
+            onClick={toggleTheme}
+            variant="ghost"
+            size="sm"
+            className="rounded-xl hover:bg-accent hover:text-accent-foreground flex-shrink-0 ml-auto"
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
         </div>
       </div>
     </>

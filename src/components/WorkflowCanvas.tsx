@@ -1,6 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
-import { FloatingToolbar } from "./FloatingToolbar";
 import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
@@ -20,7 +19,7 @@ interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
 }
 
-export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
+export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNodes = [] }, ref) => {
   const defaultNodes: WorkflowNodeData[] = [
     {
       id: "1",
@@ -81,6 +80,51 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Expose methods to parent via ref
+  useImperativeHandle(ref, () => ({
+    handleAddNode,
+    workflow: { nodes },
+    handleWorkflowOptimized,
+    handleOpenAIGenerator: () => setShowTextGeneration(true),
+    handleSave: () => setShowSaveDialog(true),
+    isOptimizing: false,
+    handleOptimize: async () => {
+      if (!nodes?.length) {
+        toast({
+          title: "No workflow",
+          description: "Create some nodes first to optimize",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('optimize-workflow', {
+          body: { 
+            workflow: { nodes },
+            userContext: "General workflow automation"
+          }
+        });
+
+        if (error) throw error;
+
+        if (data?.optimizedWorkflow?.nodes) {
+          handleWorkflowOptimized(data.optimizedWorkflow.nodes);
+          toast({
+            title: "Workflow Optimized!",
+            description: data.optimizedWorkflow.insights || "AI Genius enhanced your workflow",
+          });
+        }
+      } catch (error: any) {
+        toast({
+          title: "Optimization Failed",
+          description: error.message || "Failed to optimize workflow",
+          variant: "destructive",
+        });
+      }
+    }
+  }));
 
   useEffect(() => {
     // Get user's default workspace
@@ -605,14 +649,6 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
         </div>
       </div>
 
-      {/* Floating Toolbar */}
-      <FloatingToolbar 
-        onAddNode={handleAddNode} 
-        workflow={{ nodes }}
-        onOptimized={handleWorkflowOptimized}
-        onOpenAIGenerator={() => setShowTextGeneration(true)}
-        onSave={() => setShowSaveDialog(true)}
-      />
 
       {/* Action Buttons for Selected Node */}
       {selectedNodeId && (
@@ -709,4 +745,4 @@ export const WorkflowCanvas = ({ initialNodes = [] }: WorkflowCanvasProps) => {
     </div>
     </>
   );
-};
+});

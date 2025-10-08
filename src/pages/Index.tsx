@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { WorkflowCanvas } from "@/components/WorkflowCanvas";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -15,6 +15,7 @@ import { FloatingBottomMenu } from "@/components/FloatingBottomMenu";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
+  const canvasRef = useRef<any>(null);
 
   const handleAIWorkflowGenerated = (workflow: any) => {
     console.log('AI Workflow generated:', workflow);
@@ -30,8 +31,8 @@ const Index = (): JSX.Element => {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
-          <div className="flex-1 p-6 pb-24 overflow-auto">
-            {currentView === 'canvas' && <WorkflowCanvas />}
+          <div className="flex-1 p-6 pb-20 overflow-auto">
+            {currentView === 'canvas' && <WorkflowCanvas ref={canvasRef} />}
             {currentView === 'ai-builder' && <AIAgentBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />}
             {currentView === 'triggers' && <TriggerConfiguration workflowId="demo-workflow" onTriggerCreated={(trigger) => console.log('Trigger created:', trigger)} />}
             {currentView === 'embed' && <EmbeddableAgent workflowId="demo-workflow" />}
@@ -46,6 +47,13 @@ const Index = (): JSX.Element => {
           <FloatingBottomMenu 
             currentView={currentView}
             onSelectView={setCurrentView}
+            onAddNode={canvasRef.current?.handleAddNode}
+            workflow={canvasRef.current?.workflow}
+            onOptimized={canvasRef.current?.handleWorkflowOptimized}
+            onOpenAIGenerator={canvasRef.current?.handleOpenAIGenerator}
+            onSave={canvasRef.current?.handleSave}
+            isOptimizing={canvasRef.current?.isOptimizing}
+            onOptimize={canvasRef.current?.handleOptimize}
           />
         </div>
       </div>
