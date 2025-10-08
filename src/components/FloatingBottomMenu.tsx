@@ -40,10 +40,10 @@ export function FloatingBottomMenu({ onSelectView, currentView }: FloatingBottom
         />
       )}
 
-      {/* Menu Panel - positioned above the floating button */}
+      {/* Menu Panel - positioned above the bottom bar */}
       <div 
         className={`
-          fixed bottom-24 left-6 bg-card border rounded-lg shadow-2xl z-50 
+          fixed bottom-20 left-6 bg-card border rounded-lg shadow-2xl z-50 
           transition-all duration-300 ease-out
           ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}
         `}
@@ -89,25 +89,32 @@ export function FloatingBottomMenu({ onSelectView, currentView }: FloatingBottom
         </ScrollArea>
       </div>
 
-      {/* Floating Button */}
-      <Button
-        size="lg"
-        className="fixed bottom-6 left-6 z-50 h-14 w-14 rounded-full shadow-2xl p-0"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? (
-          <X className="h-6 w-6" />
-        ) : (
-          <Icon className="h-6 w-6" />
-        )}
-      </Button>
-
-      {/* Label when closed */}
-      {!isOpen && currentItem && (
-        <div className="fixed bottom-6 left-24 z-50 bg-card border rounded-lg shadow-lg px-4 py-2.5 pointer-events-none">
-          <p className="text-sm font-medium">{currentItem.label}</p>
+      {/* Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg z-50">
+        <div className="px-4 py-3 flex items-center gap-4">
+          <Button
+            size="lg"
+            className="h-12 w-12 rounded-full shadow-lg p-0 flex-shrink-0"
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            {isOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </Button>
+          
+          {currentItem && (
+            <div className="flex items-center gap-2">
+              <Icon className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium leading-none">{currentItem.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{currentItem.description}</p>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </>
   );
 }
