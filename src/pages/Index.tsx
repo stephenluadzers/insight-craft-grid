@@ -7,7 +7,11 @@ import CollaborativeWorkspace from '@/components/CollaborativeWorkspace';
 import TriggerConfiguration from '@/components/TriggerConfiguration';
 import EmbeddableAgent from '@/components/EmbeddableAgent';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, Store, Users, Zap, Code2 } from 'lucide-react';
+import { Sparkles, Store, Users, Zap, Code2, Bug, TestTube, BarChart3, DollarSign } from 'lucide-react';
+import { WorkflowDebugger } from "@/components/WorkflowDebugger";
+import { WorkflowTestSuite } from "@/components/WorkflowTestSuite";
+import { WorkflowAnalyticsDashboard } from "@/components/WorkflowAnalyticsDashboard";
+import { WorkflowCostEstimator } from "@/components/WorkflowCostEstimator";
 
 const Index = (): JSX.Element => {
   const handleAIWorkflowGenerated = (workflow: any) => {
@@ -32,7 +36,7 @@ const Index = (): JSX.Element => {
           </div>
 
           <Tabs defaultValue="canvas" className="flex-1">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-10">
               <TabsTrigger value="canvas">Canvas</TabsTrigger>
               <TabsTrigger value="ai-builder">
                 <Sparkles className="h-4 w-4 mr-2" />
@@ -53,6 +57,22 @@ const Index = (): JSX.Element => {
               <TabsTrigger value="collaboration">
                 <Users className="h-4 w-4 mr-2" />
                 Team
+              </TabsTrigger>
+              <TabsTrigger value="debug">
+                <Bug className="h-4 w-4 mr-2" />
+                Debug
+              </TabsTrigger>
+              <TabsTrigger value="test">
+                <TestTube className="h-4 w-4 mr-2" />
+                Test
+              </TabsTrigger>
+              <TabsTrigger value="analytics">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger value="cost">
+                <DollarSign className="h-4 w-4 mr-2" />
+                Cost
               </TabsTrigger>
             </TabsList>
 
@@ -81,6 +101,36 @@ const Index = (): JSX.Element => {
 
             <TabsContent value="collaboration" className="mt-6">
               <CollaborativeWorkspace />
+            </TabsContent>
+
+            <TabsContent value="debug" className="mt-6">
+              <WorkflowDebugger
+                workflowId="demo-workflow"
+                nodes={[]}
+              />
+            </TabsContent>
+
+            <TabsContent value="test" className="mt-6">
+              <WorkflowTestSuite
+                workflowId="demo-workflow"
+                onRunTest={async (testCase) => {
+                  return { status: "success" };
+                }}
+              />
+            </TabsContent>
+
+            <TabsContent value="analytics" className="mt-6">
+              <WorkflowAnalyticsDashboard
+                workflowId="demo-workflow"
+                timeRange="7d"
+              />
+            </TabsContent>
+
+            <TabsContent value="cost" className="mt-6">
+              <WorkflowCostEstimator
+                nodes={[]}
+                executionsPerMonth={1000}
+              />
             </TabsContent>
           </Tabs>
         </div>
