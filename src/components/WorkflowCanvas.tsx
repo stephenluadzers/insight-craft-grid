@@ -77,6 +77,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   } | null>(null);
   const [showIntegrationSetup, setShowIntegrationSetup] = useState(false);
   const [requiredIntegrations, setRequiredIntegrations] = useState<any[]>([]);
+  const [isOptimizing, setIsOptimizing] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -88,7 +89,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     handleWorkflowOptimized,
     handleOpenAIGenerator: () => setShowTextGeneration(true),
     handleSave: () => setShowSaveDialog(true),
-    isOptimizing: false,
+    isOptimizing,
     handleOptimize: async () => {
       if (!nodes?.length) {
         toast({
@@ -99,6 +100,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         return;
       }
 
+      setIsOptimizing(true);
       try {
         const { data, error } = await supabase.functions.invoke('optimize-workflow', {
           body: { 
@@ -122,6 +124,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           description: error.message || "Failed to optimize workflow",
           variant: "destructive",
         });
+      } finally {
+        setIsOptimizing(false);
       }
     }
   }));
