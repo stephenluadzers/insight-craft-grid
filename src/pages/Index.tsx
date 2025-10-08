@@ -50,10 +50,10 @@ const Index = (): JSX.Element => {
             onAddNode={canvasRef.current?.handleAddNode}
             workflow={canvasRef.current?.workflow}
             onOptimized={canvasRef.current?.handleWorkflowOptimized}
-            onOpenAIGenerator={canvasRef.current?.handleOpenAIGenerator}
-            onSave={canvasRef.current?.handleSave}
+            onOpenAIGenerator={() => canvasRef.current?.handleOpenAIGenerator()}
+            onSave={() => canvasRef.current?.handleSave()}
             isOptimizing={canvasRef.current?.isOptimizing}
-            onOptimize={canvasRef.current?.handleOptimize}
+            onOptimize={() => canvasRef.current?.handleOptimize()}
           />
         </div>
       </div>
