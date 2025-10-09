@@ -54,6 +54,7 @@ const Index = (): JSX.Element => {
             onSave={() => canvasRef.current?.handleSave?.()}
             isOptimizing={canvasRef.current?.isOptimizing ?? false}
             onOptimize={() => canvasRef.current?.handleOptimize?.()}
+            onDownload={() => canvasRef.current?.handleDownload?.()}
           />
         </div>
       </div>

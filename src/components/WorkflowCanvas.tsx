@@ -91,7 +91,10 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     handleSave: () => setShowSaveDialog(true),
     isOptimizing,
     handleOptimize: async () => {
+      console.log('🚀 AI Optimize button clicked');
+      
       if (!nodes?.length) {
+        console.warn('⚠️ No nodes to optimize');
         toast({
           title: "No workflow",
           description: "Create some nodes first to optimize",
@@ -100,8 +103,11 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         return;
       }
 
+      console.log(`📊 Optimizing ${nodes.length} nodes...`);
       setIsOptimizing(true);
+      
       try {
+        console.log('📡 Calling optimize-workflow edge function...');
         const { data, error } = await supabase.functions.invoke('optimize-workflow', {
           body: { 
             workflow: { nodes },
@@ -109,23 +115,77 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           }
         });
 
-        if (error) throw error;
+        console.log('✅ Edge function response:', { data, error });
+
+        if (error) {
+          console.error('❌ Edge function error:', error);
+          throw error;
+        }
+
+        if (data?.error) {
+          console.error('❌ AI error:', data.error);
+          throw new Error(data.error);
+        }
 
         if (data?.optimizedWorkflow?.nodes) {
+          console.log('✨ Optimization successful! New nodes:', data.optimizedWorkflow.nodes.length);
           handleWorkflowOptimized(data.optimizedWorkflow.nodes);
           toast({
             title: "Workflow Optimized!",
             description: data.optimizedWorkflow.insights || "AI Genius enhanced your workflow",
           });
+          
+          if (data.suggestions && data.suggestions.length > 0) {
+            console.log('💡 Suggestions:', data.suggestions);
+            setTimeout(() => {
+              toast({
+                title: "Optimization Suggestions",
+                description: `${data.suggestions.length} improvements identified`,
+              });
+            }, 1500);
+          }
+        } else {
+          console.warn('⚠️ No optimized workflow in response');
+          throw new Error('No optimized workflow returned');
         }
       } catch (error: any) {
+        console.error('💥 Optimization failed:', error);
         toast({
           title: "Optimization Failed",
-          description: error.message || "Failed to optimize workflow",
+          description: error.message || "Failed to optimize workflow. Check console for details.",
           variant: "destructive",
         });
       } finally {
         setIsOptimizing(false);
+        console.log('🏁 Optimization complete');
+      }
+    },
+    handleDownload: async () => {
+      console.log('⬇️ Download workflow package');
+      try {
+        const { generateWorkflowDownloadPackage } = await import('@/lib/workflowDownload');
+        const blob = await generateWorkflowDownloadPackage(nodes, currentWorkflowName);
+        
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_package.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: "Package Downloaded!",
+          description: "Workflow package with ROI analysis ready",
+        });
+      } catch (error: any) {
+        console.error('Download failed:', error);
+        toast({
+          title: "Download Failed",
+          description: error.message,
+          variant: "destructive",
+        });
       }
     }
   }));

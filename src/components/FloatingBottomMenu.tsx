@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Sparkles, Store, Users, Zap, Code2, Bug, TestTube, 
   BarChart3, DollarSign, Menu, X, Layout, Mail, Database, 
-  FileText, Image as ImageIcon, Moon, Sun, Loader2, Save
+  FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download
 } from "lucide-react";
 import { NodeType } from "./WorkflowNode";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ interface FloatingBottomMenuProps {
   onSave?: () => void;
   isOptimizing?: boolean;
   onOptimize?: () => void;
+  onDownload?: () => void;
 }
 
 const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = [
@@ -40,7 +41,8 @@ export function FloatingBottomMenu({
   onOpenAIGenerator,
   onSave,
   isOptimizing = false,
-  onOptimize
+  onOptimize,
+  onDownload
 }: FloatingBottomMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
@@ -229,16 +231,29 @@ export function FloatingBottomMenu({
 
               <div className="w-px h-6 bg-border flex-shrink-0 mx-1" />
 
-              {/* Save Button */}
-              <Button
-                onClick={onSave}
-                variant="outline"
-                size="sm"
-                className="h-9 rounded-lg shadow-sm hover:bg-accent hover:text-accent-foreground flex-shrink-0"
-              >
-                <Save className="w-4 h-4 mr-1.5" />
-                <span className="text-xs font-medium">Save</span>
-              </Button>
+              {/* Action Buttons Group */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <Button
+                  onClick={onDownload}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-lg shadow-sm hover:bg-accent hover:text-accent-foreground min-w-[44px]"
+                  disabled={!workflow?.nodes?.length}
+                >
+                  <Download className="w-4 h-4 mr-1.5" />
+                  <span className="text-xs font-medium hidden sm:inline">Download</span>
+                </Button>
+                
+                <Button
+                  onClick={onSave}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-lg shadow-sm hover:bg-accent hover:text-accent-foreground min-w-[44px]"
+                >
+                  <Save className="w-4 h-4 mr-1.5" />
+                  <span className="text-xs font-medium hidden sm:inline">Save</span>
+                </Button>
+              </div>
             </>
           )}
 
