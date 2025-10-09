@@ -47,13 +47,13 @@ const Index = (): JSX.Element => {
           <FloatingBottomMenu 
             currentView={currentView}
             onSelectView={setCurrentView}
-            onAddNode={canvasRef.current?.handleAddNode}
+            onAddNode={(type, title, config) => canvasRef.current?.handleAddNode?.(type, title, config)}
             workflow={canvasRef.current?.workflow}
-            onOptimized={canvasRef.current?.handleWorkflowOptimized}
-            onOpenAIGenerator={() => canvasRef.current?.handleOpenAIGenerator()}
-            onSave={() => canvasRef.current?.handleSave()}
-            isOptimizing={canvasRef.current?.isOptimizing}
-            onOptimize={() => canvasRef.current?.handleOptimize()}
+            onOptimized={(nodes) => canvasRef.current?.handleWorkflowOptimized?.(nodes)}
+            onOpenAIGenerator={() => canvasRef.current?.handleOpenAIGenerator?.()}
+            onSave={() => canvasRef.current?.handleSave?.()}
+            isOptimizing={canvasRef.current?.isOptimizing ?? false}
+            onOptimize={() => canvasRef.current?.handleOptimize?.()}
           />
         </div>
       </div>

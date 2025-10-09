@@ -498,9 +498,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
               <ImageIcon className="w-12 h-12 text-muted-foreground" />
               <div className="text-center space-y-2">
-                <p className="text-sm font-medium">Upload workflow diagrams or screenshots</p>
-                <p className="text-xs text-muted-foreground">
-                  Select multiple images to combine into a single workflow
+                <h3 className="text-lg font-semibold">Upload Multiple Images</h3>
+                <p className="text-sm text-muted-foreground">
+                  Select multiple workflow diagrams, screenshots, or sketches to stitch together into a single workflow
                 </p>
               </div>
               <input

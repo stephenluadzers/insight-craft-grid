@@ -133,7 +133,7 @@ export function FloatingBottomMenu({
 
       {/* Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t shadow-lg z-50">
-        <div className="px-3 py-3 flex items-center gap-2 overflow-x-auto">
+        <div className="px-3 py-3 flex items-center gap-2 overflow-x-auto scrollbar-hide">
           {/* Navigation Section */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <Button
