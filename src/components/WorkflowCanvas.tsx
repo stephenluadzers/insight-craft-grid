@@ -154,14 +154,15 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         }
       } catch (error: any) {
         console.error('💥 Optimization failed:', error);
+        console.error('📍 Error stack:', error.stack);
         toast({
           title: "Optimization Failed",
-          description: error.message || "Failed to optimize workflow. Please try again.",
+          description: error.message || "Unknown error occurred. Check browser console.",
           variant: "destructive",
         });
       } finally {
         setIsOptimizing(false);
-        console.log('🏁 Optimization complete');
+        console.log('🏁 Optimization complete, isOptimizing set to false');
       }
     },
     handleDownload: async () => {

@@ -190,11 +190,15 @@ export function FloatingBottomMenu({
                   disabled={isOptimizing || !workflow?.nodes?.length}
                   size="sm"
                   variant="outline"
-                  className="h-9 rounded-lg shadow-sm"
+                  className={cn(
+                    "h-9 rounded-lg shadow-sm min-w-[44px] touch-manipulation",
+                    isOptimizing && "bg-primary/10 border-primary",
+                    !isOptimizing && "hover:bg-primary hover:text-primary-foreground active:scale-95 transition-all"
+                  )}
                 >
                   {isOptimizing ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin text-primary" />
                       <span className="text-xs font-medium">Optimizing...</span>
                     </>
                   ) : (
