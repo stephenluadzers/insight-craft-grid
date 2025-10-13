@@ -107,13 +107,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       setIsOptimizing(true);
       
       try {
-        console.log('📡 Calling optimize-workflow edge function...');
-        
-        // Get the auth session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          throw new Error('You must be logged in to use AI optimization');
-        }
+        console.log('📡 Calling optimize-workflow edge function with', nodes.length, 'nodes');
+        console.log('🔍 Workflow data:', JSON.stringify({ nodes }, null, 2));
 
         const { data, error } = await supabase.functions.invoke('optimize-workflow', {
           body: { 
@@ -121,6 +116,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
             userContext: "General workflow automation"
           }
         });
+        
+        console.log('📨 Raw edge function response:', JSON.stringify({ data, error }, null, 2));
 
         console.log('✅ Edge function response:', { data, error });
 

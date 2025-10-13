@@ -7,12 +7,18 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('🚀 optimize-workflow function called');
+  console.log('📥 Request method:', req.method);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { workflow, userContext } = await req.json();
+    const requestBody = await req.json();
+    console.log('📦 Request body:', JSON.stringify(requestBody, null, 2));
+    
+    const { workflow, userContext } = requestBody;
     
     // Input validation
     if (!workflow) {
@@ -37,13 +43,19 @@ serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    console.log('🔑 API Key check:', LOVABLE_API_KEY ? 'Present' : 'MISSING');
+    
     if (!LOVABLE_API_KEY) {
+      console.error('❌ LOVABLE_API_KEY not configured');
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    console.log('Optimizing workflow with AI Genius...');
+    console.log('🤖 Optimizing workflow with AI Genius...');
+    console.log('📊 Nodes to optimize:', workflow.nodes?.length || 0);
 
     // Use Gemini 2.5 Pro for advanced reasoning and optimization
+    console.log('🌐 Calling Lovable AI Gateway...');
+    
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -96,8 +108,11 @@ Format (ensure all strings are properly escaped and no trailing commas):
         max_tokens: 6000
       }),
     });
+    
+    console.log('📡 AI Gateway response status:', response.status);
 
     if (!response.ok) {
+      console.error('❌ AI Gateway error status:', response.status);
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
@@ -116,13 +131,17 @@ Format (ensure all strings are properly escaped and no trailing commas):
     }
 
     const data = await response.json();
+    console.log('📨 AI Gateway raw data:', JSON.stringify(data, null, 2));
+    
     const content = data.choices?.[0]?.message?.content;
+    console.log('📝 AI content length:', content?.length || 0);
     
     if (!content) {
+      console.error('❌ No content in AI response');
       throw new Error('No response from AI');
     }
 
-    console.log('AI optimization response received');
+    console.log('✅ AI optimization response received, parsing...');
 
     // Parse the JSON response with improved extraction
     let optimizationData;
