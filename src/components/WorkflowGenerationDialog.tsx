@@ -366,16 +366,47 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       document.body.removeChild(jsonLink);
       URL.revokeObjectURL(jsonUrl);
 
-      // Then capture screenshot
+      // Then capture screenshot with centered workflow
       const canvasElement = document.querySelector('.workflow-canvas') as HTMLElement;
       if (!canvasElement) {
         throw new Error('Canvas element not found');
       }
 
+      // Calculate bounding box of all nodes to center the screenshot
+      const nodeElements = canvasElement.querySelectorAll('[data-node-id]');
+      if (nodeElements.length === 0) {
+        throw new Error('No nodes found to screenshot');
+      }
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      nodeElements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const canvasRect = canvasElement.getBoundingClientRect();
+        const relX = rect.left - canvasRect.left;
+        const relY = rect.top - canvasRect.top;
+        
+        minX = Math.min(minX, relX);
+        minY = Math.min(minY, relY);
+        maxX = Math.max(maxX, relX + rect.width);
+        maxY = Math.max(maxY, relY + rect.height);
+      });
+
+      // Add padding around the workflow
+      const padding = 40;
+      const cropX = Math.max(0, minX - padding);
+      const cropY = Math.max(0, minY - padding);
+      const cropWidth = (maxX - minX) + (padding * 2);
+      const cropHeight = (maxY - minY) + (padding * 2);
+
       const canvas = await html2canvas(canvasElement, {
         backgroundColor: '#1a1a1a',
         scale: 2,
         logging: false,
+        x: cropX,
+        y: cropY,
+        width: cropWidth,
+        height: cropHeight,
       });
 
       canvas.toBlob((blob) => {

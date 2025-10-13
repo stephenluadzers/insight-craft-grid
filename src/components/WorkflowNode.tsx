@@ -65,6 +65,7 @@ export const WorkflowNode = ({
 
   return (
     <div
+      data-node-id={data.id}
       onClick={onSelect}
       className={cn(
         "absolute w-64 rounded-lg border-2 bg-card backdrop-blur-sm transition-all duration-300 cursor-move group",

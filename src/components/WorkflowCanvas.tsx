@@ -108,6 +108,13 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       
       try {
         console.log('📡 Calling optimize-workflow edge function...');
+        
+        // Get the auth session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('You must be logged in to use AI optimization');
+        }
+
         const { data, error } = await supabase.functions.invoke('optimize-workflow', {
           body: { 
             workflow: { nodes },
@@ -119,7 +126,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
         if (error) {
           console.error('❌ Edge function error:', error);
-          throw error;
+          throw new Error(error.message || 'Failed to call optimization service');
         }
 
         if (data?.error) {
@@ -146,13 +153,13 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           }
         } else {
           console.warn('⚠️ No optimized workflow in response');
-          throw new Error('No optimized workflow returned');
+          throw new Error('No optimized workflow returned from AI');
         }
       } catch (error: any) {
         console.error('💥 Optimization failed:', error);
         toast({
           title: "Optimization Failed",
-          description: error.message || "Failed to optimize workflow. Check console for details.",
+          description: error.message || "Failed to optimize workflow. Please try again.",
           variant: "destructive",
         });
       } finally {
