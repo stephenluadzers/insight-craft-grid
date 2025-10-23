@@ -96,6 +96,15 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     onOptimizingChange?.(isOptimizing);
   }, [isOptimizing, onOptimizingChange]);
 
+  const handleGitHubImport = (importedNodes: WorkflowNodeData[], name: string) => {
+    console.log('📥 Importing workflow from GitHub:', name, importedNodes.length, 'nodes');
+    setNodes(importedNodes);
+    toast({
+      title: "Workflow Imported",
+      description: `${name} loaded with ${importedNodes.length} nodes`,
+    });
+  };
+
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     handleAddNode,
@@ -103,6 +112,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     handleWorkflowOptimized,
     handleOpenAIGenerator: () => setShowTextGeneration(true),
     handleSave: () => setShowSaveDialog(true),
+    handleGitHubImport,
     isOptimizing,
     handleOptimize: async () => {
       console.log('🚀 AI Optimize button clicked');

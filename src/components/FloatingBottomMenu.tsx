@@ -4,11 +4,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Sparkles, Store, Users, Zap, Code2, Bug, TestTube, 
   BarChart3, DollarSign, Menu, X, Layout, Mail, Database, 
-  FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download
+  FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download, Github, Upload
 } from "lucide-react";
 import { NodeType } from "./WorkflowNode";
 import { cn } from "@/lib/utils";
 import { IntegrationLibrary } from "./IntegrationLibrary";
+import { GitHubImportDialog } from "./GitHubImportDialog";
 
 interface FloatingBottomMenuProps {
   onSelectView: (view: string) => void;
@@ -22,6 +23,7 @@ interface FloatingBottomMenuProps {
   isOptimizing?: boolean;
   onOptimize?: () => void;
   onDownload?: () => void;
+  onGitHubImport?: (nodes: any[], name: string) => void;
 }
 
 const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = [
@@ -42,10 +44,12 @@ export function FloatingBottomMenu({
   onSave,
   isOptimizing = false,
   onOptimize,
-  onDownload
+  onDownload,
+  onGitHubImport
 }: FloatingBottomMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [showGitHubImport, setShowGitHubImport] = useState(false);
 
   useEffect(() => {
     const dark = document.documentElement.classList.contains("dark");
@@ -238,6 +242,16 @@ export function FloatingBottomMenu({
               {/* Action Buttons Group */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <Button
+                  onClick={() => setShowGitHubImport(true)}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-lg shadow-sm hover:bg-accent hover:text-accent-foreground min-w-[44px]"
+                >
+                  <Github className="w-4 h-4 mr-1.5" />
+                  <span className="text-xs font-medium hidden sm:inline">Import</span>
+                </Button>
+
+                <Button
                   onClick={onDownload}
                   variant="outline"
                   size="sm"
@@ -258,6 +272,15 @@ export function FloatingBottomMenu({
                   <span className="text-xs font-medium hidden sm:inline">Save</span>
                 </Button>
               </div>
+
+              <GitHubImportDialog
+                open={showGitHubImport}
+                onOpenChange={setShowGitHubImport}
+                onImport={(nodes, name) => {
+                  onGitHubImport?.(nodes, name);
+                  setShowGitHubImport(false);
+                }}
+              />
             </>
           )}
 
