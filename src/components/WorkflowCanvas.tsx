@@ -17,9 +17,11 @@ import { validateWorkflow, ValidationResult } from "@/lib/workflowValidation";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
+  onWorkflowChange?: (workflow: { nodes: WorkflowNodeData[] }) => void;
+  onOptimizingChange?: (isOptimizing: boolean) => void;
 }
 
-export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNodes = [] }, ref) => {
+export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNodes = [], onWorkflowChange, onOptimizingChange }, ref) => {
   const defaultNodes: WorkflowNodeData[] = [
     {
       id: "1",
@@ -81,6 +83,18 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Notify parent of workflow changes
+  useEffect(() => {
+    console.log('📊 Workflow changed, notifying parent. Nodes:', nodes.length);
+    onWorkflowChange?.({ nodes });
+  }, [nodes, onWorkflowChange]);
+
+  // Notify parent of optimization state changes
+  useEffect(() => {
+    console.log('⚙️ Optimization state changed:', isOptimizing);
+    onOptimizingChange?.(isOptimizing);
+  }, [isOptimizing, onOptimizingChange]);
 
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({

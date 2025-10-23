@@ -15,6 +15,8 @@ import { FloatingBottomMenu } from "@/components/FloatingBottomMenu";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
+  const [workflow, setWorkflow] = useState<any>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
   const canvasRef = useRef<any>(null);
 
   const handleAIWorkflowGenerated = (workflow: any) => {
@@ -32,7 +34,13 @@ const Index = (): JSX.Element => {
         
         <div className="flex-1 flex flex-col">
           <div className="flex-1 p-6 pb-20 overflow-auto">
-            {currentView === 'canvas' && <WorkflowCanvas ref={canvasRef} />}
+            {currentView === 'canvas' && (
+              <WorkflowCanvas 
+                ref={canvasRef} 
+                onWorkflowChange={setWorkflow}
+                onOptimizingChange={setIsOptimizing}
+              />
+            )}
             {currentView === 'ai-builder' && <AIAgentBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />}
             {currentView === 'triggers' && <TriggerConfiguration workflowId="demo-workflow" onTriggerCreated={(trigger) => console.log('Trigger created:', trigger)} />}
             {currentView === 'embed' && <EmbeddableAgent workflowId="demo-workflow" />}
@@ -48,12 +56,17 @@ const Index = (): JSX.Element => {
             currentView={currentView}
             onSelectView={setCurrentView}
             onAddNode={(type, title, config) => canvasRef.current?.handleAddNode?.(type, title, config)}
-            workflow={canvasRef.current?.workflow}
+            workflow={workflow}
             onOptimized={(nodes) => canvasRef.current?.handleWorkflowOptimized?.(nodes)}
             onOpenAIGenerator={() => canvasRef.current?.handleOpenAIGenerator?.()}
             onSave={() => canvasRef.current?.handleSave?.()}
-            isOptimizing={canvasRef.current?.isOptimizing ?? false}
-            onOptimize={() => canvasRef.current?.handleOptimize?.()}
+            isOptimizing={isOptimizing}
+            onOptimize={async () => {
+              console.log('🔘 AI Optimize button clicked from Index');
+              console.log('📦 Current workflow:', workflow);
+              console.log('📍 Canvas ref:', canvasRef.current);
+              await canvasRef.current?.handleOptimize?.();
+            }}
             onDownload={() => canvasRef.current?.handleDownload?.()}
           />
         </div>
