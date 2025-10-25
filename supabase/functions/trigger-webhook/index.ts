@@ -83,14 +83,49 @@ serve(async (req) => {
       const contentType = req.headers.get('content-type');
       if (contentType?.includes('application/json')) {
         triggerData = await req.json();
+        
         // Limit payload size
         const payloadStr = JSON.stringify(triggerData);
         if (payloadStr.length > 1024 * 1024) { // 1MB limit
           throw new Error('Payload exceeds maximum size of 1MB');
         }
+        
+        // Validate payload doesn't contain dangerous patterns
+        const dangerousPatterns = [
+          /(<script|javascript:)/i,
+          /(union|insert|update|delete|drop|create|alter)\s+(select|from|into|table)/i,
+          /__proto__|constructor\[["']prototype["']\]/i,
+        ];
+        
+        for (const pattern of dangerousPatterns) {
+          if (pattern.test(payloadStr)) {
+            throw new Error('Invalid payload content detected');
+          }
+        }
+        
+        // Sanitize payload
+        const sanitizeValue = (val: any, depth = 0): any => {
+          if (depth > 10) return null; // Prevent deep nesting attacks
+          if (typeof val === 'string') return val.slice(0, 10000);
+          if (Array.isArray(val)) return val.slice(0, 100).map(v => sanitizeValue(v, depth + 1));
+          if (val && typeof val === 'object') {
+            const sanitized: Record<string, any> = {};
+            Object.keys(val).slice(0, 50).forEach(key => {
+              sanitized[key] = sanitizeValue(val[key], depth + 1);
+            });
+            return sanitized;
+          }
+          return val;
+        };
+        
+        triggerData = sanitizeValue(triggerData);
       }
     } catch (parseError) {
-      console.warn('Failed to parse trigger data:', parseError);
+      console.warn('Failed to parse or validate trigger data:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid payload data' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Execute the workflow

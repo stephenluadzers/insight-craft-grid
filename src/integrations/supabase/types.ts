@@ -472,7 +472,7 @@ export type Database = {
           id: string
           investigated: boolean
           investigation_notes: string | null
-          ip_address: unknown | null
+          ip_address: unknown
           severity: Database["public"]["Enums"]["security_risk_level"]
           triggered_rules: string[] | null
           user_agent: string | null
@@ -486,7 +486,7 @@ export type Database = {
           id?: string
           investigated?: boolean
           investigation_notes?: string | null
-          ip_address?: unknown | null
+          ip_address?: unknown
           severity: Database["public"]["Enums"]["security_risk_level"]
           triggered_rules?: string[] | null
           user_agent?: string | null
@@ -500,7 +500,7 @@ export type Database = {
           id?: string
           investigated?: boolean
           investigation_notes?: string | null
-          ip_address?: unknown | null
+          ip_address?: unknown
           severity?: Database["public"]["Enums"]["security_risk_level"]
           triggered_rules?: string[] | null
           user_agent?: string | null
@@ -524,7 +524,7 @@ export type Database = {
           action: string
           expires_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           webhook_id: string | null
         }
         Insert: {
@@ -533,7 +533,7 @@ export type Database = {
           action: string
           expires_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           webhook_id?: string | null
         }
         Update: {
@@ -542,7 +542,7 @@ export type Database = {
           action?: string
           expires_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           webhook_id?: string | null
         }
         Relationships: [
@@ -936,7 +936,7 @@ export type Database = {
           accessed_by: string
           execution_id: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           user_agent: string | null
         }
         Insert: {
@@ -945,7 +945,7 @@ export type Database = {
           accessed_by: string
           execution_id: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
         }
         Update: {
@@ -954,7 +954,7 @@ export type Database = {
           accessed_by?: string
           execution_id?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_agent?: string | null
         }
         Relationships: [
@@ -1690,10 +1690,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
-      purge_old_webhook_logs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      purge_old_webhook_logs: { Args: never; Returns: undefined }
       requires_security_approval: {
         Args: { _workflow_id: string }
         Returns: boolean
@@ -1701,6 +1698,10 @@ export type Database = {
       sanitize_execution_data: {
         Args: { execution_data: Json; workspace_id: string }
         Returns: Json
+      }
+      validate_workflow_node_data: {
+        Args: { node_data: Json }
+        Returns: boolean
       }
     }
     Enums: {

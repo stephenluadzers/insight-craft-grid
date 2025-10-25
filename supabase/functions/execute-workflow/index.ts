@@ -42,6 +42,33 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Validate nodes for dangerous patterns
+    const nodesStr = JSON.stringify(nodes);
+    const dangerousPatterns = [
+      /(<script|javascript:)/i,
+      /(union|insert|update|delete|drop|create|alter)\s+(select|from|into|table)/i,
+      /__proto__|constructor\[["']prototype["']\]/i,
+    ];
+    
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(nodesStr)) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid workflow node content detected' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+    
+    // Validate each node structure
+    for (const node of nodes) {
+      if (!node.id || !node.type) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid node structure: missing id or type' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     console.log('Starting workflow execution:', { nodeCount: nodes.length, workspaceId, workflowId });
 
