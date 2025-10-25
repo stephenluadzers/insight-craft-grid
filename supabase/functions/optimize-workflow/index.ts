@@ -63,49 +63,40 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',
+        model: 'google/gemini-2.5-flash',
         messages: [
           {
             role: 'system',
-            content: `You are the Best Practice & Optimization Engine (BPOE) - an AI Genius that analyzes workflows and enhances them to exceed industry standards.
+            content: `You are a workflow optimization expert. Analyze workflows and provide focused improvements.
 
-Your responsibilities:
-1. **Completeness Analysis**: Identify missing mandatory steps, error handlers, notifications
-2. **Best Practices**: Apply industry-standard patterns and proven methodologies
-3. **Performance Optimization**: Suggest parallel processing, caching, batch operations
-4. **Resilience**: Add retry logic, fallback mechanisms, circuit breakers
-5. **Innovation**: Propose cutting-edge improvements that surpass current standards
-6. **Security**: Ensure proper authentication, data validation, encryption where needed
-7. **User Experience**: Optimize for cognitive load reduction and intuitive flow
-
-Context: ${userContext || 'General workflow automation'}
-
-CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no code blocks. Just pure JSON.
-
-Format (ensure all strings are properly escaped and no trailing commas):
+Return ONLY valid JSON with this exact structure (no markdown, no code blocks):
 {
   "optimizedWorkflow": {
-    "nodes": [],
-    "insights": "string"
+    "nodes": [/* optimized node array */]
   },
   "suggestions": [
     {
-      "type": "string",
-      "title": "string",
-      "description": "string",
-      "impact": "string"
+      "type": "performance|security|reliability|ux",
+      "title": "Brief title",
+      "description": "Concise description",
+      "impact": "high|medium|low"
     }
-  ],
-  "innovations": []
-}`
+  ]
+}
+
+Focus on:
+- Error handling and retries
+- Missing critical steps
+- Security improvements
+- Performance optimizations
+
+Keep nodes array complete but descriptions brief.`
           },
           {
             role: 'user',
-            content: `Analyze and optimize this workflow. Make it complete, robust, and exceptional:\n\n${JSON.stringify(workflow, null, 2)}`
+            content: `Optimize this workflow:\n\n${JSON.stringify(workflow, null, 2)}`
           }
-        ],
-        temperature: 0.3,
-        max_tokens: 6000
+        ]
       }),
     });
     

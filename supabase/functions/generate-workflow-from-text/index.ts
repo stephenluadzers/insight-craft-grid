@@ -33,27 +33,32 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a workflow automation expert. Convert user descriptions into structured workflow nodes.
-            
-Return JSON with:
-- "nodes": array of workflow nodes with id, type (trigger/action/condition/data/ai), title, description, x, y coordinates, and config object
-- "explanation": detailed explanation of the workflow and how it works
+            content: `Convert workflow descriptions to JSON structure.
 
-Position nodes vertically with 200px spacing. Start at x:100, y:100.
-Include meaningful config data for each node (e.g., API endpoints, conditions, data mappings).
+Return ONLY valid JSON (no markdown):
+{
+  "nodes": [
+    {
+      "id": "1",
+      "type": "trigger|action|condition|data|ai",
+      "title": "Brief title",
+      "description": "Brief description",
+      "x": 100,
+      "y": 100,
+      "config": {}
+    }
+  ],
+  "explanation": "Brief workflow explanation"
+}
 
-Example config for action node: {"url": "https://api.example.com/endpoint", "method": "POST", "headers": {}}
-Example config for condition node: {"field": "priority", "operator": "equals", "value": "high"}
-Example config for AI node: {"model": "gpt-4", "prompt": "Analyze this data..."}
-Example config for data node: {"source": "database", "query": "SELECT * FROM table", "transform": "filter"}
-
-Return only valid JSON, no markdown.`
+Position nodes vertically: x=100, y increases by 200 per node.
+Keep descriptions concise.`
           },
           {
             role: 'user',
             content: description
           }
-        ],
+        ]
       }),
     });
 
