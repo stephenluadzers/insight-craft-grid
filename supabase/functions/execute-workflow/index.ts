@@ -225,10 +225,21 @@ serve(async (req) => {
         .eq('id', executionId);
     }
     
+    // Return sanitized error message
+    let userMessage = 'Workflow execution failed';
+    
+    if (error.message?.includes('Invalid nodes')) {
+      userMessage = 'Invalid workflow configuration';
+    } else if (error.message?.includes('exceeds maximum')) {
+      userMessage = 'Workflow too complex';
+    } else if (error.message?.includes('Workspace ID')) {
+      userMessage = 'Missing required parameters';
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message 
+        error: userMessage
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

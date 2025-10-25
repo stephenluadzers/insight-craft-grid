@@ -62,6 +62,33 @@ export type Database = {
           },
         ]
       }
+      auth_rate_limit: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          email: string
+          id: string
+          last_attempt: string
+          locked_until: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          email: string
+          id?: string
+          last_attempt?: string
+          locked_until?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          email?: string
+          id?: string
+          last_attempt?: string
+          locked_until?: string | null
+        }
+        Relationships: []
+      }
       backup_metadata: {
         Row: {
           backup_type: string
@@ -1649,6 +1676,7 @@ export type Database = {
         Args: { base_delay_seconds?: number; retry_count: number }
         Returns: string
       }
+      cleanup_auth_rate_limits: { Args: never; Returns: undefined }
       get_webhook_logs: {
         Args: { _limit?: number; _webhook_id: string }
         Returns: {

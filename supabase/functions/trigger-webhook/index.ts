@@ -154,8 +154,20 @@ serve(async (req) => {
 
   } catch (error: any) {
     console.error('Error in trigger-webhook function:', error);
+    
+    // Return sanitized error message
+    let userMessage = 'An error occurred while processing the webhook';
+    
+    if (error.message?.includes('Payload exceeds')) {
+      userMessage = 'Request payload too large';
+    } else if (error.message?.includes('Invalid payload')) {
+      userMessage = 'Invalid request data';
+    } else if (error.message?.includes('Workflow not found')) {
+      userMessage = 'Webhook configuration error';
+    }
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: userMessage }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
