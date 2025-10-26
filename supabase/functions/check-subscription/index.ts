@@ -9,11 +9,8 @@ const corsHeaders = {
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
+  console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
-
-// FlowMind subscription price ID
-const FLOWMIND_PRICE_ID = "price_1SMFwbDwvUX8vzUwXD8nCrER";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -22,7 +19,8 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
   );
 
   try {
@@ -34,8 +32,11 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
-    
+    logStep("Authorization header found");
+
     const token = authHeader.replace("Bearer ", "");
+    logStep("Authenticating user with token");
+    
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Authentication error: ${userError.message}`);
     const user = userData.user;
@@ -43,40 +44,49 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    
-    // Check if customer exists
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    let customerId;
-    if (customers.data.length > 0) {
-      customerId = customers.data[0].id;
-      logStep("Found existing customer", { customerId });
+    
+    if (customers.data.length === 0) {
+      logStep("No customer found, updating unsubscribed state");
+      return new Response(JSON.stringify({ subscribed: false }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
-    const origin = req.headers.get("origin") || "http://localhost:3000";
-    
-    const session = await stripe.checkout.sessions.create({
+    const customerId = customers.data[0].id;
+    logStep("Found Stripe customer", { customerId });
+
+    const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
-      line_items: [
-        {
-          price: FLOWMIND_PRICE_ID,
-          quantity: 1,
-        },
-      ],
-      mode: "subscription",
-      success_url: `${origin}/?success=true`,
-      cancel_url: `${origin}/?canceled=true`,
+      status: "active",
+      limit: 1,
     });
+    const hasActiveSub = subscriptions.data.length > 0;
+    let productId = null;
+    let subscriptionEnd = null;
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
+    if (hasActiveSub) {
+      const subscription = subscriptions.data[0];
+      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
+      productId = subscription.items.data[0].price.product;
+      logStep("Determined subscription product", { productId });
+    } else {
+      logStep("No active subscription found");
+    }
 
-    return new Response(JSON.stringify({ url: session.url }), {
+    return new Response(JSON.stringify({
+      subscribed: hasActiveSub,
+      product_id: productId,
+      subscription_end: subscriptionEnd
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in create-checkout", { message: errorMessage });
+    logStep("ERROR in check-subscription", { message: errorMessage });
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
