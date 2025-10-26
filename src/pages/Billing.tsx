@@ -39,17 +39,17 @@ const plans = [
   },
   {
     name: "Enterprise",
-    price: "$99",
-    description: "For large-scale operations",
+    price: "$299",
+    description: "AI workflow generation from any input",
     features: [
-      "Unlimited everything",
-      "Dedicated support",
+      "Unlimited workflows",
+      "AI-powered workflow generation",
+      "Advanced workflow optimization",
+      "Priority support",
       "Custom integrations",
-      "SLA guarantee",
       "Advanced security",
-      "Team collaboration",
     ],
-    priceId: "price_enterprise", // Replace with actual Stripe price ID
+    priceId: "price_1SMTvDDwvUX8vzUwNCW971si",
   },
 ];
 
