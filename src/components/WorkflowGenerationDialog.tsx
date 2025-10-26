@@ -39,6 +39,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [generatedExplanation, setGeneratedExplanation] = useState("");
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -151,7 +152,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -183,10 +184,19 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       validFiles.push(file);
     }
 
-    if (validFiles.length === 0) {
-      e.target.value = '';
-      return;
+    if (validFiles.length > 0) {
+      setSelectedImages(prev => [...prev, ...validFiles]);
+      toast({
+        title: "Images selected",
+        description: `${validFiles.length} image${validFiles.length > 1 ? 's' : ''} added`,
+      });
     }
+
+    e.target.value = '';
+  };
+
+  const handleGenerateFromImages = async () => {
+    if (selectedImages.length === 0) return;
 
     setIsAnalyzing(true);
     setGeneratedExplanation("");
@@ -194,7 +204,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     try {
       // Convert all files to base64
       const base64Images = await Promise.all(
-        validFiles.map(file => 
+        selectedImages.map(file => 
           new Promise<string>((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
@@ -216,7 +226,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         onOpenChange(false);
         toast({
           title: "Workflow Generated!",
-          description: `Created ${data.nodes.length} nodes from ${validFiles.length} image${validFiles.length > 1 ? 's' : ''}`,
+          description: `Created ${data.nodes.length} nodes from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`,
         });
       }
     } catch (error: any) {
@@ -227,8 +237,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       });
     } finally {
       setIsAnalyzing(false);
-      e.target.value = '';
+      setSelectedImages([]);
     }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleJSONImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -539,27 +553,61 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={handleImageUpload}
+                onChange={handleImageSelection}
                 className="hidden"
               />
-              <Button
-                onClick={() => imageInputRef.current?.click()}
-                disabled={isAnalyzing}
-                className="w-full max-w-xs"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Images
-                  </>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  variant="outline"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Select Images
+                </Button>
+                {selectedImages.length > 0 && (
+                  <Button
+                    onClick={handleGenerateFromImages}
+                    disabled={isAnalyzing}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate from {selectedImages.length} Image{selectedImages.length > 1 ? 's' : ''}
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
+
+            {selectedImages.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Selected Images ({selectedImages.length}):</h3>
+                <ScrollArea className="h-32 border rounded-md p-2">
+                  <div className="space-y-2">
+                    {selectedImages.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-muted/50 rounded p-2">
+                        <span className="text-sm truncate flex-1">{file.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeImage(index)}
+                          className="h-6 w-6 p-0"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
 
             {generatedExplanation && (
               <div className="flex-1 overflow-hidden flex flex-col">
