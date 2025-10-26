@@ -1,49 +1,12 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Zap, Lock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+
+const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/bJe00jeZI5Pnauh9Qkfbq02";
 
 export const Paywall = () => {
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  const handleSubscribe = async () => {
-    try {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to subscribe",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (error: any) {
-      console.error('Error creating checkout session:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start checkout",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleSubscribe = () => {
+    window.location.href = STRIPE_PAYMENT_LINK;
   };
 
   return (
@@ -98,11 +61,10 @@ export const Paywall = () => {
             </div>
             <Button 
               onClick={handleSubscribe} 
-              disabled={loading}
               size="lg"
               className="w-full text-lg h-12"
             >
-              {loading ? "Redirecting..." : "Subscribe Now"}
+              Subscribe Now
             </Button>
             <p className="text-xs text-muted-foreground">
               Secure checkout powered by Stripe. Cancel anytime.
