@@ -419,6 +419,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          lifetime_access: boolean | null
           updated_at: string
         }
         Insert: {
@@ -428,6 +429,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          lifetime_access?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -437,6 +439,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          lifetime_access?: boolean | null
           updated_at?: string
         }
         Relationships: [
