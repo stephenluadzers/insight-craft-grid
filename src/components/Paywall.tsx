@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, Zap, Lock } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/bJe00jeZI5Pnauh9Qkfbq02";
 
@@ -68,6 +69,12 @@ export const Paywall = () => {
             </Button>
             <p className="text-xs text-muted-foreground">
               Secure checkout powered by Stripe. Cancel anytime.
+            </p>
+            <p className="text-sm text-muted-foreground mt-4">
+              Already have an account?{" "}
+              <Link to="/auth" className="text-primary hover:underline font-medium">
+                Sign In
+              </Link>
             </p>
           </div>
         </CardContent>
