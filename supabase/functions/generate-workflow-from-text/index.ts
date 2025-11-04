@@ -134,6 +134,12 @@ OUTPUT FORMAT (Return ONLY valid JSON, no markdown):
       }
     }
   ],
+  "connections": [
+    { "from": "source_node_id", "to": "target_node_id" },
+    { "from": "main_ai_agent", "to": "sub_agent_email" },
+    { "from": "sub_agent_email", "to": "email_send_action" },
+    { "from": "error_handler", "to": "security_audit_log" }
+  ],
   "execution_strategy": {
     "event_driven": true,
     "checkpointing": true,
@@ -153,6 +159,18 @@ BEHAVIORAL RULES:
 - Add human-in-the-loop for sensitive operations
 - Enable cycle detection and prevention
 - Support A/B testing and versioning
+
+AUTO-LINKING RULES:
+- Always generate "connections" array to autowire nodes intelligently
+- Connect main agents → sub-agents → specific actions
+- Connect all nodes to error handlers for fault tolerance
+- Connect checkpoints to critical state transitions
+- Connect validators before sensitive operations
+- Connect circuit breakers around external API calls
+- Ensure execution flow is logical: trigger → processing → actions → output
+- Error handlers should connect to audit logs or notification systems
+- Agent handoffs should connect to the next agent in the chain
+- Use dependencies field in config to validate connection logic
 
 GOAL: Generate autonomous, resilient, visual workflows that combine event-driven execution, state management, multi-agent orchestration, and defensive programming — accessible to everyone, scalable to enterprise.`
           },
