@@ -8,34 +8,152 @@ export const generateWorkflowName = (nodes: WorkflowNodeData[]): string => {
     return "empty-workflow";
   }
 
-  // Extract node types and titles
-  const nodeTypes = nodes.map(n => n.type);
-  const triggerNodes = nodes.filter(n => n.type === "trigger");
-  const actionNodes = nodes.filter(n => n.type === "action");
-  const aiNodes = nodes.filter(n => n.type === "ai");
+  // Extract all titles and descriptions for analysis
+  const allText = nodes.map(n => `${n.title} ${n.description || ''}`).join(' ').toLowerCase();
   
-  // Get key words from first trigger or first node
-  const primaryNode = triggerNodes[0] || nodes[0];
-  const keyWords = extractKeyWords(primaryNode.title);
+  // Detect workflow category/purpose
+  const category = detectWorkflowCategory(allText, nodes);
   
-  // Build descriptive name
-  let name = "";
+  // Detect primary action/function
+  const primaryAction = detectPrimaryAction(allText, nodes);
   
-  if (keyWords.length > 0) {
-    // Use first 2-3 key words from trigger/primary node
-    name = keyWords.slice(0, 2).join("-");
+  // Detect tools/platforms involved
+  const platforms = detectPlatforms(allText);
+  
+  // Build intelligent name
+  let nameParts: string[] = [];
+  
+  // Add category if detected
+  if (category) {
+    nameParts.push(category);
   }
   
-  // Add workflow type indicator
-  if (aiNodes.length > 0) {
-    name += name ? "-ai-workflow" : "ai-workflow";
-  } else if (actionNodes.length > 1) {
-    name += name ? "-automation" : "automation-workflow";
-  } else {
-    name += name ? "-workflow" : "workflow";
+  // Add primary action
+  if (primaryAction) {
+    nameParts.push(primaryAction);
   }
   
-  return sanitizeFilename(name);
+  // Add platform if relevant and specific
+  if (platforms.length > 0 && platforms.length <= 2) {
+    nameParts.push(...platforms);
+  }
+  
+  // Add workflow type based on complexity
+  const workflowType = detectWorkflowType(nodes);
+  if (workflowType) {
+    nameParts.push(workflowType);
+  }
+  
+  // Fallback to simple name if nothing detected
+  if (nameParts.length === 0) {
+    const triggerNode = nodes.find(n => n.type === "trigger");
+    const keyWords = extractKeyWords(triggerNode?.title || nodes[0].title);
+    nameParts = keyWords.slice(0, 2);
+    nameParts.push("workflow");
+  }
+  
+  return sanitizeFilename(nameParts.join("-"));
+};
+
+/**
+ * Detects the workflow category/domain
+ */
+const detectWorkflowCategory = (text: string, nodes: WorkflowNodeData[]): string | null => {
+  const categories = {
+    'lead': ['lead', 'prospect', 'inquiry', 'contact form', 'signup'],
+    'customer': ['customer', 'client', 'user onboard'],
+    'invoice': ['invoice', 'billing', 'payment', 'receipt'],
+    'order': ['order', 'purchase', 'checkout', 'cart'],
+    'support': ['support', 'ticket', 'help desk', 'issue'],
+    'hr': ['employee', 'hiring', 'recruitment', 'onboarding', 'hr'],
+    'marketing': ['campaign', 'newsletter', 'marketing', 'promotion'],
+    'sales': ['sales', 'deal', 'opportunity', 'quote'],
+    'content': ['content', 'blog', 'article', 'post', 'publish'],
+    'data': ['data', 'report', 'analytics', 'sync', 'export'],
+    'notification': ['notification', 'alert', 'reminder', 'notify'],
+  };
+  
+  for (const [category, keywords] of Object.entries(categories)) {
+    if (keywords.some(kw => text.includes(kw))) {
+      return category;
+    }
+  }
+  
+  return null;
+};
+
+/**
+ * Detects the primary action/function
+ */
+const detectPrimaryAction = (text: string, nodes: WorkflowNodeData[]): string | null => {
+  const actions = {
+    'intake': ['intake', 'receive', 'capture', 'collect'],
+    'processing': ['process', 'transform', 'parse', 'analyze'],
+    'summarization': ['summarize', 'summary', 'digest'],
+    'classification': ['classify', 'categorize', 'sort', 'tag'],
+    'enrichment': ['enrich', 'enhance', 'augment'],
+    'notification': ['notify', 'alert', 'send email', 'send message'],
+    'automation': ['automate', 'schedule', 'trigger'],
+    'routing': ['route', 'distribute', 'assign'],
+    'approval': ['approve', 'review', 'validate'],
+    'generation': ['generate', 'create', 'build'],
+  };
+  
+  const hasAI = nodes.some(n => n.type === 'ai');
+  
+  for (const [action, keywords] of Object.entries(actions)) {
+    if (keywords.some(kw => text.includes(kw))) {
+      // Add "ai" prefix if AI is involved in this action
+      return hasAI && ['summarization', 'classification', 'generation'].includes(action) 
+        ? `ai-${action}` 
+        : action;
+    }
+  }
+  
+  return null;
+};
+
+/**
+ * Detects platforms/tools mentioned
+ */
+const detectPlatforms = (text: string): string[] => {
+  const platforms = [
+    'email', 'gmail', 'slack', 'discord', 'telegram',
+    'stripe', 'paypal', 'calendar', 'sheets', 'airtable',
+    'hubspot', 'salesforce', 'notion', 'jira', 'trello',
+    'shopify', 'wordpress', 'github', 'twitter', 'linkedin'
+  ];
+  
+  return platforms.filter(p => text.includes(p));
+};
+
+/**
+ * Detects workflow type based on structure
+ */
+const detectWorkflowType = (nodes: WorkflowNodeData[]): string | null => {
+  const aiNodes = nodes.filter(n => n.type === 'ai');
+  const actionNodes = nodes.filter(n => n.type === 'action');
+  const conditionNodes = nodes.filter(n => n.type === 'condition');
+  
+  // Already has AI in the name from primary action? Skip
+  const hasAIInActions = nodes.some(n => 
+    n.title.toLowerCase().includes('ai') || 
+    n.description?.toLowerCase().includes('ai')
+  );
+  
+  if (aiNodes.length >= 2) {
+    return 'multi-agent';
+  } else if (aiNodes.length === 1 && !hasAIInActions) {
+    return 'ai-powered';
+  } else if (conditionNodes.length >= 2) {
+    return 'branching';
+  } else if (actionNodes.length >= 4) {
+    return 'automation';
+  } else if (nodes.length <= 3) {
+    return 'simple';
+  }
+  
+  return 'workflow';
 };
 
 /**
