@@ -411,6 +411,142 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_purchases: {
+        Row: {
+          buyer_id: string
+          id: string
+          marketplace_template_id: string
+          price_paid_cents: number
+          purchased_at: string
+          workspace_id: string
+        }
+        Insert: {
+          buyer_id: string
+          id?: string
+          marketplace_template_id: string
+          price_paid_cents: number
+          purchased_at?: string
+          workspace_id: string
+        }
+        Update: {
+          buyer_id?: string
+          id?: string
+          marketplace_template_id?: string
+          price_paid_cents?: number
+          purchased_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_purchases_marketplace_template_id_fkey"
+            columns: ["marketplace_template_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_purchases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_reviews: {
+        Row: {
+          created_at: string
+          id: string
+          marketplace_template_id: string
+          rating: number
+          review_text: string | null
+          reviewer_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marketplace_template_id: string
+          rating: number
+          review_text?: string | null
+          reviewer_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marketplace_template_id?: string
+          rating?: number
+          review_text?: string | null
+          reviewer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_reviews_marketplace_template_id_fkey"
+            columns: ["marketplace_template_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_templates: {
+        Row: {
+          creator_id: string
+          downloads_count: number
+          featured: boolean
+          id: string
+          is_verified: boolean
+          price_cents: number
+          published_at: string
+          rating_avg: number | null
+          rating_count: number
+          revenue_share_percent: number
+          tags: string[] | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          creator_id: string
+          downloads_count?: number
+          featured?: boolean
+          id?: string
+          is_verified?: boolean
+          price_cents?: number
+          published_at?: string
+          rating_avg?: number | null
+          rating_count?: number
+          revenue_share_percent?: number
+          tags?: string[] | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          creator_id?: string
+          downloads_count?: number
+          featured?: boolean
+          id?: string
+          is_verified?: boolean
+          price_cents?: number
+          published_at?: string
+          rating_avg?: number | null
+          rating_count?: number
+          revenue_share_percent?: number
+          tags?: string[] | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_templates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1058,6 +1194,195 @@ export type Database = {
           },
         ]
       }
+      workflow_healing_logs: {
+        Row: {
+          attempted_at: string
+          completed_at: string | null
+          failure_type: string
+          healing_action: string
+          healing_strategy: Json
+          id: string
+          learned_pattern: Json | null
+          original_error: string
+          recovery_time_ms: number | null
+          success: boolean
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          completed_at?: string | null
+          failure_type: string
+          healing_action: string
+          healing_strategy: Json
+          id?: string
+          learned_pattern?: Json | null
+          original_error: string
+          recovery_time_ms?: number | null
+          success?: boolean
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          attempted_at?: string
+          completed_at?: string | null
+          failure_type?: string
+          healing_action?: string
+          healing_strategy?: Json
+          id?: string
+          learned_pattern?: Json | null
+          original_error?: string
+          recovery_time_ms?: number | null
+          success?: boolean
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_healing_logs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_healing_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_learned_optimizations: {
+        Row: {
+          applied: boolean
+          applied_at: string | null
+          id: string
+          learned_at: string
+          optimization_data: Json
+          optimization_type: string
+          performance_improvement_percent: number | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          applied?: boolean
+          applied_at?: string | null
+          id?: string
+          learned_at?: string
+          optimization_data: Json
+          optimization_type: string
+          performance_improvement_percent?: number | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          applied?: boolean
+          applied_at?: string | null
+          id?: string
+          learned_at?: string
+          optimization_data?: Json
+          optimization_type?: string
+          performance_improvement_percent?: number | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_learned_optimizations_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_learned_optimizations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_optimization_experiments: {
+        Row: {
+          applied_at: string | null
+          auto_apply: boolean
+          completed_at: string | null
+          experiment_type: string
+          id: string
+          started_at: string
+          status: string
+          variant_a_avg_duration_ms: number | null
+          variant_a_config: Json
+          variant_a_executions: number
+          variant_a_success_rate: number | null
+          variant_b_avg_duration_ms: number | null
+          variant_b_config: Json
+          variant_b_executions: number
+          variant_b_success_rate: number | null
+          winner: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          auto_apply?: boolean
+          completed_at?: string | null
+          experiment_type: string
+          id?: string
+          started_at?: string
+          status?: string
+          variant_a_avg_duration_ms?: number | null
+          variant_a_config: Json
+          variant_a_executions?: number
+          variant_a_success_rate?: number | null
+          variant_b_avg_duration_ms?: number | null
+          variant_b_config: Json
+          variant_b_executions?: number
+          variant_b_success_rate?: number | null
+          winner?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          auto_apply?: boolean
+          completed_at?: string | null
+          experiment_type?: string
+          id?: string
+          started_at?: string
+          status?: string
+          variant_a_avg_duration_ms?: number | null
+          variant_a_config?: Json
+          variant_a_executions?: number
+          variant_a_success_rate?: number | null
+          variant_b_avg_duration_ms?: number | null
+          variant_b_config?: Json
+          variant_b_executions?: number
+          variant_b_success_rate?: number | null
+          winner?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_optimization_experiments_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_optimization_experiments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_performance_metrics: {
         Row: {
           api_calls: number | null
@@ -1118,6 +1443,75 @@ export type Database = {
           },
           {
             foreignKeyName: "workflow_performance_metrics_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_recommendations: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          created_at: string
+          description: string
+          effort_score: number
+          expires_at: string | null
+          id: string
+          impact_score: number
+          priority: string
+          recommendation_data: Json
+          recommendation_type: string
+          status: string
+          title: string
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string
+          description: string
+          effort_score: number
+          expires_at?: string | null
+          id?: string
+          impact_score: number
+          priority?: string
+          recommendation_data: Json
+          recommendation_type: string
+          status?: string
+          title: string
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string
+          description?: string
+          effort_score?: number
+          expires_at?: string | null
+          id?: string
+          impact_score?: number
+          priority?: string
+          recommendation_data?: Json
+          recommendation_type?: string
+          status?: string
+          title?: string
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_recommendations_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_recommendations_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

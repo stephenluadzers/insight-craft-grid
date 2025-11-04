@@ -38,3 +38,12 @@ verify_jwt = false
 
 [functions.run-workflow-tests]
 verify_jwt = false
+
+[functions.self-heal-workflow]
+verify_jwt = false
+
+[functions.generate-recommendations]
+verify_jwt = false
+
+[functions.run-ab-test]
+verify_jwt = false

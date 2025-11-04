@@ -12,6 +12,9 @@ import { WorkflowTestSuite } from "./WorkflowTestSuite";
 import { SecurityMonitoringDashboard } from "./SecurityMonitoringDashboard";
 import AIAgentBuilder from "./AIAgentBuilder";
 import { WorkflowCostEstimator } from "./WorkflowCostEstimator";
+import { SelfHealingMonitor } from "./SelfHealingMonitor";
+import { RecommendationsEngine } from "./RecommendationsEngine";
+import { ABTestingDashboard } from "./ABTestingDashboard";
 import { supabase } from "@/integrations/supabase/client";
 
 export const EnterpriseControlPanel = () => {
@@ -45,7 +48,7 @@ export const EnterpriseControlPanel = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:grid-cols-9">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-12">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -55,6 +58,9 @@ export const EnterpriseControlPanel = () => {
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="ai">AI Agent</TabsTrigger>
           <TabsTrigger value="costs">Costs</TabsTrigger>
+          <TabsTrigger value="healing">Self-Healing</TabsTrigger>
+          <TabsTrigger value="recommendations">AI Recs</TabsTrigger>
+          <TabsTrigger value="experiments">A/B Tests</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -190,6 +196,18 @@ export const EnterpriseControlPanel = () => {
 
         <TabsContent value="costs">
           <WorkflowCostEstimator nodes={[]} executionsPerMonth={1000} />
+        </TabsContent>
+
+        <TabsContent value="healing">
+          {workspaceId && <SelfHealingMonitor workspaceId={workspaceId} />}
+        </TabsContent>
+
+        <TabsContent value="recommendations">
+          {workspaceId && <RecommendationsEngine workspaceId={workspaceId} />}
+        </TabsContent>
+
+        <TabsContent value="experiments">
+          {workspaceId && <ABTestingDashboard workspaceId={workspaceId} />}
         </TabsContent>
       </Tabs>
     </div>
