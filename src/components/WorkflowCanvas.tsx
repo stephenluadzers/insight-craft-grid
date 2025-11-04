@@ -192,13 +192,17 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     handleDownload: async () => {
       console.log('⬇️ Download workflow package');
       try {
-        const { generateWorkflowDownloadPackage } = await import('@/lib/workflowDownload');
-        const blob = await generateWorkflowDownloadPackage(nodes, currentWorkflowName);
+        const { exportWorkflowForBusiness } = await import('@/lib/workflowExport');
+        const blob = await exportWorkflowForBusiness(nodes, currentWorkflowName, {
+          platform: 'supabase-function',
+          includeDocs: true,
+          includeTests: false,
+        });
         
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_package.zip`;
+        a.download = `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_complete_export.zip`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

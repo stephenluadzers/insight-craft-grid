@@ -356,39 +356,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       // Generate intelligent filename
       const filename = generateWorkflowName(nodes);
       
-      // Export JSON first
-      const workflowData = {
-        name: workflowName,
-        version: "1.0",
-        nodes: nodes.map(node => ({
-          id: node.id,
-          type: node.type,
-          title: node.title,
-          description: node.description,
-          x: node.x,
-          y: node.y,
-          config: node.config || {},
-        })),
-        exportedAt: new Date().toISOString(),
-      };
-
-      const jsonBlob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
-      const jsonUrl = URL.createObjectURL(jsonBlob);
-      const jsonLink = document.createElement('a');
-      jsonLink.href = jsonUrl;
-      jsonLink.download = `${filename}.json`;
-      document.body.appendChild(jsonLink);
-      jsonLink.click();
-      document.body.removeChild(jsonLink);
-      URL.revokeObjectURL(jsonUrl);
-
-      // Then capture screenshot with centered workflow
+      // Capture screenshot first
       const canvasElement = document.querySelector('.workflow-canvas') as HTMLElement;
       if (!canvasElement) {
         throw new Error('Canvas element not found');
       }
 
-      // Calculate bounding box of all nodes to center the screenshot
       const nodeElements = canvasElement.querySelectorAll('[data-node-id]');
       if (nodeElements.length === 0) {
         throw new Error('No nodes found to screenshot');
@@ -408,7 +381,6 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         maxY = Math.max(maxY, relY + rect.height);
       });
 
-      // Add padding around the workflow
       const padding = 40;
       const cropX = Math.max(0, minX - padding);
       const cropY = Math.max(0, minY - padding);
@@ -425,22 +397,41 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         height: cropHeight,
       });
 
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${filename}-screenshot.png`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+      const screenshotBlob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+        }, 'image/png');
+      });
 
-          toast({
-            title: "Export Complete",
-            description: "JSON and screenshot downloaded successfully",
-          });
-        }
+      // Generate comprehensive export bundle
+      const { exportWorkflowForBusiness } = await import('@/lib/workflowExport');
+      const exportBlob = await exportWorkflowForBusiness(nodes, workflowName, {
+        platform: 'supabase-function',
+        includeDocs: true,
+        includeTests: false,
+      });
+
+      // Add screenshot to the export bundle
+      const JSZip = (await import('jszip')).default;
+      const zip = await JSZip.loadAsync(exportBlob);
+      zip.file(`${filename}-screenshot.png`, screenshotBlob);
+
+      // Generate final bundle
+      const finalBlob = await zip.generateAsync({ type: 'blob' });
+
+      // Download the complete package
+      const url = URL.createObjectURL(finalBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}-complete-export.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export Complete",
+        description: "Complete workflow package with manifest, deploy scripts, and screenshot downloaded",
       });
     } catch (error: any) {
       toast({
