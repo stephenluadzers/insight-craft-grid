@@ -5,12 +5,13 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson } from "lucide-react";
+import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
 import { z } from "zod";
 import { generateWorkflowName } from "@/lib/workflowUtils";
+import { WorkflowBusinessExport } from "./WorkflowBusinessExport";
 
 const workflowIdeaSchema = z.string().trim().min(10, "Description must be at least 10 characters").max(5000, "Description must be less than 5000 characters");
 
@@ -39,6 +40,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [generatedExplanation, setGeneratedExplanation] = useState("");
+  const [showBusinessExport, setShowBusinessExport] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -682,7 +684,41 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
               </Button>
             </div>
           </TabsContent>
+
+          <TabsContent value="business" className="space-y-4">
+            <div className="text-center space-y-4 py-8">
+              <Package className="w-16 h-16 mx-auto text-primary" />
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Deploy to Production</h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Export your workflow as production-ready code for n8n, Make, Python, TypeScript, Docker, GitHub Actions, or Supabase.
+                </p>
+              </div>
+              
+              <Button
+                onClick={() => setShowBusinessExport(true)}
+                className="mt-4"
+                disabled={!nodes || nodes.length === 0}
+              >
+                <Package className="mr-2 h-4 w-4" />
+                Choose Export Platform
+              </Button>
+              
+              {(!nodes || nodes.length === 0) && (
+                <p className="text-xs text-muted-foreground">
+                  Create a workflow first to enable exports
+                </p>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
+
+        <WorkflowBusinessExport
+          open={showBusinessExport}
+          onOpenChange={setShowBusinessExport}
+          nodes={nodes || []}
+          workflowName={workflowName}
+        />
       </DialogContent>
     </Dialog>
   );
