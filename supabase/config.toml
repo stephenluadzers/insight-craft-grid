@@ -26,3 +26,15 @@ verify_jwt = false
 
 [functions.create-checkout-session]
 verify_jwt = true
+
+[functions.collect-trace]
+verify_jwt = false
+
+[functions.analyze-workflow-performance]
+verify_jwt = false
+
+[functions.compile-workflow]
+verify_jwt = false
+
+[functions.run-workflow-tests]
+verify_jwt = false
