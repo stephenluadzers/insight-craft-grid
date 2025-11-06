@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { description } = await req.json();
+    const { description, existingWorkflow } = await req.json();
 
     if (!description) {
       throw new Error('Description is required');
@@ -34,6 +34,29 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are FlowFuse's AI Workflow Architect — combining the best of OpenDevin, LangGraph, and Autogen Studio.
+
+${existingWorkflow ? `
+IMPORTANT: You are IMPROVING an existing workflow. The user has provided their current workflow and wants you to enhance it based on their new description.
+
+EXISTING WORKFLOW:
+${JSON.stringify(existingWorkflow, null, 2)}
+
+Your task:
+1. Understand the existing workflow structure
+2. Keep existing nodes that are still relevant
+3. Add new nodes based on the user's improvement request
+4. Modify existing nodes if the user asks for changes
+5. Maintain logical connections between nodes
+6. Preserve node IDs for unchanged nodes to maintain stability
+7. Generate new IDs only for new nodes
+8. Update the explanation to describe what was changed/added
+
+MERGE STRATEGY:
+- Preserve core functionality unless explicitly asked to change
+- Add requested features as new nodes or modify existing ones
+- Keep the workflow coherent and well-connected
+- Highlight improvements in the explanation
+` : ''}
 
 ARCHITECTURAL PRINCIPLES:
 - Event-driven execution (OpenDevin-inspired)

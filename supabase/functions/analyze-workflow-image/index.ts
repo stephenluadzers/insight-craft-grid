@@ -17,7 +17,7 @@ serve(async (req) => {
   try {
     console.log('Received image analysis request');
     
-    const { images, image } = await req.json();
+    const { images, image, existingWorkflow } = await req.json();
     
     // Support both single image (legacy) and multiple images
     const imageArray = images || (image ? [image] : []);
@@ -115,7 +115,23 @@ serve(async (req) => {
               role: 'system',
               content: `You are an Expert Workflow Understanding Engine. Analyze images containing workflows, diagrams, sketches, or process descriptions and extract structured workflow data.
 
+${existingWorkflow ? `
+IMPORTANT: You are IMPROVING an existing workflow. The user has provided an image to enhance their current workflow.
+
+EXISTING WORKFLOW:
+${JSON.stringify(existingWorkflow, null, 2)}
+
 Your task:
+1. Understand the existing workflow structure
+2. Analyze the provided image(s) for new features/nodes
+3. Integrate image insights with existing workflow
+4. Keep relevant existing nodes
+5. Add new nodes from the image
+6. Maintain logical connections
+7. Preserve node IDs for unchanged nodes
+8. Generate new IDs only for new nodes
+9. Explain what was improved/added in the insights
+` : 'Your task:'}
 1. Identify all workflow nodes (triggers, actions, conditions, data operations, AI steps) across ALL provided images
 2. Detect connections and flow between nodes, even across different images
 3. Extract node properties (titles, descriptions, types)

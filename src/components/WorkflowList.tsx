@@ -92,8 +92,7 @@ export const WorkflowList = ({ onLoadWorkflow }: WorkflowListProps) => {
           name: `${workflow.name} (Copy)`,
           description: workflow.description,
           nodes: workflow.nodes,
-          workspace_id: profile?.default_workspace_id,
-          created_by: user.id,
+          user_id: user.id,
           status: 'draft',
         });
 

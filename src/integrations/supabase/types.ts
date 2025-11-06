@@ -248,13 +248,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "dangerous_operations_log_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "dangerous_operations_log_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -770,13 +763,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "workflow_approval_queue_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "workflow_approval_queue_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -819,13 +805,6 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workflow_comments_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
         ]
@@ -920,13 +899,6 @@ export type Database = {
             columns: ["queue_item_id"]
             isOneToOne: false
             referencedRelation: "workflow_execution_queue"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workflow_dead_letter_queue_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
           {
@@ -1044,13 +1016,6 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "workflow_execution_queue_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "workflow_execution_queue_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -1179,13 +1144,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "workflow_executions_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "workflow_executions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -1239,13 +1197,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "workflow_healing_logs_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "workflow_healing_logs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -1289,13 +1240,6 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "workflow_learned_optimizations_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "workflow_learned_optimizations_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -1368,13 +1312,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "workflow_optimization_experiments_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "workflow_optimization_experiments_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -1432,13 +1369,6 @@ export type Database = {
             columns: ["execution_id"]
             isOneToOne: false
             referencedRelation: "workflow_executions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workflow_performance_metrics_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
           {
@@ -1504,13 +1434,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "workflow_recommendations_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "workflow_recommendations_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -1550,15 +1473,7 @@ export type Database = {
           updated_at?: string | null
           workflow_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "workflow_schedules_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       workflow_security_scans: {
         Row: {
@@ -1607,13 +1522,6 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "workflow_security_scans_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "workflow_security_scans_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -1759,13 +1667,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "workflow_versions_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
         ]
       }
       workflow_webhooks: {
@@ -1793,85 +1694,52 @@ export type Database = {
           webhook_key?: string
           workflow_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "workflow_webhooks_workflow_id_fkey"
-            columns: ["workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       workflows: {
         Row: {
-          category: string | null
-          created_at: string
-          created_by: string
+          connections: Json | null
+          created_at: string | null
+          created_by: string | null
           description: string | null
           id: string
-          is_template: boolean | null
+          metadata: Json | null
           name: string
           nodes: Json
-          published_at: string | null
-          status: Database["public"]["Enums"]["workflow_status"]
-          updated_at: string
-          updated_by: string | null
-          workspace_id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+          workspace_id: string | null
         }
         Insert: {
-          category?: string | null
-          created_at?: string
-          created_by: string
+          connections?: Json | null
+          created_at?: string | null
+          created_by?: string | null
           description?: string | null
           id?: string
-          is_template?: boolean | null
+          metadata?: Json | null
           name: string
           nodes?: Json
-          published_at?: string | null
-          status?: Database["public"]["Enums"]["workflow_status"]
-          updated_at?: string
-          updated_by?: string | null
-          workspace_id: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+          workspace_id?: string | null
         }
         Update: {
-          category?: string | null
-          created_at?: string
-          created_by?: string
+          connections?: Json | null
+          created_at?: string | null
+          created_by?: string | null
           description?: string | null
           id?: string
-          is_template?: boolean | null
+          metadata?: Json | null
           name?: string
           nodes?: Json
-          published_at?: string | null
-          status?: Database["public"]["Enums"]["workflow_status"]
-          updated_at?: string
-          updated_by?: string | null
-          workspace_id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+          workspace_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "workflows_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workflows_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workflows_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       workspace_execution_limits: {
         Row: {

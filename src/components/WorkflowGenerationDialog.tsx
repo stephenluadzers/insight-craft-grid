@@ -13,7 +13,7 @@ import { z } from "zod";
 import { generateWorkflowName } from "@/lib/workflowUtils";
 import { WorkflowBusinessExport } from "./WorkflowBusinessExport";
 
-const workflowIdeaSchema = z.string().trim().min(10, "Description must be at least 10 characters").max(5000, "Description must be less than 5000 characters");
+const workflowIdeaSchema = z.string().trim().min(10, "Description must be at least 10 characters").max(50000, "Description must be less than 50000 characters");
 
 const workflowNodeSchema = z.object({
   id: z.string(),
@@ -62,8 +62,13 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     setGeneratedExplanation("");
 
     try {
+      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
+      
       const { data, error } = await supabase.functions.invoke('generate-workflow-from-text', {
-        body: { description: validation.data }
+        body: { 
+          description: validation.data,
+          existingWorkflow
+        }
       });
 
       if (error) throw error;
@@ -74,8 +79,10 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         onWorkflowGenerated(data.nodes);
         onOpenChange(false);
         toast({
-          title: "Workflow Generated!",
-          description: `Created ${data.nodes.length} nodes from your description`,
+          title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
+          description: existingWorkflow 
+            ? `Enhanced your workflow with new features`
+            : `Created ${data.nodes.length} nodes from your description`,
         });
       }
     } catch (error: any) {
@@ -215,8 +222,13 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         )
       );
 
+      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
+
       const { data, error } = await supabase.functions.invoke('analyze-workflow-image', {
-        body: { images: base64Images }
+        body: { 
+          images: base64Images,
+          existingWorkflow
+        }
       });
 
       if (error) throw error;
@@ -227,8 +239,10 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         onWorkflowGenerated(data.nodes);
         onOpenChange(false);
         toast({
-          title: "Workflow Generated!",
-          description: `Created ${data.nodes.length} nodes from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`,
+          title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
+          description: existingWorkflow
+            ? `Enhanced your workflow with insights from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`
+            : `Created ${data.nodes.length} nodes from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`,
         });
       }
     } catch (error: any) {

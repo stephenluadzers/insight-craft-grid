@@ -21,7 +21,7 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
   const [explanation, setExplanation] = useState('');
   const { toast } = useToast();
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (existingWorkflow?: any) => {
     if (!prompt.trim()) {
       toast({
         title: "Input Required",
@@ -34,7 +34,10 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-workflow-from-text', {
-        body: { description: prompt }
+        body: { 
+          description: prompt,
+          existingWorkflow: existingWorkflow || generatedWorkflow
+        }
       });
 
       if (error) throw error;
@@ -48,8 +51,10 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
       setExplanation(data.explanation || '');
 
       toast({
-        title: "Workflow Generated",
-        description: "Review your AI-powered workflow in the preview panel",
+        title: existingWorkflow ? "Workflow Improved" : "Workflow Generated",
+        description: existingWorkflow 
+          ? "Your workflow has been enhanced based on your instructions"
+          : "Review your AI-powered workflow in the preview panel",
       });
     } catch (error: any) {
       console.error('Error generating workflow:', error);
@@ -151,24 +156,39 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
         </div>
 
         {/* Generate Button */}
-        <Button
-          onClick={handleGenerate}
-          disabled={isGenerating || !prompt.trim()}
-          className="w-full"
-          size="lg"
-        >
-          {isGenerating ? (
-            <>
-              <Wand2 className="mr-2 h-4 w-4 animate-spin" />
-              Generating Workflow...
-            </>
-          ) : (
-            <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate Workflow
-            </>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => handleGenerate()}
+            disabled={isGenerating || !prompt.trim()}
+            className="flex-1"
+            size="lg"
+          >
+            {isGenerating ? (
+              <>
+                <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                {generatedWorkflow ? 'Improve Workflow' : 'Generate Workflow'}
+              </>
+            )}
+          </Button>
+          {generatedWorkflow && (
+            <Button
+              onClick={() => {
+                setGeneratedWorkflow(null);
+                setExplanation('');
+                setPrompt('');
+              }}
+              variant="outline"
+              size="lg"
+            >
+              Clear
+            </Button>
           )}
-        </Button>
+        </div>
 
           {/* Helpful Tips */}
           <Alert className="bg-primary/5 border-primary/20">
