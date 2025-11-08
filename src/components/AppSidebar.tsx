@@ -1,4 +1,4 @@
-import { Home, Workflow, Clock, Webhook, BookTemplate, Settings, LogOut, CreditCard, Key, FileCode } from "lucide-react";
+import { Home, Workflow, Clock, Webhook, BookTemplate, Settings, LogOut, CreditCard, Key, FileCode, Terminal } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ const items = [
   { title: "Webhooks", url: "/webhooks", icon: Webhook },
   { title: "API Keys", url: "/api-keys", icon: Key },
   { title: "API Docs", url: "/api-docs", icon: FileCode },
+  { title: "CLI Tool", url: "/cli", icon: Terminal },
   { title: "Billing", url: "/billing", icon: CreditCard },
   { title: "Settings", url: "/settings", icon: Settings },
 ];

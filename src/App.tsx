@@ -13,6 +13,7 @@ import Webhooks from "./pages/Webhooks";
 import Billing from "./pages/Billing";
 import APIKeys from "./pages/APIKeys";
 import APIDocs from "./pages/APIDocs";
+import CLITool from "./pages/CLITool";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/webhooks" element={<ProtectedRoute><Webhooks /></ProtectedRoute>} />
             <Route path="/api-keys" element={<ProtectedRoute><APIKeys /></ProtectedRoute>} />
             <Route path="/api-docs" element={<ProtectedRoute><APIDocs /></ProtectedRoute>} />
+            <Route path="/cli" element={<ProtectedRoute><CLITool /></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

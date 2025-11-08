@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -8,7 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Key, Copy, Trash2, Plus, Eye, EyeOff } from "lucide-react";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Key, Copy, Trash2, Plus, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 
 interface APIKey {
@@ -31,6 +35,7 @@ export default function APIKeys() {
   const [newKeyData, setNewKeyData] = useState<{ api_key: string } | null>(null);
   const [showFullKey, setShowFullKey] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Form state
   const [keyName, setKeyName] = useState("");
@@ -151,13 +156,32 @@ export default function APIKeys() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">API Keys</h1>
-        <p className="text-muted-foreground">
-          Manage your API keys for programmatic access to workflows
-        </p>
-      </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        
+        <div className="flex-1 flex flex-col">
+          <header className="h-14 border-b flex items-center px-6 gap-4">
+            <SidebarTrigger />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/")}
+              className="gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Workflows
+            </Button>
+          </header>
+
+          <div className="flex-1 overflow-auto p-6">
+            <div className="container mx-auto max-w-6xl">
+              <div className="mb-8">
+                <h1 className="text-4xl font-bold mb-2">API Keys</h1>
+                <p className="text-muted-foreground">
+                  Manage your API keys for programmatic access to workflows
+                </p>
+              </div>
 
       <div className="mb-6">
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -326,7 +350,11 @@ export default function APIKeys() {
             </Card>
           ))
         )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

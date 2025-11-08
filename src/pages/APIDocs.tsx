@@ -1,13 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Code, Copy } from "lucide-react";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Code, Copy, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 export default function APIDocs() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [selectedEndpoint, setSelectedEndpoint] = useState("workflows");
 
   const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
@@ -111,13 +116,32 @@ export default function APIDocs() {
   ];
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">API Documentation</h1>
-        <p className="text-muted-foreground">
-          Complete REST API reference for programmatic workflow management
-        </p>
-      </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        
+        <div className="flex-1 flex flex-col">
+          <header className="h-14 border-b flex items-center px-6 gap-4">
+            <SidebarTrigger />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/")}
+              className="gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Workflows
+            </Button>
+          </header>
+
+          <div className="flex-1 overflow-auto p-6">
+            <div className="container mx-auto max-w-7xl">
+              <div className="mb-8">
+                <h1 className="text-4xl font-bold mb-2">API Documentation</h1>
+                <p className="text-muted-foreground">
+                  Complete REST API reference for programmatic workflow management
+                </p>
+              </div>
 
       <div className="grid gap-6 mb-8">
         <Card>
@@ -340,6 +364,10 @@ func main() {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
