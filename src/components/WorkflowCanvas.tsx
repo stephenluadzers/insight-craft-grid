@@ -752,7 +752,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
               onMouseDown={(e) => handleMouseDown(e, node.id)}
               onTouchStart={(e) => handleTouchStart(e, node.id)}
               className="group touch-none"
-              style={{ position: 'relative', zIndex: 10 }}
+              style={{ zIndex: 10 }}
             >
               <WorkflowNode
                 data={node}
