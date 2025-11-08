@@ -6,9 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sparkles, Wand2, FileCode, Image, Mic, Eye, Code2, MessageSquare, Lightbulb, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Wand2, FileCode, Image, Mic, Eye, Code2, MessageSquare, Lightbulb, CheckCircle2, DollarSign, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { WorkflowROIReport } from './WorkflowROIReport';
 
 interface AIAgentBuilderProps {
   onWorkflowGenerated: (workflow: any) => void;
@@ -19,6 +20,8 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedWorkflow, setGeneratedWorkflow] = useState<any>(null);
   const [explanation, setExplanation] = useState('');
+  const [showROIReport, setShowROIReport] = useState(false);
+  const [workflowName, setWorkflowName] = useState('');
   const { toast } = useToast();
 
   const handleGenerate = async (existingWorkflow?: any) => {
@@ -49,12 +52,14 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
       
       setGeneratedWorkflow(workflow);
       setExplanation(data.explanation || '');
+      setWorkflowName(data.workflowName || 'Generated Workflow');
+      setShowROIReport(true);
 
       toast({
         title: existingWorkflow ? "Workflow Improved" : "Workflow Generated",
         description: existingWorkflow 
           ? "Your workflow has been enhanced based on your instructions"
-          : "Review your AI-powered workflow in the preview panel",
+          : "Review your AI-powered workflow and ROI report",
       });
     } catch (error: any) {
       console.error('Error generating workflow:', error);
@@ -226,10 +231,16 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
               <CardTitle>Workflow Preview</CardTitle>
             </div>
             {generatedWorkflow && (
-              <Button onClick={handleApplyWorkflow} size="sm">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Apply to Canvas
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowROIReport(true)} variant="outline" size="sm">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  View ROI Report
+                </Button>
+                <Button onClick={handleApplyWorkflow} size="sm">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Apply to Canvas
+                </Button>
+              </div>
             )}
           </div>
           <CardDescription>
@@ -332,6 +343,21 @@ const AIAgentBuilder = ({ onWorkflowGenerated }: AIAgentBuilderProps) => {
           )}
         </CardContent>
       </Card>
+
+      {/* ROI Report Modal */}
+      {showROIReport && generatedWorkflow && generatedWorkflow.nodes && (
+        <div className="fixed inset-0 bg-background/95 z-50 overflow-y-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex justify-end mb-4">
+              <Button variant="ghost" onClick={() => setShowROIReport(false)}>
+                <X className="h-4 w-4 mr-2" />
+                Close Report
+              </Button>
+            </div>
+            <WorkflowROIReport nodes={generatedWorkflow.nodes} workflowName={workflowName} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
