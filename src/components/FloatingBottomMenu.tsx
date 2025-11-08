@@ -4,7 +4,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Sparkles, Store, Users, Zap, Code2, Bug, TestTube, 
   BarChart3, DollarSign, Menu, X, Layout, Mail, Database, 
-  FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download, Github, Upload
+  FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download, Github, Upload,
+  Layers, FolderOpen, TestTube2, TrendingUp, Play
 } from "lucide-react";
 import { NodeType } from "./WorkflowNode";
 import { cn } from "@/lib/utils";
@@ -63,8 +64,11 @@ export function FloatingBottomMenu({
   };
 
   const menuItems = [
-    { id: 'canvas', label: 'Canvas', icon: Layout, description: 'Visual workflow builder' },
+    { id: 'canvas', label: 'Canvas', icon: Layers, description: 'Visual workflow builder' },
+    { id: 'workflows', label: 'Workflows', icon: FolderOpen, description: 'Manage saved workflows' },
     { id: 'ai-builder', label: 'AI Builder', icon: Sparkles, description: 'Generate workflows with AI' },
+    { id: 'sandbox', label: 'Sandbox', icon: TestTube2, description: 'Test workflows safely' },
+    { id: 'business-intelligence', label: 'Business Intelligence', icon: TrendingUp, description: 'Track ROI and costs' },
     { id: 'triggers', label: 'Triggers', icon: Zap, description: 'Configure workflow triggers' },
     { id: 'embed', label: 'Embed', icon: Code2, description: 'Embed agents anywhere' },
     { id: 'marketplace', label: 'Marketplace', icon: Store, description: 'Browse templates' },

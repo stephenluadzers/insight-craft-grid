@@ -771,6 +771,113 @@ export type Database = {
           },
         ]
       }
+      workflow_business_metrics: {
+        Row: {
+          avg_execution_time_ms: number | null
+          created_at: string
+          date: string
+          failed_executions: number
+          id: string
+          roi_score: number | null
+          successful_executions: number
+          time_saved_hours: number | null
+          total_cost_cents: number
+          total_executions: number
+          updated_at: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          avg_execution_time_ms?: number | null
+          created_at?: string
+          date: string
+          failed_executions?: number
+          id?: string
+          roi_score?: number | null
+          successful_executions?: number
+          time_saved_hours?: number | null
+          total_cost_cents?: number
+          total_executions?: number
+          updated_at?: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          avg_execution_time_ms?: number | null
+          created_at?: string
+          date?: string
+          failed_executions?: number
+          id?: string
+          roi_score?: number | null
+          successful_executions?: number
+          time_saved_hours?: number | null
+          total_cost_cents?: number
+          total_executions?: number
+          updated_at?: string
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_business_metrics_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_business_metrics_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_collaboration_sessions: {
+        Row: {
+          created_at: string
+          cursor_position: Json | null
+          id: string
+          is_editing: boolean
+          last_seen_at: string
+          selected_node_id: string | null
+          user_color: string
+          user_id: string
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          cursor_position?: Json | null
+          id?: string
+          is_editing?: boolean
+          last_seen_at?: string
+          selected_node_id?: string | null
+          user_color: string
+          user_id: string
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          cursor_position?: Json | null
+          id?: string
+          is_editing?: boolean
+          last_seen_at?: string
+          selected_node_id?: string | null
+          user_color?: string
+          user_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_collaboration_sessions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_comments: {
         Row: {
           content: string
@@ -805,6 +912,76 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_cost_tracking: {
+        Row: {
+          cost_amount_cents: number
+          cost_type: string
+          execution_id: string | null
+          id: string
+          metadata: Json | null
+          node_id: string
+          node_type: string
+          provider: string | null
+          recorded_at: string
+          usage_quantity: number | null
+          usage_unit: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          cost_amount_cents?: number
+          cost_type: string
+          execution_id?: string | null
+          id?: string
+          metadata?: Json | null
+          node_id: string
+          node_type: string
+          provider?: string | null
+          recorded_at?: string
+          usage_quantity?: number | null
+          usage_unit?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          cost_amount_cents?: number
+          cost_type?: string
+          execution_id?: string | null
+          id?: string
+          metadata?: Json | null
+          node_id?: string
+          node_type?: string
+          provider?: string | null
+          recorded_at?: string
+          usage_quantity?: number | null
+          usage_unit?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_cost_tracking_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_cost_tracking_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_cost_tracking_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1631,6 +1808,128 @@ export type Database = {
           },
         ]
       }
+      workflow_test_runs: {
+        Row: {
+          actual_output: Json | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          error_message: string | null
+          execution_time_ms: number | null
+          expected_output: Json | null
+          id: string
+          input_data: Json
+          mock_responses: Json | null
+          status: string
+          test_name: string
+          test_type: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          actual_output?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          expected_output?: Json | null
+          id?: string
+          input_data?: Json
+          mock_responses?: Json | null
+          status?: string
+          test_name: string
+          test_type: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          actual_output?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          expected_output?: Json | null
+          id?: string
+          input_data?: Json
+          mock_responses?: Json | null
+          status?: string
+          test_name?: string
+          test_type?: string
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_test_runs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_test_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_test_steps: {
+        Row: {
+          error_message: string | null
+          executed_at: string | null
+          execution_time_ms: number | null
+          expected_output: Json | null
+          id: string
+          input_data: Json | null
+          mock_used: boolean | null
+          node_id: string
+          output_data: Json | null
+          status: string
+          step_number: number
+          test_run_id: string
+        }
+        Insert: {
+          error_message?: string | null
+          executed_at?: string | null
+          execution_time_ms?: number | null
+          expected_output?: Json | null
+          id?: string
+          input_data?: Json | null
+          mock_used?: boolean | null
+          node_id: string
+          output_data?: Json | null
+          status: string
+          step_number: number
+          test_run_id: string
+        }
+        Update: {
+          error_message?: string | null
+          executed_at?: string | null
+          execution_time_ms?: number | null
+          expected_output?: Json | null
+          id?: string
+          input_data?: Json | null
+          mock_used?: boolean | null
+          node_id?: string
+          output_data?: Json | null
+          status?: string
+          step_number?: number
+          test_run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_test_steps_test_run_id_fkey"
+            columns: ["test_run_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_test_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_versions: {
         Row: {
           created_at: string
@@ -1942,6 +2241,7 @@ export type Database = {
         Returns: string
       }
       cleanup_auth_rate_limits: { Args: never; Returns: undefined }
+      cleanup_old_collaboration_sessions: { Args: never; Returns: undefined }
       get_webhook_logs: {
         Args: { _limit?: number; _webhook_id: string }
         Returns: {

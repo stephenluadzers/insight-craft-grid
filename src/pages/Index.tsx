@@ -12,6 +12,9 @@ import { WorkflowTestSuite } from "@/components/WorkflowTestSuite";
 import { WorkflowAnalyticsDashboard } from "@/components/WorkflowAnalyticsDashboard";
 import { WorkflowCostEstimator } from "@/components/WorkflowCostEstimator";
 import { FloatingBottomMenu } from "@/components/FloatingBottomMenu";
+import { WorkflowList } from "@/components/WorkflowList";
+import { WorkflowSandbox } from "@/components/WorkflowSandbox";
+import { WorkflowBIDashboard } from "@/components/WorkflowBIDashboard";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
@@ -41,6 +44,12 @@ const Index = (): JSX.Element => {
                 onOptimizingChange={setIsOptimizing}
               />
             )}
+            {currentView === 'workflows' && (
+              <WorkflowList onLoadWorkflow={(nodes) => {
+                setCurrentView('canvas');
+                setTimeout(() => canvasRef.current?.loadWorkflow?.(nodes), 100);
+              }} />
+            )}
             {currentView === 'ai-builder' && <AIAgentBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />}
             {currentView === 'triggers' && <TriggerConfiguration workflowId="demo-workflow" onTriggerCreated={(trigger) => console.log('Trigger created:', trigger)} />}
             {currentView === 'embed' && <EmbeddableAgent workflowId="demo-workflow" />}
@@ -48,6 +57,8 @@ const Index = (): JSX.Element => {
             {currentView === 'collaboration' && <CollaborativeWorkspace />}
             {currentView === 'debug' && <WorkflowDebugger workflowId="demo-workflow" nodes={[]} />}
             {currentView === 'test' && <WorkflowTestSuite workflowId="demo-workflow" onRunTest={async (testCase) => ({ status: "success" })} />}
+            {currentView === 'sandbox' && workflow && <WorkflowSandbox workflowId="demo-workflow" nodes={workflow?.nodes || []} />}
+            {currentView === 'business-intelligence' && <WorkflowBIDashboard workflowId="demo-workflow" workspaceId="demo-workspace" />}
             {currentView === 'analytics' && <WorkflowAnalyticsDashboard workflowId="demo-workflow" timeRange="7d" />}
             {currentView === 'cost' && <WorkflowCostEstimator nodes={[]} executionsPerMonth={1000} />}
           </div>

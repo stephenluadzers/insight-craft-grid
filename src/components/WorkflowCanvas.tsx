@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { SidebarTrigger } from "./ui/sidebar";
 import { validateWorkflow, ValidationResult } from "@/lib/workflowValidation";
+import { useWorkflowPersistence } from "@/hooks/useWorkflowPersistence";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
@@ -84,6 +85,17 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Workflow persistence
+  const { saveWorkflow } = useWorkflowPersistence({
+    workflowId: currentWorkflowId || undefined,
+    nodes,
+    workflowName: currentWorkflowName,
+    onWorkflowLoaded: (loadedNodes, loadedId) => {
+      setNodes(loadedNodes);
+      setCurrentWorkflowId(loadedId);
+    }
+  });
+
   // Notify parent of workflow changes
   useEffect(() => {
     console.log('📊 Workflow changed, notifying parent. Nodes:', nodes.length);
@@ -111,9 +123,16 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     workflow: { nodes },
     handleWorkflowOptimized,
     handleOpenAIGenerator: () => setShowTextGeneration(true),
-    handleSave: () => setShowSaveDialog(true),
+    handleSave: saveWorkflow,
     handleGitHubImport,
     isOptimizing,
+    loadWorkflow: (loadedNodes: WorkflowNodeData[]) => {
+      setNodes(loadedNodes);
+      toast({
+        title: "Workflow Loaded",
+        description: `Loaded ${loadedNodes.length} nodes`,
+      });
+    },
     handleOptimize: async () => {
       console.log('🚀 AI Optimize button clicked');
       
