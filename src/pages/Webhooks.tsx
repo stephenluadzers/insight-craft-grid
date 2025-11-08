@@ -6,9 +6,10 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Copy, Trash2, Webhook } from "lucide-react";
+import { Loader2, Plus, Copy, Trash2, Webhook, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CreateWebhookDialog } from "@/components/CreateWebhookDialog";
+import { WebhookDetails } from "@/components/WebhookDetails";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +36,8 @@ export default function Webhooks(): JSX.Element {
   const [webhooks, setWebhooks] = useState<WebhookItem[]>([]);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteWebhookId, setDeleteWebhookId] = useState<string | null>(null);
+  const [selectedWebhook, setSelectedWebhook] = useState<WebhookItem | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -201,6 +204,16 @@ export default function Webhooks(): JSX.Element {
                             <Button
                               variant="outline"
                               size="sm"
+                              onClick={() => {
+                                setSelectedWebhook(webhook);
+                                setDetailsOpen(true);
+                              }}
+                            >
+                              <Settings className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => copyWebhookUrl(webhook.webhook_key)}
                             >
                               <Copy className="w-4 h-4" />
@@ -234,6 +247,12 @@ export default function Webhooks(): JSX.Element {
                 open={createDialogOpen}
                 onOpenChange={setCreateDialogOpen}
                 onWebhookCreated={loadWebhooks}
+              />
+
+              <WebhookDetails
+                webhook={selectedWebhook}
+                open={detailsOpen}
+                onOpenChange={setDetailsOpen}
               />
 
               <AlertDialog open={!!deleteWebhookId} onOpenChange={() => setDeleteWebhookId(null)}>

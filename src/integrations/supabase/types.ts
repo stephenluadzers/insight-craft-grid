@@ -834,6 +834,85 @@ export type Database = {
           },
         ]
       }
+      webhook_delivery_logs: {
+        Row: {
+          created_at: string | null
+          delivered_at: string | null
+          error_message: string | null
+          event_type: string
+          http_status_code: number | null
+          id: string
+          payload: Json
+          response_body: Json | null
+          retry_count: number
+          status: string
+          webhook_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          event_type: string
+          http_status_code?: number | null
+          id?: string
+          payload?: Json
+          response_body?: Json | null
+          retry_count?: number
+          status?: string
+          webhook_id: string
+        }
+        Update: {
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          http_status_code?: number | null
+          id?: string
+          payload?: Json
+          response_body?: Json | null
+          retry_count?: number
+          status?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_delivery_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_event_subscriptions: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          webhook_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          webhook_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_event_subscriptions_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_approval_queue: {
         Row: {
           id: string
@@ -2551,6 +2630,7 @@ export type Database = {
         Row: {
           created_at: string | null
           enabled: boolean | null
+          external_url: string | null
           id: string
           last_triggered_at: string | null
           webhook_key: string
@@ -2559,6 +2639,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           enabled?: boolean | null
+          external_url?: string | null
           id?: string
           last_triggered_at?: string | null
           webhook_key: string
@@ -2567,6 +2648,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           enabled?: boolean | null
+          external_url?: string | null
           id?: string
           last_triggered_at?: string | null
           webhook_key?: string
