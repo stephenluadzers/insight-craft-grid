@@ -14,6 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          scopes: string[]
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          scopes?: string[]
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          scopes?: string[]
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_rate_limits: {
+        Row: {
+          api_key_id: string
+          id: string
+          request_count: number
+          window_start: string
+        }
+        Insert: {
+          api_key_id: string
+          id?: string
+          request_count?: number
+          window_start: string
+        }
+        Update: {
+          api_key_id?: string
+          id?: string
+          request_count?: number
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_rate_limits_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_usage: {
+        Row: {
+          api_key_id: string
+          created_at: string
+          endpoint: string
+          id: string
+          method: string
+          response_time_ms: number | null
+          status_code: number
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          method: string
+          response_time_ms?: number | null
+          status_code: number
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          method?: string
+          response_time_ms?: number | null
+          status_code?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -2699,8 +2819,14 @@ export type Database = {
         Args: { base_delay_seconds?: number; retry_count: number }
         Returns: string
       }
+      check_api_rate_limit: {
+        Args: { _api_key_id: string; _limit?: number; _window_minutes?: number }
+        Returns: boolean
+      }
       cleanup_auth_rate_limits: { Args: never; Returns: undefined }
+      cleanup_old_api_usage: { Args: never; Returns: undefined }
       cleanup_old_collaboration_sessions: { Args: never; Returns: undefined }
+      generate_api_key: { Args: never; Returns: string }
       get_webhook_logs: {
         Args: { _limit?: number; _webhook_id: string }
         Returns: {
