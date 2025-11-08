@@ -7,6 +7,8 @@ import { WorkflowGenerationDialog } from "./WorkflowGenerationDialog";
 import { WorkflowValidationDialog } from "./WorkflowValidationDialog";
 import { ExecutionErrorDialog } from "./ExecutionErrorDialog";
 import { IntegrationSetupDialog } from "./IntegrationSetupDialog";
+import { CollaboratorCursors } from "./CollaboratorCursors";
+import { NodeLockIndicator } from "./NodeLockIndicator";
 import { cn } from "@/lib/utils";
 import { Trash2, Settings } from "lucide-react";
 import { Button } from "./ui/button";
@@ -15,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SidebarTrigger } from "./ui/sidebar";
 import { validateWorkflow, ValidationResult } from "@/lib/workflowValidation";
 import { useWorkflowPersistence } from "@/hooks/useWorkflowPersistence";
+import { useCollaboration } from "@/hooks/useCollaboration";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
@@ -84,6 +87,17 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Collaboration features
+  const { 
+    editLocks, 
+    currentUserId, 
+    updateCursor, 
+    updateSelectedNode, 
+    acquireNodeLock, 
+    releaseNodeLock,
+    logActivity 
+  } = useCollaboration(currentWorkflowId, workspaceId);
 
   // Memoize callbacks to prevent infinite loops
   const handleWorkflowLoaded = useCallback((loadedNodes: WorkflowNodeData[], loadedId: string) => {
@@ -436,24 +450,39 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     }
   };
 
-  const handleDeleteNode = () => {
+  const handleDeleteNode = async () => {
     if (!selectedNodeId) return;
+    
+    // Log activity
+    await logActivity('node_deleted', { nodeId: selectedNodeId });
+    
     setNodes(nodes.filter(n => n.id !== selectedNodeId));
     setSelectedNodeId(null);
+    updateSelectedNode(null);
   };
 
-  const handleConfigureNode = () => {
+  const handleConfigureNode = async () => {
     if (!selectedNodeId) return;
+    
+    // Try to acquire lock
+    const acquired = await acquireNodeLock(selectedNodeId);
+    if (!acquired) return;
+    
     const node = nodes.find(n => n.id === selectedNodeId);
     if (node) {
       setConfiguredNode(node);
       setShowNodeConfig(true);
+      await logActivity('node_edit_started', { nodeId: selectedNodeId });
     }
   };
 
-  const handleSaveNodeConfig = (updatedNode: WorkflowNodeData): void => {
+  const handleSaveNodeConfig = async (updatedNode: WorkflowNodeData): Promise<void> => {
     setNodes(nodes.map(n => n.id === updatedNode.id ? updatedNode : n));
     setConfiguredNode(null);
+    
+    // Release lock and log activity
+    await releaseNodeLock(updatedNode.id);
+    await logActivity('node_updated', { nodeId: updatedNode.id });
   };
 
   const handleSaveWorkflow = async (name: string, description: string) => {
@@ -716,6 +745,9 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         onTouchEnd={handleTouchEnd}
         style={{ cursor: isPanning ? "grabbing" : "default" }}
       >
+        {/* Collaboration Cursors */}
+        <CollaboratorCursors workflowId={currentWorkflowId} panOffset={panOffset} />
+
         {/* Nodes Container with pan transform */}
         <div
           ref={nodesContainerRef}
@@ -725,6 +757,9 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
             inset: 0,
           }}
         >
+          {/* Collaboration Cursors */}
+          <CollaboratorCursors workflowId={currentWorkflowId} panOffset={panOffset} />
+          
           {/* Connection Lines */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
             {nodes.map((node, index) => {

@@ -268,6 +268,114 @@ export type Database = {
           },
         ]
       }
+      collaboration_activity: {
+        Row: {
+          activity_data: Json
+          activity_type: string
+          created_at: string | null
+          id: string
+          user_id: string
+          workflow_id: string
+        }
+        Insert: {
+          activity_data?: Json
+          activity_type: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+          workflow_id: string
+        }
+        Update: {
+          activity_data?: Json
+          activity_type?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_activity_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collaboration_cursors: {
+        Row: {
+          id: string
+          updated_at: string
+          user_id: string
+          workflow_id: string
+          x: number
+          y: number
+        }
+        Insert: {
+          id?: string
+          updated_at?: string
+          user_id: string
+          workflow_id: string
+          x: number
+          y: number
+        }
+        Update: {
+          id?: string
+          updated_at?: string
+          user_id?: string
+          workflow_id?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_cursors_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collaboration_messages: {
+        Row: {
+          created_at: string
+          id: string
+          mentioned_users: string[] | null
+          message: string
+          message_type: string
+          user_id: string
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mentioned_users?: string[] | null
+          message: string
+          message_type?: string
+          user_id: string
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mentioned_users?: string[] | null
+          message?: string
+          message_type?: string
+          user_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collaboration_messages_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credential_rotation_log: {
         Row: {
           credential_id: string
@@ -796,6 +904,60 @@ export type Database = {
           },
         ]
       }
+      user_presence: {
+        Row: {
+          created_at: string
+          cursor_x: number | null
+          cursor_y: number | null
+          id: string
+          last_active_at: string
+          selected_node_id: string | null
+          status: string
+          user_id: string
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          cursor_x?: number | null
+          cursor_y?: number | null
+          id?: string
+          last_active_at?: string
+          selected_node_id?: string | null
+          status?: string
+          user_id: string
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          cursor_x?: number | null
+          cursor_y?: number | null
+          id?: string
+          last_active_at?: string
+          selected_node_id?: string | null
+          status?: string
+          user_id?: string
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_presence_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_presence_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_access_logs: {
         Row: {
           accessed_at: string | null
@@ -1037,6 +1199,8 @@ export type Database = {
         Row: {
           created_at: string
           cursor_position: Json | null
+          cursor_x: number | null
+          cursor_y: number | null
           id: string
           is_editing: boolean
           last_seen_at: string
@@ -1048,6 +1212,8 @@ export type Database = {
         Insert: {
           created_at?: string
           cursor_position?: Json | null
+          cursor_x?: number | null
+          cursor_y?: number | null
           id?: string
           is_editing?: boolean
           last_seen_at?: string
@@ -1059,6 +1225,8 @@ export type Database = {
         Update: {
           created_at?: string
           cursor_position?: Json | null
+          cursor_x?: number | null
+          cursor_y?: number | null
           id?: string
           is_editing?: boolean
           last_seen_at?: string
@@ -1427,6 +1595,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "workflow_documentation_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_edit_locks: {
+        Row: {
+          expires_at: string
+          id: string
+          locked_at: string
+          locked_by: string
+          node_id: string
+          workflow_id: string
+        }
+        Insert: {
+          expires_at?: string
+          id?: string
+          locked_at?: string
+          locked_by: string
+          node_id: string
+          workflow_id: string
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          locked_at?: string
+          locked_by?: string
+          node_id?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_edit_locks_workflow_id_fkey"
             columns: ["workflow_id"]
             isOneToOne: false
             referencedRelation: "workflows"
@@ -2663,6 +2866,8 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          locked_at: string | null
+          locked_by: string | null
           metadata: Json | null
           name: string
           nodes: Json
@@ -2677,6 +2882,8 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          locked_at?: string | null
+          locked_by?: string | null
           metadata?: Json | null
           name: string
           nodes?: Json
@@ -2691,6 +2898,8 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          locked_at?: string | null
+          locked_by?: string | null
           metadata?: Json | null
           name?: string
           nodes?: Json
@@ -2897,6 +3106,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_workflow_lock: {
+        Args: { _workflow_id: string }
+        Returns: boolean
+      }
       calculate_next_retry: {
         Args: { base_delay_seconds?: number; retry_count: number }
         Returns: string
@@ -2908,6 +3121,9 @@ export type Database = {
       cleanup_auth_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_api_usage: { Args: never; Returns: undefined }
       cleanup_old_collaboration_sessions: { Args: never; Returns: undefined }
+      cleanup_stale_collaboration_sessions: { Args: never; Returns: undefined }
+      cleanup_stale_presence: { Args: never; Returns: undefined }
+      cleanup_stale_sessions: { Args: never; Returns: undefined }
       generate_api_key: { Args: never; Returns: string }
       get_webhook_logs: {
         Args: { _limit?: number; _webhook_id: string }
@@ -2951,6 +3167,10 @@ export type Database = {
         Returns: boolean
       }
       purge_old_webhook_logs: { Args: never; Returns: undefined }
+      release_workflow_lock: {
+        Args: { _workflow_id: string }
+        Returns: undefined
+      }
       requires_security_approval: {
         Args: { _workflow_id: string }
         Returns: boolean
