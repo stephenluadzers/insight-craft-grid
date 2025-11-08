@@ -98,15 +98,13 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
   // Notify parent of workflow changes
   useEffect(() => {
-    console.log('📊 Workflow changed, notifying parent. Nodes:', nodes.length);
     onWorkflowChange?.({ nodes });
-  }, [nodes, onWorkflowChange]);
+  }, [nodes]);
 
   // Notify parent of optimization state changes
   useEffect(() => {
-    console.log('⚙️ Optimization state changed:', isOptimizing);
     onOptimizingChange?.(isOptimizing);
-  }, [isOptimizing, onOptimizingChange]);
+  }, [isOptimizing]);
 
   const handleGitHubImport = (importedNodes: WorkflowNodeData[], name: string) => {
     console.log('📥 Importing workflow from GitHub:', name, importedNodes.length, 'nodes');
@@ -721,12 +719,6 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
             {nodes.map((node, index) => {
               if (index === nodes.length - 1) return null;
               const nextNode = nodes[index + 1];
-              
-              // Debug log to verify line data
-              console.log('Drawing line from', node.id, 'to', nextNode.id, {
-                from: { x: node.x + 128, y: node.y + 60 },
-                to: { x: nextNode.x + 128, y: nextNode.y }
-              });
               
               return (
                 <line
