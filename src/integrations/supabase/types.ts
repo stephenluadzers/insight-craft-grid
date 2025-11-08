@@ -916,6 +916,66 @@ export type Database = {
           },
         ]
       }
+      workflow_compliance_logs: {
+        Row: {
+          compliance_framework: string
+          data_accessed: Json | null
+          event_data: Json
+          event_type: string
+          execution_id: string | null
+          id: string
+          ip_address: unknown
+          logged_at: string
+          user_id: string | null
+          verified_hash: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          compliance_framework: string
+          data_accessed?: Json | null
+          event_data: Json
+          event_type: string
+          execution_id?: string | null
+          id?: string
+          ip_address?: unknown
+          logged_at?: string
+          user_id?: string | null
+          verified_hash?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          compliance_framework?: string
+          data_accessed?: Json | null
+          event_data?: Json
+          event_type?: string
+          execution_id?: string | null
+          id?: string
+          ip_address?: unknown
+          logged_at?: string
+          user_id?: string | null
+          verified_hash?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_compliance_logs_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_compliance_logs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_cost_tracking: {
         Row: {
           cost_amount_cents: number
@@ -1083,6 +1143,94 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_debug_sessions: {
+        Row: {
+          ended_at: string | null
+          execution_id: string
+          id: string
+          modifications: Json
+          replay_count: number
+          snapshots: Json
+          started_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          ended_at?: string | null
+          execution_id: string
+          id?: string
+          modifications?: Json
+          replay_count?: number
+          snapshots?: Json
+          started_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          ended_at?: string | null
+          execution_id?: string
+          id?: string
+          modifications?: Json
+          replay_count?: number
+          snapshots?: Json
+          started_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_debug_sessions_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_documentation: {
+        Row: {
+          content: Json
+          documentation_type: string
+          generated_at: string
+          generated_by: string
+          id: string
+          is_current: boolean
+          version: number
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          content: Json
+          documentation_type: string
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          is_current?: boolean
+          version?: number
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          content?: Json
+          documentation_type?: string
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          is_current?: boolean
+          version?: number
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_documentation_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
         ]
@@ -1382,6 +1530,118 @@ export type Database = {
           },
         ]
       }
+      workflow_health_scores: {
+        Row: {
+          calculated_at: string
+          cost_score: number
+          efficiency_score: number
+          id: string
+          overall_score: number
+          previous_score: number | null
+          recommendations: Json
+          reliability_score: number
+          security_score: number
+          trend: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          calculated_at?: string
+          cost_score: number
+          efficiency_score: number
+          id?: string
+          overall_score: number
+          previous_score?: number | null
+          recommendations?: Json
+          reliability_score: number
+          security_score: number
+          trend?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          calculated_at?: string
+          cost_score?: number
+          efficiency_score?: number
+          id?: string
+          overall_score?: number
+          previous_score?: number | null
+          recommendations?: Json
+          reliability_score?: number
+          security_score?: number
+          trend?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_health_scores_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_integration_suggestions: {
+        Row: {
+          confidence_score: number
+          current_approach: string
+          estimated_savings_cents: number | null
+          estimated_time_savings_hours: number | null
+          id: string
+          implementation_complexity: string
+          integration_category: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          suggested_at: string
+          suggested_integration: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          confidence_score: number
+          current_approach: string
+          estimated_savings_cents?: number | null
+          estimated_time_savings_hours?: number | null
+          id?: string
+          implementation_complexity: string
+          integration_category: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_at?: string
+          suggested_integration: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          confidence_score?: number
+          current_approach?: string
+          estimated_savings_cents?: number | null
+          estimated_time_savings_hours?: number | null
+          id?: string
+          implementation_complexity?: string
+          integration_category?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_at?: string
+          suggested_integration?: string
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_integration_suggestions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_learned_optimizations: {
         Row: {
           applied: boolean
@@ -1425,6 +1685,107 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workflow_mobile_notifications: {
+        Row: {
+          acted_at: string | null
+          action_required: boolean
+          action_url: string | null
+          device_tokens: string[] | null
+          id: string
+          message: string
+          notification_type: string
+          priority: string
+          read_at: string | null
+          sent_at: string
+          title: string
+          user_id: string
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          acted_at?: string | null
+          action_required?: boolean
+          action_url?: string | null
+          device_tokens?: string[] | null
+          id?: string
+          message: string
+          notification_type: string
+          priority?: string
+          read_at?: string | null
+          sent_at?: string
+          title: string
+          user_id: string
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          acted_at?: string | null
+          action_required?: boolean
+          action_url?: string | null
+          device_tokens?: string[] | null
+          id?: string
+          message?: string
+          notification_type?: string
+          priority?: string
+          read_at?: string | null
+          sent_at?: string
+          title?: string
+          user_id?: string
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_mobile_notifications_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_nl_commands: {
+        Row: {
+          command_text: string
+          command_type: string
+          executed_at: string
+          execution_status: string
+          execution_time_ms: number | null
+          id: string
+          interpretation: Json
+          result: Json | null
+          user_id: string
+          workflow_ids: string[] | null
+          workspace_id: string
+        }
+        Insert: {
+          command_text: string
+          command_type: string
+          executed_at?: string
+          execution_status?: string
+          execution_time_ms?: number | null
+          id?: string
+          interpretation: Json
+          result?: Json | null
+          user_id: string
+          workflow_ids?: string[] | null
+          workspace_id: string
+        }
+        Update: {
+          command_text?: string
+          command_type?: string
+          executed_at?: string
+          execution_status?: string
+          execution_time_ms?: number | null
+          id?: string
+          interpretation?: Json
+          result?: Json | null
+          user_id?: string
+          workflow_ids?: string[] | null
+          workspace_id?: string
+        }
+        Relationships: []
       }
       workflow_optimization_experiments: {
         Row: {
@@ -1557,6 +1918,62 @@ export type Database = {
           },
         ]
       }
+      workflow_predictions: {
+        Row: {
+          confidence_score: number
+          created_at: string
+          details: Json
+          id: string
+          predicted_at: string
+          predicted_for: string
+          prediction_type: string
+          preventive_actions: Json
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          confidence_score: number
+          created_at?: string
+          details?: Json
+          id?: string
+          predicted_at?: string
+          predicted_for: string
+          prediction_type: string
+          preventive_actions?: Json
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string
+          details?: Json
+          id?: string
+          predicted_at?: string
+          predicted_for?: string
+          prediction_type?: string
+          preventive_actions?: Json
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_predictions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_recommendations: {
         Row: {
           applied_at: string | null
@@ -1618,6 +2035,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      workflow_redundancy_analysis: {
+        Row: {
+          cost_waste_cents: number
+          created_at: string
+          id: string
+          redundancy_type: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          similarity_score: number
+          status: string
+          suggested_consolidation: Json
+          workflow_ids: string[]
+          workspace_id: string
+        }
+        Insert: {
+          cost_waste_cents?: number
+          created_at?: string
+          id?: string
+          redundancy_type: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          similarity_score: number
+          status?: string
+          suggested_consolidation: Json
+          workflow_ids: string[]
+          workspace_id: string
+        }
+        Update: {
+          cost_waste_cents?: number
+          created_at?: string
+          id?: string
+          redundancy_type?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          similarity_score?: number
+          status?: string
+          suggested_consolidation?: Json
+          workflow_ids?: string[]
+          workspace_id?: string
+        }
+        Relationships: []
       }
       workflow_schedules: {
         Row: {
