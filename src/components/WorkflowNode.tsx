@@ -1,7 +1,7 @@
 import { GripVertical, Zap, Mail, Database, FileText, Image, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type NodeType = "trigger" | "action" | "condition" | "data" | "ai";
+export type NodeType = "trigger" | "action" | "condition" | "data" | "ai" | "utility" | "security" | "storage" | "agent_handoff" | "connector" | "checkpointer" | "error_handler" | "circuit_breaker";
 
 export interface WorkflowNodeData {
   id: string;
@@ -48,6 +48,46 @@ const nodeTypeConfig: Record<
   ai: {
     icon: Image,
     gradient: "bg-gradient-hero",
+    border: "border-accent/50",
+  },
+  utility: {
+    icon: FileText,
+    gradient: "bg-gradient-primary",
+    border: "border-primary/50",
+  },
+  security: {
+    icon: Zap,
+    gradient: "bg-gradient-accent",
+    border: "border-accent/50",
+  },
+  storage: {
+    icon: Database,
+    gradient: "bg-gradient-primary",
+    border: "border-primary/50",
+  },
+  agent_handoff: {
+    icon: Mail,
+    gradient: "bg-gradient-hero",
+    border: "border-accent/50",
+  },
+  connector: {
+    icon: Zap,
+    gradient: "bg-gradient-primary",
+    border: "border-primary/50",
+  },
+  checkpointer: {
+    icon: Clock,
+    gradient: "bg-gradient-accent",
+    border: "border-accent/50",
+  },
+  error_handler: {
+    icon: Zap,
+    gradient: "bg-gradient-primary",
+    border: "border-primary/50",
+  },
+  circuit_breaker: {
+    icon: Zap,
+    gradient: "bg-gradient-accent",
     border: "border-accent/50",
   },
 };
