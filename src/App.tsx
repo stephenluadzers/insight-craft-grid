@@ -14,6 +14,7 @@ import Billing from "./pages/Billing";
 import APIKeys from "./pages/APIKeys";
 import APIDocs from "./pages/APIDocs";
 import CLITool from "./pages/CLITool";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/api-keys" element={<ProtectedRoute><APIKeys /></ProtectedRoute>} />
             <Route path="/api-docs" element={<ProtectedRoute><APIDocs /></ProtectedRoute>} />
             <Route path="/cli" element={<ProtectedRoute><CLITool /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
