@@ -65,7 +65,7 @@ export const useWorkflowPersistence = ({
               status: 'draft',
             })
             .select()
-            .single();
+            .maybeSingle();
 
           if (error) throw error;
           
@@ -96,15 +96,17 @@ export const useWorkflowPersistence = ({
           .from('workflows')
           .select('*')
           .eq('id', workflowId)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
 
         if (data && onWorkflowLoaded) {
-          onWorkflowLoaded(data.nodes as any, data.id);
+          const loadedNodes = (data.nodes as unknown as WorkflowNodeData[]) || [];
+          onWorkflowLoaded(loadedNodes, data.id);
           lastSavedNodes.current = JSON.stringify(data.nodes);
         }
       } catch (error: any) {
+        console.error('Failed to load workflow:', error);
         toast({
           title: 'Failed to load workflow',
           description: error.message,
@@ -143,7 +145,7 @@ export const useWorkflowPersistence = ({
             status: 'draft',
           })
           .select()
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
         
