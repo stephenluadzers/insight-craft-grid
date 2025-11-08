@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from "react";
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from "react";
 import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
 import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
@@ -85,26 +85,37 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Memoize callbacks to prevent infinite loops
+  const handleWorkflowLoaded = useCallback((loadedNodes: WorkflowNodeData[], loadedId: string) => {
+    setNodes(loadedNodes);
+    setCurrentWorkflowId(loadedId);
+  }, []);
+
   // Workflow persistence
   const { saveWorkflow } = useWorkflowPersistence({
     workflowId: currentWorkflowId || undefined,
     nodes,
     workflowName: currentWorkflowName,
-    onWorkflowLoaded: (loadedNodes, loadedId) => {
-      setNodes(loadedNodes);
-      setCurrentWorkflowId(loadedId);
-    }
+    onWorkflowLoaded: handleWorkflowLoaded
   });
 
-  // Notify parent of workflow changes
-  useEffect(() => {
+  // Notify parent of workflow changes (memoized)
+  const notifyWorkflowChange = useCallback(() => {
     onWorkflowChange?.({ nodes });
-  }, [nodes]);
+  }, [nodes, onWorkflowChange]);
 
-  // Notify parent of optimization state changes
   useEffect(() => {
+    notifyWorkflowChange();
+  }, [notifyWorkflowChange]);
+
+  // Notify parent of optimization state changes (memoized)
+  const notifyOptimizingChange = useCallback(() => {
     onOptimizingChange?.(isOptimizing);
-  }, [isOptimizing]);
+  }, [isOptimizing, onOptimizingChange]);
+
+  useEffect(() => {
+    notifyOptimizingChange();
+  }, [notifyOptimizingChange]);
 
   const handleGitHubImport = (importedNodes: WorkflowNodeData[], name: string) => {
     console.log('📥 Importing workflow from GitHub:', name, importedNodes.length, 'nodes');

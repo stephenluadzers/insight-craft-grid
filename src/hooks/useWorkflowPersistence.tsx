@@ -116,7 +116,7 @@ export const useWorkflowPersistence = ({
     };
 
     loadWorkflow();
-  }, [workflowId, onWorkflowLoaded, toast]);
+  }, [workflowId]);
 
   const saveWorkflow = useCallback(async () => {
     try {
