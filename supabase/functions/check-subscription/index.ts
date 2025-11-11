@@ -43,61 +43,82 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Check for lifetime access first
+    // Get user's workspace
     const { data: profile } = await supabaseClient
       .from('profiles')
-      .select('lifetime_access')
+      .select('default_workspace_id')
       .eq('id', user.id)
       .single();
 
-    if (profile?.lifetime_access) {
-      logStep("User has lifetime access");
+    if (!profile?.default_workspace_id) {
       return new Response(JSON.stringify({ 
-        subscribed: true, 
-        lifetime_access: true 
+        subscribed: false, 
+        tier: 'free',
+        subscription_end: null 
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
+    // Check existing subscription in DB
+    const { data: dbSub } = await supabaseClient
+      .from('workspace_subscriptions')
+      .select('*')
+      .eq('workspace_id', profile.default_workspace_id)
+      .single();
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    
-    if (customers.data.length === 0) {
-      logStep("No customer found, updating unsubscribed state");
-      return new Response(JSON.stringify({ subscribed: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+
+    // If we have a Stripe customer, sync their subscription
+    if (dbSub?.stripe_customer_id) {
+      const subscriptions = await stripe.subscriptions.list({
+        customer: dbSub.stripe_customer_id,
+        status: "active",
+        limit: 1,
       });
+
+      if (subscriptions.data.length > 0) {
+        const subscription = subscriptions.data[0];
+        const productId = subscription.items.data[0].price.product as string;
+        
+        // Map product to tier
+        let tier: string = 'free';
+        if (productId.includes('professional') || productId.includes('pro')) tier = 'professional';
+        else if (productId.includes('business')) tier = 'business';
+        else if (productId.includes('enterprise')) tier = 'enterprise';
+
+        // Update DB
+        await supabaseClient
+          .from('workspace_subscriptions')
+          .update({
+            status: 'active',
+            stripe_product_id: productId,
+            tier: tier,
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
+          })
+          .eq('workspace_id', profile.default_workspace_id);
+
+        logStep("Active subscription found", { tier, productId });
+
+        return new Response(JSON.stringify({
+          subscribed: true,
+          tier: tier,
+          product_id: productId,
+          subscription_end: new Date(subscription.current_period_end * 1000).toISOString()
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
     }
 
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
-
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
-    const hasActiveSub = subscriptions.data.length > 0;
-    let productId = null;
-    let subscriptionEnd = null;
-
-    if (hasActiveSub) {
-      const subscription = subscriptions.data[0];
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
-      logStep("Active subscription found", { subscriptionId: subscription.id, endDate: subscriptionEnd });
-      productId = subscription.items.data[0].price.product;
-      logStep("Determined subscription product", { productId });
-    } else {
-      logStep("No active subscription found");
-    }
-
+    // No active subscription found
+    logStep("No active subscription");
     return new Response(JSON.stringify({
-      subscribed: hasActiveSub,
-      product_id: productId,
-      subscription_end: subscriptionEnd
+      subscribed: false,
+      tier: dbSub?.tier || 'free',
+      subscription_end: null
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

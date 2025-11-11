@@ -1,4 +1,4 @@
-import { Home, Workflow, Clock, Webhook, BookTemplate, Settings, LogOut, CreditCard, Key, FileCode, Terminal, BarChart3, GitBranch } from "lucide-react";
+import { Home, Workflow, Clock, Webhook, BookTemplate, Settings, LogOut, CreditCard, Key, FileCode, Terminal, BarChart3, GitBranch, Shield } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ const items = [
   { title: "API Docs", url: "/api-docs", icon: FileCode },
   { title: "CLI Tool", url: "/cli", icon: Terminal },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Enterprise", url: "/enterprise", icon: Shield },
   { title: "Billing", url: "/billing", icon: CreditCard },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
