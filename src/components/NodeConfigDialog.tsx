@@ -7,6 +7,7 @@ import { Textarea } from "./ui/textarea";
 import { WorkflowNodeData } from "./WorkflowNode";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { GuardrailConfigPanel } from "./GuardrailConfigPanel";
 
 const nodeConfigSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(100, "Title must be less than 100 characters"),
@@ -127,21 +128,28 @@ export const NodeConfigDialog = ({ node, open, onOpenChange, onSave }: NodeConfi
             {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="config">Configuration (JSON)</Label>
-            <Textarea
-              id="config"
-              value={config}
-              onChange={(e) => setConfig(e.target.value)}
-              placeholder='{"key": "value"}'
-              className="font-mono text-sm"
-              rows={10}
+          {node.type === 'guardrail' ? (
+            <GuardrailConfigPanel
+              config={JSON.parse(config)}
+              onChange={(newConfig) => setConfig(JSON.stringify(newConfig, null, 2))}
             />
-            {errors.config && <p className="text-xs text-destructive">{errors.config}</p>}
-            <p className="text-xs text-muted-foreground">
-              Example for action node: {`{"url": "https://api.example.com", "method": "POST"}`}
-            </p>
-          </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="config">Configuration (JSON)</Label>
+              <Textarea
+                id="config"
+                value={config}
+                onChange={(e) => setConfig(e.target.value)}
+                placeholder='{"key": "value"}'
+                className="font-mono text-sm"
+                rows={10}
+              />
+              {errors.config && <p className="text-xs text-destructive">{errors.config}</p>}
+              <p className="text-xs text-muted-foreground">
+                Example for action node: {`{"url": "https://api.example.com", "method": "POST"}`}
+              </p>
+            </div>
+          )}
         </div>
 
         <DialogFooter>

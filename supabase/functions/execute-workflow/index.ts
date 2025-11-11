@@ -275,6 +275,9 @@ async function executeNode(node: any, executionData: any): Promise<any> {
     case 'ai':
       return await executeAINode(node, executionData);
 
+    case 'guardrail':
+      return await executeGuardrailNode(node, executionData);
+
     default:
       return {
         status: 'completed',
@@ -557,6 +560,176 @@ async function executeAINode(node: any, executionData: any): Promise<any> {
     return {
       status: 'error',
       message: `AI processing failed: ${error.message}`,
+      error: error.message
+    };
+  }
+}
+
+async function executeGuardrailNode(node: any, executionData: any): Promise<any> {
+  const config = node.config || {};
+  
+  try {
+    const guardrailType = config.guardrailType || 'validation';
+    
+    // Get previous step data
+    const previousData = executionData[executionData.length - 1] || {};
+    
+    switch (guardrailType) {
+      case 'rate_limit': {
+        const limit = config.limit || 100;
+        const window = config.window || 60; // seconds
+        const currentCount = previousData.requestCount || 0;
+        
+        if (currentCount >= limit) {
+          throw new Error(`Rate limit exceeded: ${currentCount}/${limit} in ${window}s window`);
+        }
+        
+        return {
+          status: 'passed',
+          message: `Rate limit check passed: ${currentCount}/${limit}`,
+          data: { requestCount: currentCount + 1, limit, window }
+        };
+      }
+      
+      case 'input_validation': {
+        const rules = config.rules || {};
+        const inputData = previousData.data || previousData;
+        const errors: string[] = [];
+        
+        for (const [field, rule] of Object.entries(rules) as [string, any][]) {
+          const value = inputData[field];
+          
+          if (rule.required && (value === undefined || value === null || value === '')) {
+            errors.push(`Field "${field}" is required`);
+          }
+          
+          if (rule.type && typeof value !== rule.type) {
+            errors.push(`Field "${field}" must be of type ${rule.type}`);
+          }
+          
+          if (rule.minLength && typeof value === 'string' && value.length < rule.minLength) {
+            errors.push(`Field "${field}" must be at least ${rule.minLength} characters`);
+          }
+          
+          if (rule.maxLength && typeof value === 'string' && value.length > rule.maxLength) {
+            errors.push(`Field "${field}" must be at most ${rule.maxLength} characters`);
+          }
+          
+          if (rule.pattern && typeof value === 'string' && !new RegExp(rule.pattern).test(value)) {
+            errors.push(`Field "${field}" does not match required pattern`);
+          }
+        }
+        
+        if (errors.length > 0) {
+          throw new Error(`Validation failed: ${errors.join(', ')}`);
+        }
+        
+        return {
+          status: 'passed',
+          message: 'Input validation passed',
+          data: inputData
+        };
+      }
+      
+      case 'output_validation': {
+        const expectedSchema = config.schema || {};
+        const outputData = previousData.data || previousData;
+        const errors: string[] = [];
+        
+        for (const [field, expected] of Object.entries(expectedSchema)) {
+          if (!(field in outputData)) {
+            errors.push(`Expected field "${field}" not found in output`);
+          }
+        }
+        
+        if (errors.length > 0) {
+          throw new Error(`Output validation failed: ${errors.join(', ')}`);
+        }
+        
+        return {
+          status: 'passed',
+          message: 'Output validation passed',
+          data: outputData
+        };
+      }
+      
+      case 'security_check': {
+        const checks = config.checks || [];
+        const data = previousData.data || previousData;
+        
+        for (const check of checks) {
+          if (check === 'no_sql_injection') {
+            const dataStr = JSON.stringify(data);
+            const sqlPatterns = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER)\b)/i;
+            if (sqlPatterns.test(dataStr)) {
+              throw new Error('Potential SQL injection detected');
+            }
+          }
+          
+          if (check === 'no_xss') {
+            const dataStr = JSON.stringify(data);
+            const xssPatterns = /<script|javascript:|onerror=/i;
+            if (xssPatterns.test(dataStr)) {
+              throw new Error('Potential XSS attack detected');
+            }
+          }
+          
+          if (check === 'sanitize_input') {
+            // Basic sanitization - remove potentially dangerous characters
+            const sanitized = JSON.parse(JSON.stringify(data).replace(/[<>]/g, ''));
+            return {
+              status: 'passed',
+              message: 'Security checks passed (input sanitized)',
+              data: sanitized
+            };
+          }
+        }
+        
+        return {
+          status: 'passed',
+          message: 'Security checks passed',
+          data
+        };
+      }
+      
+      case 'compliance_check': {
+        const standards = config.standards || [];
+        const data = previousData.data || previousData;
+        const violations: string[] = [];
+        
+        for (const standard of standards) {
+          if (standard === 'gdpr' && data.personalData && !data.consent) {
+            violations.push('GDPR: Personal data processed without consent');
+          }
+          
+          if (standard === 'pci_dss' && data.creditCard && !/^\*+\d{4}$/.test(data.creditCard)) {
+            violations.push('PCI-DSS: Credit card data not properly masked');
+          }
+        }
+        
+        if (violations.length > 0) {
+          throw new Error(`Compliance violations: ${violations.join(', ')}`);
+        }
+        
+        return {
+          status: 'passed',
+          message: `Compliance checks passed (${standards.join(', ')})`,
+          data
+        };
+      }
+      
+      default:
+        return {
+          status: 'passed',
+          message: `Guardrail "${node.title}" executed`,
+          data: previousData
+        };
+    }
+  } catch (error: any) {
+    console.error('Guardrail node execution error:', error);
+    return {
+      status: 'blocked',
+      message: `Guardrail "${node.title}" blocked execution: ${error.message}`,
       error: error.message
     };
   }

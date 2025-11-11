@@ -1,7 +1,7 @@
-import { GripVertical, Zap, Mail, Database, FileText, Image, Clock } from "lucide-react";
+import { GripVertical, Zap, Mail, Database, FileText, Image, Clock, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type NodeType = "trigger" | "action" | "condition" | "data" | "ai" | "utility" | "security" | "storage" | "agent_handoff" | "connector" | "checkpointer" | "error_handler" | "circuit_breaker";
+export type NodeType = "trigger" | "action" | "condition" | "data" | "ai" | "utility" | "security" | "storage" | "agent_handoff" | "connector" | "checkpointer" | "error_handler" | "circuit_breaker" | "guardrail";
 
 export interface WorkflowNodeData {
   id: string;
@@ -89,6 +89,11 @@ const nodeTypeConfig: Record<
     icon: Zap,
     gradient: "bg-gradient-accent",
     border: "border-accent/50",
+  },
+  guardrail: {
+    icon: Shield,
+    gradient: "bg-gradient-to-br from-orange-500 to-red-600",
+    border: "border-orange-500/50",
   },
 };
 

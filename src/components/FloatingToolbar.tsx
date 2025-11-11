@@ -1,4 +1,4 @@
-import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library } from "lucide-react";
+import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 import { NodeType } from "./WorkflowNode";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = 
   { type: "condition", icon: FileText, label: "Condition" },
   { type: "data", icon: Database, label: "Data" },
   { type: "ai", icon: ImageIcon, label: "AI" },
+  { type: "guardrail", icon: Shield, label: "Guardrail" },
 ];
 
 export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGenerator, onSave }: FloatingToolbarProps): JSX.Element => {
