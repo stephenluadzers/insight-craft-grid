@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { injectGuardrailNodes, GUARDRAIL_SYSTEM_PROMPT } from "../_shared/guardrails.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -68,6 +69,8 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are a workflow optimization expert. Analyze workflows and provide focused improvements.
+
+${GUARDRAIL_SYSTEM_PROMPT}
 
 Return ONLY valid JSON with this exact structure (no markdown, no code blocks):
 {
@@ -163,6 +166,15 @@ Keep nodes array complete but descriptions brief.`
       // Validate required structure
       if (!optimizationData.optimizedWorkflow || !optimizationData.suggestions) {
         throw new Error('Missing required fields in response');
+      }
+
+      // Automatically inject guardrail nodes if missing
+      if (optimizationData.optimizedWorkflow.nodes) {
+        const existingGuardrails = optimizationData.optimizedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length;
+        if (existingGuardrails === 0) {
+          optimizationData.optimizedWorkflow.nodes = injectGuardrailNodes(optimizationData.optimizedWorkflow.nodes);
+          console.log('Guardrail nodes auto-injected during optimization');
+        }
       }
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);

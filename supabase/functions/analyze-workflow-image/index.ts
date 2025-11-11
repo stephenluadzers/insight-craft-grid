@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { injectGuardrailNodes, GUARDRAIL_SYSTEM_PROMPT } from "../_shared/guardrails.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,6 +116,8 @@ serve(async (req) => {
               role: 'system',
               content: `You are an Expert Workflow Understanding Engine. Analyze images containing workflows, diagrams, sketches, or process descriptions and extract structured workflow data.
 
+${GUARDRAIL_SYSTEM_PROMPT}
+
 ${existingWorkflow ? `
 IMPORTANT: You are IMPROVING an existing workflow. The user has provided an image to enhance their current workflow.
 
@@ -202,6 +205,12 @@ Return ONLY valid JSON in this exact format:
                        content.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
       workflowData = JSON.parse(jsonStr);
+
+      // Automatically inject guardrail nodes
+      if (workflowData.nodes) {
+        workflowData.nodes = injectGuardrailNodes(workflowData.nodes);
+        console.log('Guardrail nodes injected from image analysis:', workflowData.nodes.filter((n: any) => n.type === 'guardrail').length);
+      }
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
       throw new Error('AI returned invalid JSON format');

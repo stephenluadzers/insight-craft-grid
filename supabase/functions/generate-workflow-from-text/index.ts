@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { injectGuardrailNodes, GUARDRAIL_SYSTEM_PROMPT } from "../_shared/guardrails.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +35,8 @@ serve(async (req) => {
           {
             role: 'system',
             content: `You are FlowFuse's AI Workflow Architect — combining the best of OpenDevin, LangGraph, and Autogen Studio.
+
+${GUARDRAIL_SYSTEM_PROMPT}
 
 ${existingWorkflow ? `
 IMPORTANT: You are IMPROVING an existing workflow. The user has provided their current workflow and wants you to enhance it based on their new description.
@@ -126,7 +129,7 @@ OUTPUT FORMAT (Return ONLY valid JSON, no markdown):
   "nodes": [
     {
       "id": "unique_id",
-      "type": "trigger|action|condition|data|ai|connector|error_handler|validator|agent_handoff|checkpointer|circuit_breaker",
+      "type": "trigger|action|condition|data|ai|connector|error_handler|validator|agent_handoff|checkpointer|circuit_breaker|guardrail",
       "title": "Concise title",
       "description": "What this does",
       "group": "Core|Optional Connectors|System Services",
@@ -225,6 +228,12 @@ GOAL: Generate autonomous, resilient, visual workflows that combine event-driven
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
       throw new Error('AI returned invalid JSON format');
+    }
+
+    // Automatically inject guardrail nodes
+    if (parsed.nodes) {
+      parsed.nodes = injectGuardrailNodes(parsed.nodes);
+      console.log('Guardrail nodes injected:', parsed.nodes.filter((n: any) => n.type === 'guardrail').length);
     }
 
     console.log('Generated workflow:', parsed);
