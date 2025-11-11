@@ -232,8 +232,13 @@ GOAL: Generate autonomous, resilient, visual workflows that combine event-driven
 
     // Automatically inject guardrail nodes
     if (parsed.nodes) {
-      parsed.nodes = injectGuardrailNodes(parsed.nodes);
-      console.log('Guardrail nodes injected:', parsed.nodes.filter((n: any) => n.type === 'guardrail').length);
+      const injectionResult = injectGuardrailNodes(parsed.nodes);
+      parsed.nodes = injectionResult.nodes;
+      parsed.guardrailExplanations = injectionResult.explanations;
+      parsed.complianceStandards = injectionResult.complianceStandards;
+      parsed.guardrailsAdded = injectionResult.guardrailsAdded;
+      console.log('Guardrail nodes injected:', injectionResult.guardrailsAdded);
+      console.log('Compliance standards detected:', injectionResult.complianceStandards);
     }
 
     console.log('Generated workflow:', parsed);

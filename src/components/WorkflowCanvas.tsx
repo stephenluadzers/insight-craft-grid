@@ -9,6 +9,7 @@ import { ExecutionErrorDialog } from "./ExecutionErrorDialog";
 import { IntegrationSetupDialog } from "./IntegrationSetupDialog";
 import { CollaboratorCursors } from "./CollaboratorCursors";
 import { NodeLockIndicator } from "./NodeLockIndicator";
+import { GuardrailVisualization } from "./GuardrailVisualization";
 import { cn } from "@/lib/utils";
 import { Trash2, Settings } from "lucide-react";
 import { Button } from "./ui/button";
@@ -84,6 +85,9 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const [showIntegrationSetup, setShowIntegrationSetup] = useState(false);
   const [requiredIntegrations, setRequiredIntegrations] = useState<any[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [guardrailExplanations, setGuardrailExplanations] = useState<any[]>([]);
+  const [complianceStandards, setComplianceStandards] = useState<string[]>([]);
+  const [showGuardrailViz, setShowGuardrailViz] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -406,7 +410,10 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     setNodes([...nodes, newNode]);
   };
 
-  const handleWorkflowGenerated = (generatedNodes: WorkflowNodeData[]): void => {
+  const handleWorkflowGenerated = (generatedNodes: WorkflowNodeData[], metadata?: {
+    guardrailExplanations?: any[];
+    complianceStandards?: string[];
+  }): void => {
     // Position nodes in visible area, accounting for toolbar at bottom
     // Center horizontally in viewport, start from top with spacing
     const viewportWidth = window.innerWidth;
@@ -420,6 +427,18 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     }));
     setNodes(positionedNodes);
     setSelectedNodeId(null);
+    
+    // Store guardrail metadata
+    if (metadata?.guardrailExplanations) {
+      setGuardrailExplanations(metadata.guardrailExplanations);
+      setComplianceStandards(metadata.complianceStandards || []);
+      setShowGuardrailViz(true);
+      
+      toast({
+        title: "Guardrails Active",
+        description: `${metadata.guardrailExplanations.length} security layers added automatically`,
+      });
+    }
     
     // Reset pan to show the nodes
     setPanOffset({ x: 0, y: 0 });
@@ -896,6 +915,24 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           });
         }}
       />
+
+      {/* Guardrail Visualization */}
+      {showGuardrailViz && guardrailExplanations.length > 0 && (
+        <div className="fixed bottom-20 right-6 w-[500px] z-50 animate-fade-in">
+          <GuardrailVisualization
+            explanations={guardrailExplanations}
+            complianceStandards={complianceStandards}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-2 right-2"
+            onClick={() => setShowGuardrailViz(false)}
+          >
+            ✕
+          </Button>
+        </div>
+      )}
     </div>
     </>
   );

@@ -38,14 +38,18 @@ serve(async (req) => {
     // Inject guardrails if none exist
     let processedWorkflow = { ...workflow };
     if (existingGuardrails.length === 0) {
-      processedWorkflow.nodes = injectGuardrailNodes(workflow.nodes);
-      console.log('Auto-injected guardrails. New total:', processedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length);
+      const injectionResult = injectGuardrailNodes(workflow.nodes);
+      processedWorkflow.nodes = injectionResult.nodes;
+      processedWorkflow.guardrailExplanations = injectionResult.explanations;
+      processedWorkflow.complianceStandards = injectionResult.complianceStandards;
+      console.log('Auto-injected guardrails. New total:', injectionResult.guardrailsAdded);
     }
 
     return new Response(
       JSON.stringify({
         workflow: processedWorkflow,
         guardrailsAdded: processedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length - existingGuardrails.length,
+        complianceStandards: processedWorkflow.complianceStandards || [],
         message: existingGuardrails.length === 0 
           ? 'Workflow imported with automatic guardrail protection' 
           : 'Workflow imported (guardrails already present)'

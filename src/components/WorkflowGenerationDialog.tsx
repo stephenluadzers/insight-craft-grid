@@ -28,7 +28,7 @@ const workflowNodeSchema = z.object({
 interface WorkflowGenerationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWorkflowGenerated: (nodes: any[]) => void;
+  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[] }) => void;
   nodes: WorkflowNodeData[];
   workflowName: string;
 }
@@ -76,7 +76,10 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       setGeneratedExplanation(data.explanation || "Workflow generated successfully!");
       
       if (data.nodes && data.nodes.length > 0) {
-        onWorkflowGenerated(data.nodes);
+        onWorkflowGenerated(data.nodes, {
+          guardrailExplanations: data.guardrailExplanations,
+          complianceStandards: data.complianceStandards
+        });
         onOpenChange(false);
         toast({
           title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
@@ -236,7 +239,10 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       setGeneratedExplanation(data.insights || "Successfully extracted workflow from images");
       
       if (data.nodes && data.nodes.length > 0) {
-        onWorkflowGenerated(data.nodes);
+        onWorkflowGenerated(data.nodes, {
+          guardrailExplanations: data.guardrailExplanations,
+          complianceStandards: data.complianceStandards
+        });
         onOpenChange(false);
         toast({
           title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",

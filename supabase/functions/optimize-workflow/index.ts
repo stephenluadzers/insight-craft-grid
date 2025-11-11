@@ -172,7 +172,11 @@ Keep nodes array complete but descriptions brief.`
       if (optimizationData.optimizedWorkflow.nodes) {
         const existingGuardrails = optimizationData.optimizedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length;
         if (existingGuardrails === 0) {
-          optimizationData.optimizedWorkflow.nodes = injectGuardrailNodes(optimizationData.optimizedWorkflow.nodes);
+          const injectionResult = injectGuardrailNodes(optimizationData.optimizedWorkflow.nodes);
+          optimizationData.optimizedWorkflow.nodes = injectionResult.nodes;
+          optimizationData.guardrailExplanations = injectionResult.explanations;
+          optimizationData.complianceStandards = injectionResult.complianceStandards;
+          optimizationData.guardrailsAdded = injectionResult.guardrailsAdded;
           console.log('Guardrail nodes auto-injected during optimization');
         }
       }

@@ -208,8 +208,12 @@ Return ONLY valid JSON in this exact format:
 
       // Automatically inject guardrail nodes
       if (workflowData.nodes) {
-        workflowData.nodes = injectGuardrailNodes(workflowData.nodes);
-        console.log('Guardrail nodes injected from image analysis:', workflowData.nodes.filter((n: any) => n.type === 'guardrail').length);
+        const injectionResult = injectGuardrailNodes(workflowData.nodes);
+        workflowData.nodes = injectionResult.nodes;
+        workflowData.guardrailExplanations = injectionResult.explanations;
+        workflowData.complianceStandards = injectionResult.complianceStandards;
+        workflowData.guardrailsAdded = injectionResult.guardrailsAdded;
+        console.log('Guardrail nodes injected from image analysis:', injectionResult.guardrailsAdded);
       }
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);

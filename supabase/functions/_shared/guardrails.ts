@@ -1,3 +1,10 @@
+import { 
+  detectComplianceRequirements, 
+  selectGuardrailsForCompliance,
+  GuardrailExplanation,
+  GUARDRAIL_REGISTRY
+} from "./guardrail-registry.ts";
+
 export interface WorkflowNode {
   id: string;
   type: string;
@@ -8,12 +15,35 @@ export interface WorkflowNode {
   config?: Record<string, any>;
 }
 
-export function injectGuardrailNodes(nodes: WorkflowNode[]): WorkflowNode[] {
-  if (!nodes || nodes.length === 0) return nodes;
+export interface GuardrailInjectionResult {
+  nodes: WorkflowNode[];
+  explanations: GuardrailExplanation[];
+  complianceStandards: string[];
+  guardrailsAdded: number;
+}
+
+export function injectGuardrailNodes(nodes: WorkflowNode[]): GuardrailInjectionResult {
+  if (!nodes || nodes.length === 0) {
+    return {
+      nodes,
+      explanations: [],
+      complianceStandards: [],
+      guardrailsAdded: 0
+    };
+  }
 
   const guardrails: WorkflowNode[] = [];
+  const explanations: GuardrailExplanation[] = [];
   const modifiedNodes = [...nodes];
   let guardrailY = 0;
+
+  // Step 1: Detect compliance requirements
+  const requiredStandards = detectComplianceRequirements(nodes);
+  console.log('Detected compliance standards:', requiredStandards);
+
+  // Step 2: Select guardrails based on compliance and context
+  const selectedGuardrails = selectGuardrailsForCompliance(requiredStandards, nodes);
+  console.log('Selected guardrails:', selectedGuardrails.length);
 
   // Find all action nodes for rate limiting
   const actionNodes = nodes.filter(n => n.type === 'action' || n.type === 'connector');
@@ -28,112 +58,60 @@ export function injectGuardrailNodes(nodes: WorkflowNode[]): WorkflowNode[] {
   const maxY = Math.max(...nodes.map(n => n.y), 0);
   guardrailY = maxY + 200;
 
-  // 1. Add input validation guardrail at the start (after trigger)
   const triggerNodes = nodes.filter(n => n.type === 'trigger');
-  if (triggerNodes.length > 0) {
+  const timestamp = new Date().toISOString();
+
+  // Step 3: Create guardrail nodes from registry with explanations
+  for (const { guardrail, explanation } of selectedGuardrails) {
+    const nodeId = `${guardrail.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Determine position based on context
+    let x = 100;
+    let y = guardrailY;
+    
+    if (guardrail.context.includes('user_input') && triggerNodes.length > 0) {
+      x = triggerNodes[0].x + 300;
+      y = triggerNodes[0].y;
+    } else {
+      guardrailY += 200;
+    }
+
     guardrails.push({
-      id: `guardrail_input_${Date.now()}`,
+      id: nodeId,
       type: 'guardrail',
-      title: 'Input Validation',
-      description: 'Validates incoming data structure and types',
-      x: triggerNodes[0].x + 300,
-      y: triggerNodes[0].y,
+      title: guardrail.name,
+      description: guardrail.description,
+      x,
+      y,
       config: {
-        guardrailType: 'input_validation',
-        rules: {
-          data: {
-            required: true,
-            type: 'object'
-          }
-        }
+        ...guardrail.config,
+        registryId: guardrail.id,
+        severity: guardrail.severity,
+        complianceStandards: guardrail.complianceStandards,
+        explanation: explanation
       }
+    });
+
+    explanations.push({
+      guardrailId: guardrail.id,
+      ruleName: guardrail.name,
+      reason: explanation,
+      triggeredBy: guardrail.context,
+      complianceStandards: guardrail.complianceStandards,
+      severity: guardrail.severity,
+      nodeId,
+      timestamp
     });
   }
 
-  // 2. Add rate limiting for external API calls
-  if (actionNodes.length > 0) {
-    guardrails.push({
-      id: `guardrail_rate_limit_${Date.now()}`,
-      type: 'guardrail',
-      title: 'API Rate Limiter',
-      description: 'Prevents API overload with rate limiting',
-      x: 100,
-      y: guardrailY,
-      config: {
-        guardrailType: 'rate_limit',
-        limit: 100,
-        window: 60
-      }
-    });
-    guardrailY += 200;
-  }
+  console.log('Injected', guardrails.length, 'guardrails with explanations');
 
-  // 3. Add security checks for AI content
-  if (aiNodes.length > 0) {
-    guardrails.push({
-      id: `guardrail_security_${Date.now()}`,
-      type: 'guardrail',
-      title: 'Security Scanner',
-      description: 'Scans for SQL injection, XSS, and malicious content',
-      x: 100,
-      y: guardrailY,
-      config: {
-        guardrailType: 'security_check',
-        checks: ['no_sql_injection', 'no_xss', 'sanitize_input']
-      }
-    });
-    guardrailY += 200;
-  }
-
-  // 4. Add output validation before final actions
-  const finalActionNodes = nodes.filter(n => 
-    (n.type === 'action' || n.type === 'connector') && 
-    !nodes.some(other => other.config?.dependencies?.includes(n.id))
-  );
-  
-  if (finalActionNodes.length > 0) {
-    guardrails.push({
-      id: `guardrail_output_${Date.now()}`,
-      type: 'guardrail',
-      title: 'Output Validation',
-      description: 'Ensures output meets expected schema',
-      x: 100,
-      y: guardrailY,
-      config: {
-        guardrailType: 'output_validation',
-        schema: {
-          status: 'string',
-          data: 'object'
-        }
-      }
-    });
-    guardrailY += 200;
-  }
-
-  // 5. Add compliance check if handling sensitive data
-  const hasSensitiveData = nodes.some(n => 
-    n.title?.toLowerCase().includes('email') ||
-    n.title?.toLowerCase().includes('user') ||
-    n.title?.toLowerCase().includes('payment') ||
-    n.title?.toLowerCase().includes('personal')
-  );
-
-  if (hasSensitiveData) {
-    guardrails.push({
-      id: `guardrail_compliance_${Date.now()}`,
-      type: 'guardrail',
-      title: 'Compliance Check',
-      description: 'Ensures GDPR and data protection compliance',
-      x: 100,
-      y: guardrailY,
-      config: {
-        guardrailType: 'compliance_check',
-        standards: ['gdpr']
-      }
-    });
-  }
-
-  return [...modifiedNodes, ...guardrails];
+  return {
+    nodes: [...modifiedNodes, ...guardrails],
+    explanations,
+    complianceStandards: requiredStandards,
+    guardrailsAdded: guardrails.length
+  };
 }
 
 export const GUARDRAIL_SYSTEM_PROMPT = `
