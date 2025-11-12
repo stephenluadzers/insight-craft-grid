@@ -4,6 +4,8 @@
  * Version: 1.0 | Remora Development
  */
 
+import { Link } from "react-router-dom";
+
 export const LegalFooter = () => {
   return (
     <footer className="border-t border-border/40 bg-background/50 backdrop-blur-sm py-8 mt-auto">
@@ -53,6 +55,11 @@ export const LegalFooter = () => {
             </p>
             <p className="text-xs mt-1">
               Contact: legal@remoradev.ai | Version: 1.0
+            </p>
+            <p className="text-xs mt-2">
+              <Link to="/legal" className="text-primary hover:underline">
+                View Full Legal Statement
+              </Link>
             </p>
           </div>
         </div>

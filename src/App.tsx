@@ -19,6 +19,7 @@ import Versions from "./pages/Versions";
 import Pricing from "./pages/Pricing";
 import Enterprise from "./pages/Enterprise";
 import Schedules from "./pages/Schedules";
+import Legal from "./pages/Legal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/schedules" element={<ProtectedRoute><Schedules /></ProtectedRoute>} />
             <Route path="/enterprise" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+            <Route path="/legal" element={<Legal />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
