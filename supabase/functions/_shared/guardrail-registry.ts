@@ -4,9 +4,12 @@ export interface GuardrailRule {
   trigger: string;
   action: string;
   context: string[];
+  appliesTo: string[];
   severity: 'low' | 'medium' | 'high' | 'critical';
   complianceStandards: string[];
   description: string;
+  riskScore: number; // 1-10, where 10 is highest risk mitigation
+  explain: string; // AI explanation for why this guardrail exists
   config: Record<string, any>;
 }
 
@@ -17,9 +20,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'User input includes SQL patterns or database operations detected',
     action: 'Sanitize input and block SQL keywords',
     context: ['database', 'query', 'user_input'],
+    appliesTo: ['database', 'api', 'input'],
     severity: 'critical',
     complianceStandards: ['OWASP', 'PCI-DSS', 'SOC2'],
     description: 'Prevents SQL injection attacks by scanning for malicious SQL patterns',
+    riskScore: 10,
+    explain: 'SQL injection prevention for transactional security and data integrity',
     config: {
       guardrailType: 'security_check',
       checks: ['no_sql_injection']
@@ -32,9 +38,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'HTML/JavaScript patterns detected in user input',
     action: 'Sanitize HTML and remove script tags',
     context: ['web', 'user_input', 'frontend'],
+    appliesTo: ['web', 'output', 'frontend'],
     severity: 'critical',
     complianceStandards: ['OWASP', 'SOC2'],
     description: 'Prevents cross-site scripting attacks by sanitizing HTML content',
+    riskScore: 10,
+    explain: 'XSS prevention protects users from malicious script injection in web interfaces',
     config: {
       guardrailType: 'security_check',
       checks: ['no_xss', 'sanitize_input']
@@ -47,9 +56,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'External API calls or high-volume operations detected',
     action: 'Limit requests per time window',
     context: ['api', 'external_service', 'performance'],
+    appliesTo: ['api', 'external_service'],
     severity: 'high',
     complianceStandards: ['SOC2'],
     description: 'Prevents API overload and ensures fair usage',
+    riskScore: 7,
+    explain: 'Rate limiting prevents system abuse and ensures service availability',
     config: {
       guardrailType: 'rate_limit',
       limit: 100,
@@ -63,9 +75,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'Personal data processing detected (email, name, address)',
     action: 'Verify consent and enable data deletion rights',
     context: ['personal_data', 'privacy', 'eu'],
+    appliesTo: ['input', 'storage', 'processing'],
     severity: 'critical',
     complianceStandards: ['GDPR'],
     description: 'Ensures GDPR compliance for personal data processing',
+    riskScore: 9,
+    explain: 'GDPR compliance protects EU citizen data rights and prevents legal violations',
     config: {
       guardrailType: 'compliance_check',
       standards: ['gdpr']
@@ -78,9 +93,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'Healthcare or medical data detected (diagnosis, treatment, health records)',
     action: 'Encrypt data and ensure audit logging',
     context: ['healthcare', 'phi', 'medical'],
+    appliesTo: ['healthcare', 'storage', 'transmission'],
     severity: 'critical',
     complianceStandards: ['HIPAA'],
     description: 'Protects Protected Health Information (PHI) per HIPAA requirements',
+    riskScore: 10,
+    explain: 'HIPAA compliance protects patient health information and prevents healthcare data breaches',
     config: {
       guardrailType: 'compliance_check',
       standards: ['hipaa']
@@ -93,9 +111,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'Payment or credit card data detected',
     action: 'Mask sensitive data and ensure secure transmission',
     context: ['payment', 'credit_card', 'financial'],
+    appliesTo: ['payment', 'financial', 'storage'],
     severity: 'critical',
     complianceStandards: ['PCI-DSS'],
     description: 'Ensures PCI-DSS compliance for payment data handling',
+    riskScore: 10,
+    explain: 'PCI-DSS compliance protects payment card data and prevents financial fraud',
     config: {
       guardrailType: 'compliance_check',
       standards: ['pci_dss']
@@ -108,9 +129,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'User input or external data entry point detected',
     action: 'Validate data types, formats, and required fields',
     context: ['user_input', 'data_entry', 'validation'],
+    appliesTo: ['input', 'api', 'form'],
     severity: 'high',
     complianceStandards: ['OWASP', 'SOC2'],
     description: 'Validates input data structure and prevents malformed data',
+    riskScore: 8,
+    explain: 'Input validation prevents malformed data from causing system errors or security vulnerabilities',
     config: {
       guardrailType: 'input_validation',
       rules: {
@@ -125,9 +149,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'Final output or API response detected',
     action: 'Ensure output matches expected schema',
     context: ['output', 'api_response', 'data_integrity'],
+    appliesTo: ['output', 'api', 'response'],
     severity: 'medium',
     complianceStandards: ['SOC2'],
     description: 'Validates output data structure before sending to consumers',
+    riskScore: 6,
+    explain: 'Output validation ensures data integrity and prevents sending malformed responses to clients',
     config: {
       guardrailType: 'output_validation',
       schema: { status: 'string', data: 'object' }
@@ -140,9 +167,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'PII or sensitive data in logs or outputs',
     action: 'Mask or redact sensitive information',
     context: ['logging', 'privacy', 'sensitive_data'],
+    appliesTo: ['logging', 'output', 'storage'],
     severity: 'high',
     complianceStandards: ['GDPR', 'HIPAA', 'PCI-DSS'],
     description: 'Prevents exposure of sensitive data in logs and outputs',
+    riskScore: 9,
+    explain: 'Protects user-identifiable data (email, SSN, address) before logging or export',
     config: {
       guardrailType: 'security_check',
       checks: ['sanitize_input']
@@ -155,9 +185,12 @@ export const GUARDRAIL_REGISTRY: Record<string, GuardrailRule> = {
     trigger: 'High-risk operations or compliance-required actions',
     action: 'Log all actions with timestamps and user context',
     context: ['audit', 'compliance', 'security'],
+    appliesTo: ['audit', 'compliance', 'operation'],
     severity: 'high',
     complianceStandards: ['SOC2', 'HIPAA', 'PCI-DSS'],
     description: 'Maintains audit trail for compliance and security investigations',
+    riskScore: 8,
+    explain: 'Audit logging provides traceability for security investigations and compliance requirements',
     config: {
       guardrailType: 'security_check',
       checks: ['audit_log']
@@ -235,10 +268,25 @@ export function selectGuardrailsForCompliance(
     if (triggered) {
       selectedGuardrails.push({
         guardrail: rule,
-        explanation: `Added ${rule.name} because: ${rule.trigger}. Detected context: ${triggerDetails.join(', ')}. Required by: ${rule.complianceStandards.filter(s => standards.includes(s)).join(', ')}.`
+        explanation: `Added ${rule.name} because: ${rule.trigger}. Detected context: ${triggerDetails.join(', ')}. Required by: ${rule.complianceStandards.filter(s => standards.includes(s)).join(', ')}. ${rule.explain}`
       });
     }
   }
 
   return selectedGuardrails;
+}
+
+export function calculateWorkflowRiskScore(
+  guardrails: GuardrailRule[],
+  complianceStandards: string[]
+): number {
+  if (guardrails.length === 0) return 10; // No guardrails = highest risk
+  
+  const totalPossibleRisk = 100;
+  const mitigatedRisk = guardrails.reduce((sum, g) => sum + g.riskScore, 0);
+  const complianceMultiplier = complianceStandards.length > 0 ? 1.2 : 1.0;
+  
+  // Score from 1-10, where 1 is safest
+  const riskScore = Math.max(1, Math.min(10, 10 - (mitigatedRisk * complianceMultiplier / 10)));
+  return Math.round(riskScore * 10) / 10;
 }

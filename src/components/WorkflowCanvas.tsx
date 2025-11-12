@@ -87,6 +87,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [guardrailExplanations, setGuardrailExplanations] = useState<any[]>([]);
   const [complianceStandards, setComplianceStandards] = useState<string[]>([]);
+  const [riskScore, setRiskScore] = useState<number | undefined>(undefined);
   const [showGuardrailViz, setShowGuardrailViz] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
@@ -413,6 +414,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const handleWorkflowGenerated = (generatedNodes: WorkflowNodeData[], metadata?: {
     guardrailExplanations?: any[];
     complianceStandards?: string[];
+    riskScore?: number;
   }): void => {
     // Position nodes in visible area, accounting for toolbar at bottom
     // Center horizontally in viewport, start from top with spacing
@@ -432,6 +434,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     if (metadata?.guardrailExplanations) {
       setGuardrailExplanations(metadata.guardrailExplanations);
       setComplianceStandards(metadata.complianceStandards || []);
+      setRiskScore(metadata.riskScore);
       setShowGuardrailViz(true);
       
       toast({
@@ -919,10 +922,11 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       {/* Guardrail Visualization */}
       {showGuardrailViz && guardrailExplanations.length > 0 && (
         <div className="fixed bottom-20 right-6 w-[500px] z-50 animate-fade-in">
-          <GuardrailVisualization
-            explanations={guardrailExplanations}
-            complianceStandards={complianceStandards}
-          />
+        <GuardrailVisualization
+          explanations={guardrailExplanations}
+          complianceStandards={complianceStandards}
+          riskScore={riskScore}
+        />
           <Button
             variant="ghost"
             size="sm"

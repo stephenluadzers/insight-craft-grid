@@ -18,6 +18,7 @@ interface GuardrailExplanation {
 interface GuardrailVisualizationProps {
   explanations: GuardrailExplanation[];
   complianceStandards: string[];
+  riskScore?: number;
 }
 
 const severityConfig = {
@@ -27,7 +28,11 @@ const severityConfig = {
   low: { icon: CheckCircle, color: 'text-blue-500', bg: 'bg-blue-500/10' },
 };
 
-export const GuardrailVisualization = ({ explanations, complianceStandards }: GuardrailVisualizationProps) => {
+export function GuardrailVisualization({ 
+  explanations,
+  complianceStandards,
+  riskScore 
+}: GuardrailVisualizationProps) {
   if (!explanations || explanations.length === 0) {
     return (
       <Card>
@@ -44,6 +49,21 @@ export const GuardrailVisualization = ({ explanations, complianceStandards }: Gu
 
   const criticalCount = explanations.filter(e => e.severity === 'critical').length;
   const highCount = explanations.filter(e => e.severity === 'high').length;
+
+  // Risk score color mapping
+  const getRiskColor = (score?: number) => {
+    if (!score) return 'text-muted-foreground';
+    if (score <= 3) return 'text-green-500';
+    if (score <= 6) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  const getRiskLabel = (score?: number) => {
+    if (!score) return 'Unknown';
+    if (score <= 3) return 'Low Risk';
+    if (score <= 6) return 'Medium Risk';
+    return 'High Risk';
+  };
 
   return (
     <Card className="border-orange-500/20">
@@ -69,8 +89,16 @@ export const GuardrailVisualization = ({ explanations, complianceStandards }: Gu
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Summary Stats */}
-          <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+          {/* Summary Stats with Risk Score */}
+          <div className="grid grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+            {riskScore !== undefined && (
+              <div className="text-center">
+                <div className={`text-2xl font-bold ${getRiskColor(riskScore)}`}>
+                  {riskScore.toFixed(1)}
+                </div>
+                <div className="text-xs text-muted-foreground">{getRiskLabel(riskScore)}</div>
+              </div>
+            )}
             <div className="text-center">
               <div className="text-2xl font-bold text-red-500">{criticalCount}</div>
               <div className="text-xs text-muted-foreground">Critical</div>

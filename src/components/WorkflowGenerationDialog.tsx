@@ -28,7 +28,7 @@ const workflowNodeSchema = z.object({
 interface WorkflowGenerationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[] }) => void;
+  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number }) => void;
   nodes: WorkflowNodeData[];
   workflowName: string;
 }
@@ -78,7 +78,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       if (data.nodes && data.nodes.length > 0) {
         onWorkflowGenerated(data.nodes, {
           guardrailExplanations: data.guardrailExplanations,
-          complianceStandards: data.complianceStandards
+          complianceStandards: data.complianceStandards,
+          riskScore: data.riskScore
         });
         onOpenChange(false);
         toast({
@@ -241,7 +242,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       if (data.nodes && data.nodes.length > 0) {
         onWorkflowGenerated(data.nodes, {
           guardrailExplanations: data.guardrailExplanations,
-          complianceStandards: data.complianceStandards
+          complianceStandards: data.complianceStandards,
+          riskScore: data.riskScore
         });
         onOpenChange(false);
         toast({
@@ -312,7 +314,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         return validation.data as WorkflowNodeData;
       });
 
-      onWorkflowGenerated(validatedNodes);
+      onWorkflowGenerated(validatedNodes, {
+        guardrailExplanations: data.guardrailExplanations,
+        complianceStandards: data.complianceStandards,
+        riskScore: data.riskScore
+      });
       setGeneratedExplanation(`Imported ${validatedNodes.length} nodes with configurations`);
       onOpenChange(false);
 

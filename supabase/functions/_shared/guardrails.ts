@@ -1,9 +1,4 @@
-import { 
-  detectComplianceRequirements, 
-  selectGuardrailsForCompliance,
-  GuardrailExplanation,
-  GUARDRAIL_REGISTRY
-} from "./guardrail-registry.ts";
+import { detectComplianceRequirements, selectGuardrailsForCompliance, calculateWorkflowRiskScore, GuardrailExplanation } from './guardrail-registry.ts';
 
 export interface WorkflowNode {
   id: string;
@@ -20,6 +15,7 @@ export interface GuardrailInjectionResult {
   explanations: GuardrailExplanation[];
   complianceStandards: string[];
   guardrailsAdded: number;
+  riskScore: number;
 }
 
 export function injectGuardrailNodes(nodes: WorkflowNode[]): GuardrailInjectionResult {
@@ -28,7 +24,8 @@ export function injectGuardrailNodes(nodes: WorkflowNode[]): GuardrailInjectionR
       nodes,
       explanations: [],
       complianceStandards: [],
-      guardrailsAdded: 0
+      guardrailsAdded: 0,
+      riskScore: 10
     };
   }
 
@@ -106,11 +103,16 @@ export function injectGuardrailNodes(nodes: WorkflowNode[]): GuardrailInjectionR
 
   console.log('Injected', guardrails.length, 'guardrails with explanations');
 
+  // Calculate risk score
+  const appliedGuardrails = selectedGuardrails.map(sg => sg.guardrail);
+  const riskScore = calculateWorkflowRiskScore(appliedGuardrails, requiredStandards);
+
   return {
     nodes: [...modifiedNodes, ...guardrails],
     explanations,
     complianceStandards: requiredStandards,
-    guardrailsAdded: guardrails.length
+    guardrailsAdded: guardrails.length,
+    riskScore
   };
 }
 
