@@ -15,6 +15,7 @@ import { FloatingBottomMenu } from "@/components/FloatingBottomMenu";
 import { WorkflowList } from "@/components/WorkflowList";
 import { WorkflowSandbox } from "@/components/WorkflowSandbox";
 import { WorkflowBIDashboard } from "@/components/WorkflowBIDashboard";
+import { LegalFooter } from "@/components/LegalFooter";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
@@ -83,6 +84,8 @@ const Index = (): JSX.Element => {
             onDownload={() => canvasRef.current?.handleDownload?.()}
             onGitHubImport={(nodes, name) => canvasRef.current?.handleGitHubImport?.(nodes, name)}
           />
+          
+          <LegalFooter />
         </div>
       </div>
     </SidebarProvider>
