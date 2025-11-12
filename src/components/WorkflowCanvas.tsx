@@ -10,6 +10,7 @@ import { IntegrationSetupDialog } from "./IntegrationSetupDialog";
 import { CollaboratorCursors } from "./CollaboratorCursors";
 import { NodeLockIndicator } from "./NodeLockIndicator";
 import { GuardrailVisualization } from "./GuardrailVisualization";
+import { WorkflowMetricsOverlay } from "./WorkflowMetricsOverlay";
 import { cn } from "@/lib/utils";
 import { Trash2, Settings } from "lucide-react";
 import { Button } from "./ui/button";
@@ -89,6 +90,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const [complianceStandards, setComplianceStandards] = useState<string[]>([]);
   const [riskScore, setRiskScore] = useState<number | undefined>(undefined);
   const [showGuardrailViz, setShowGuardrailViz] = useState(false);
+  const [showMetricsOverlay, setShowMetricsOverlay] = useState(true);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -941,6 +943,15 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
             ✕
           </Button>
         </div>
+      )}
+
+      {/* Workflow Metrics Overlay */}
+      {showMetricsOverlay && nodes.length > 0 && (
+        <WorkflowMetricsOverlay
+          nodes={nodes}
+          complianceStandards={complianceStandards}
+          riskScore={riskScore}
+        />
       )}
     </div>
     </>

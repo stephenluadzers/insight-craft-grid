@@ -52,6 +52,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [multipleWorkflows, setMultipleWorkflows] = useState<any[]>([]);
   const [selectedWorkflowIndex, setSelectedWorkflowIndex] = useState<number | null>(null);
+  const [canMergeWorkflows, setCanMergeWorkflows] = useState(false);
+  const [mergeStrategy, setMergeStrategy] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -88,6 +90,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       // Check if multiple workflows were detected
       if (data.workflows && Array.isArray(data.workflows)) {
         setMultipleWorkflows(data.workflows);
+        setCanMergeWorkflows(data.canMerge || false);
+        setMergeStrategy(data.suggestedMergeStrategy || "");
         setGeneratedExplanation(data.summary || `Detected ${data.workflows.length} distinct workflows. Select one to apply.`);
         toast({
           title: "Multiple Workflows Detected!",
@@ -682,7 +686,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             {multipleWorkflows.length > 0 && (
               <div className="mt-4 space-y-3">
                 <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
                   {multipleWorkflows.map((workflow, index) => (
                     <div
                       key={index}
@@ -692,16 +696,32 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                       onClick={() => setSelectedWorkflowIndex(index)}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium">{workflow.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{workflow.name}</h4>
+                          {workflow.phase && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full">
+                              {workflow.phase}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {workflow.nodes?.length || 0} nodes
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                         {workflow.explanation}
                       </p>
+                      {workflow.contextTags && workflow.contextTags.length > 0 && (
+                        <div className="flex gap-1 mb-2 flex-wrap">
+                          {workflow.contextTags.map((tag: string, i: number) => (
+                            <span key={i} className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
-                        <div className="flex gap-1 mt-2 flex-wrap">
+                        <div className="flex gap-1 flex-wrap">
                           {workflow.complianceStandards.map((standard: string, i: number) => (
                             <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
                               {standard}
@@ -712,29 +732,73 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                     </div>
                   ))}
                 </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      if (selectedWorkflowIndex !== null) {
+                        const selected = multipleWorkflows[selectedWorkflowIndex];
+                        onWorkflowGenerated(selected.nodes, {
+                          guardrailExplanations: selected.guardrailExplanations,
+                          complianceStandards: selected.complianceStandards,
+                          riskScore: selected.riskScore
+                        });
+                        setMultipleWorkflows([]);
+                        setSelectedWorkflowIndex(null);
+                        setCanMergeWorkflows(false);
+                        onOpenChange(false);
+                        toast({
+                          title: "Workflow Created!",
+                          description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                        });
+                      }
+                    }}
+                    disabled={selectedWorkflowIndex === null}
+                    className="flex-1"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Create Selected
+                  </Button>
+                  {canMergeWorkflows && (
+                    <Button
+                      onClick={() => {
+                        const { mergeWorkflows } = require("@/lib/workflowMerge");
+                        const { nodes, connections } = mergeWorkflows(multipleWorkflows);
+                        onWorkflowGenerated(nodes, {
+                          guardrailExplanations: multipleWorkflows.flatMap(w => w.guardrailExplanations || []),
+                          complianceStandards: [...new Set(multipleWorkflows.flatMap(w => w.complianceStandards || []))],
+                          riskScore: Math.max(...multipleWorkflows.map(w => w.riskScore || 0)),
+                        });
+                        setMultipleWorkflows([]);
+                        setSelectedWorkflowIndex(null);
+                        setCanMergeWorkflows(false);
+                        onOpenChange(false);
+                        toast({
+                          title: "Workflows Merged!",
+                          description: `Combined ${multipleWorkflows.length} workflows with ${nodes.length} total nodes`,
+                        });
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <Package className="w-4 h-4 mr-2" />
+                      Auto-Merge All
+                    </Button>
+                  )}
+                </div>
                 <Button
                   onClick={() => {
-                    if (selectedWorkflowIndex !== null) {
-                      const selected = multipleWorkflows[selectedWorkflowIndex];
-                      onWorkflowGenerated(selected.nodes, {
-                        guardrailExplanations: selected.guardrailExplanations,
-                        complianceStandards: selected.complianceStandards,
-                        riskScore: selected.riskScore
-                      });
-                      setMultipleWorkflows([]);
-                      setSelectedWorkflowIndex(null);
-                      onOpenChange(false);
-                      toast({
-                        title: "Workflow Created!",
-                        description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
-                      });
-                    }
+                    const { exportFlowBundle } = require("@/lib/workflowMerge");
+                    exportFlowBundle(multipleWorkflows, "Multi-Workflow Bundle");
+                    toast({
+                      title: "FlowBundle Exported!",
+                      description: `Saved ${multipleWorkflows.length} workflows to .flowbundle.json`,
+                    });
                   }}
-                  disabled={selectedWorkflowIndex === null}
+                  variant="secondary"
                   className="w-full"
                 >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Create Selected Workflow
+                  <Download className="w-4 h-4 mr-2" />
+                  Export as FlowBundle
                 </Button>
               </div>
             )}
@@ -799,50 +863,110 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                         }`}
                         onClick={() => setSelectedWorkflowIndex(index)}
                       >
-                        <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
                           <h4 className="font-medium">{workflow.name}</h4>
-                          <span className="text-xs text-muted-foreground">
-                            {workflow.nodes?.length || 0} nodes
-                          </span>
+                          {workflow.phase && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full">
+                              {workflow.phase}
+                            </span>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {workflow.explanation}
-                        </p>
-                        {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
-                          <div className="flex gap-1 mt-2 flex-wrap">
-                            {workflow.complianceStandards.map((standard: string, i: number) => (
-                              <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
-                                {standard}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {workflow.nodes?.length || 0} nodes
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                        {workflow.explanation}
+                      </p>
+                      {workflow.contextTags && workflow.contextTags.length > 0 && (
+                        <div className="flex gap-1 mb-2 flex-wrap">
+                          {workflow.contextTags.map((tag: string, i: number) => (
+                            <span key={i} className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
+                        <div className="flex gap-1 flex-wrap">
+                          {workflow.complianceStandards.map((standard: string, i: number) => (
+                            <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
+                              {standard}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       </div>
                     ))}
                   </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        if (selectedWorkflowIndex !== null) {
+                          const selected = multipleWorkflows[selectedWorkflowIndex];
+                          onWorkflowGenerated(selected.nodes, {
+                            guardrailExplanations: selected.guardrailExplanations,
+                            complianceStandards: selected.complianceStandards,
+                            riskScore: selected.riskScore
+                          });
+                          setMultipleWorkflows([]);
+                          setSelectedWorkflowIndex(null);
+                          setCanMergeWorkflows(false);
+                          onOpenChange(false);
+                          toast({
+                            title: "Workflow Created!",
+                            description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                          });
+                        }
+                      }}
+                      disabled={selectedWorkflowIndex === null}
+                      className="flex-1"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Create Selected
+                    </Button>
+                    {canMergeWorkflows && (
+                      <Button
+                        onClick={() => {
+                          const { mergeWorkflows } = require("@/lib/workflowMerge");
+                          const { nodes, connections } = mergeWorkflows(multipleWorkflows);
+                          onWorkflowGenerated(nodes, {
+                            guardrailExplanations: multipleWorkflows.flatMap(w => w.guardrailExplanations || []),
+                            complianceStandards: [...new Set(multipleWorkflows.flatMap(w => w.complianceStandards || []))],
+                            riskScore: Math.max(...multipleWorkflows.map(w => w.riskScore || 0)),
+                          });
+                          setMultipleWorkflows([]);
+                          setSelectedWorkflowIndex(null);
+                          setCanMergeWorkflows(false);
+                          onOpenChange(false);
+                          toast({
+                            title: "Workflows Merged!",
+                            description: `Combined ${multipleWorkflows.length} workflows with ${nodes.length} total nodes`,
+                          });
+                        }}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <Package className="w-4 h-4 mr-2" />
+                        Auto-Merge All
+                      </Button>
+                    )}
+                  </div>
                   <Button
                     onClick={() => {
-                      if (selectedWorkflowIndex !== null) {
-                        const selected = multipleWorkflows[selectedWorkflowIndex];
-                        onWorkflowGenerated(selected.nodes, {
-                          guardrailExplanations: selected.guardrailExplanations,
-                          complianceStandards: selected.complianceStandards,
-                          riskScore: selected.riskScore
-                        });
-                        setMultipleWorkflows([]);
-                        setSelectedWorkflowIndex(null);
-                        onOpenChange(false);
-                        toast({
-                          title: "Workflow Created!",
-                          description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
-                        });
-                      }
+                      const { exportFlowBundle } = require("@/lib/workflowMerge");
+                      exportFlowBundle(multipleWorkflows, "YouTube Multi-Workflow Bundle");
+                      toast({
+                        title: "FlowBundle Exported!",
+                        description: `Saved ${multipleWorkflows.length} workflows to .flowbundle.json`,
+                      });
                     }}
-                    disabled={selectedWorkflowIndex === null}
+                    variant="secondary"
                     className="w-full"
                   >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Create Selected Workflow
+                    <Download className="w-4 h-4 mr-2" />
+                    Export as FlowBundle
                   </Button>
                 </div>
               )}
@@ -941,16 +1065,32 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                       onClick={() => setSelectedWorkflowIndex(index)}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium">{workflow.name}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{workflow.name}</h4>
+                          {workflow.phase && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full">
+                              {workflow.phase}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {workflow.nodes?.length || 0} nodes
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                         {workflow.explanation}
                       </p>
+                      {workflow.contextTags && workflow.contextTags.length > 0 && (
+                        <div className="flex gap-1 mb-2 flex-wrap">
+                          {workflow.contextTags.map((tag: string, i: number) => (
+                            <span key={i} className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
-                        <div className="flex gap-1 mt-2 flex-wrap">
+                        <div className="flex gap-1 flex-wrap">
                           {workflow.complianceStandards.map((standard: string, i: number) => (
                             <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
                               {standard}
@@ -961,29 +1101,73 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                     </div>
                   ))}
                 </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      if (selectedWorkflowIndex !== null) {
+                        const selected = multipleWorkflows[selectedWorkflowIndex];
+                        onWorkflowGenerated(selected.nodes, {
+                          guardrailExplanations: selected.guardrailExplanations,
+                          complianceStandards: selected.complianceStandards,
+                          riskScore: selected.riskScore
+                        });
+                        setMultipleWorkflows([]);
+                        setSelectedWorkflowIndex(null);
+                        setCanMergeWorkflows(false);
+                        onOpenChange(false);
+                        toast({
+                          title: "Workflow Created!",
+                          description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                        });
+                      }
+                    }}
+                    disabled={selectedWorkflowIndex === null}
+                    className="flex-1"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Create Selected
+                  </Button>
+                  {canMergeWorkflows && (
+                    <Button
+                      onClick={() => {
+                        const { mergeWorkflows } = require("@/lib/workflowMerge");
+                        const { nodes, connections } = mergeWorkflows(multipleWorkflows);
+                        onWorkflowGenerated(nodes, {
+                          guardrailExplanations: multipleWorkflows.flatMap(w => w.guardrailExplanations || []),
+                          complianceStandards: [...new Set(multipleWorkflows.flatMap(w => w.complianceStandards || []))],
+                          riskScore: Math.max(...multipleWorkflows.map(w => w.riskScore || 0)),
+                        });
+                        setMultipleWorkflows([]);
+                        setSelectedWorkflowIndex(null);
+                        setCanMergeWorkflows(false);
+                        onOpenChange(false);
+                        toast({
+                          title: "Workflows Merged!",
+                          description: `Combined ${multipleWorkflows.length} workflows with ${nodes.length} total nodes`,
+                        });
+                      }}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <Package className="w-4 h-4 mr-2" />
+                      Auto-Merge All
+                    </Button>
+                  )}
+                </div>
                 <Button
                   onClick={() => {
-                    if (selectedWorkflowIndex !== null) {
-                      const selected = multipleWorkflows[selectedWorkflowIndex];
-                      onWorkflowGenerated(selected.nodes, {
-                        guardrailExplanations: selected.guardrailExplanations,
-                        complianceStandards: selected.complianceStandards,
-                        riskScore: selected.riskScore
-                      });
-                      setMultipleWorkflows([]);
-                      setSelectedWorkflowIndex(null);
-                      onOpenChange(false);
-                      toast({
-                        title: "Workflow Created!",
-                        description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
-                      });
-                    }
+                    const { exportFlowBundle } = require("@/lib/workflowMerge");
+                    exportFlowBundle(multipleWorkflows, "Image Multi-Workflow Bundle");
+                    toast({
+                      title: "FlowBundle Exported!",
+                      description: `Saved ${multipleWorkflows.length} workflows to .flowbundle.json`,
+                    });
                   }}
-                  disabled={selectedWorkflowIndex === null}
+                  variant="secondary"
                   className="w-full"
                 >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Create Selected Workflow
+                  <Download className="w-4 h-4 mr-2" />
+                  Export as FlowBundle
                 </Button>
               </div>
             )}

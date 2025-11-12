@@ -45,6 +45,13 @@ MULTI-WORKFLOW DETECTION:
 - Each workflow should have its own nodes, connections, and explanation
 - Example: A video showing "email automation" and "slack notification system" are TWO workflows
 
+CONTEXT LABELING (for multiple workflows):
+- Assign semantic tags to each workflow based on its purpose
+- Common tags: "Setup", "Deployment", "Error Handling", "Data Processing", "Monitoring", "Integration", "Authentication", "Notification", "Reporting", "Testing", "Backup", "Security"
+- Each workflow should have a "contextTags" array with 1-3 relevant tags
+- Add a "phase" field indicating workflow order: "initial", "intermediate", "final", or "standalone"
+- Include "estimatedComplexity" (low/medium/high) based on node count and integrations
+
 ${existingWorkflow ? `
 IMPORTANT: You are IMPROVING an existing workflow. The user has provided their current workflow and wants you to enhance it based on their new description.
 
@@ -188,6 +195,9 @@ FOR MULTIPLE WORKFLOWS (when description contains multiple distinct workflows):
   "workflows": [
     {
       "name": "Workflow 1 Name",
+      "contextTags": ["Setup", "Integration"],
+      "phase": "initial",
+      "estimatedComplexity": "medium",
       "nodes": [...],
       "connections": [...],
       "execution_strategy": {...},
@@ -195,13 +205,18 @@ FOR MULTIPLE WORKFLOWS (when description contains multiple distinct workflows):
     },
     {
       "name": "Workflow 2 Name", 
+      "contextTags": ["Deployment", "Monitoring"],
+      "phase": "final",
+      "estimatedComplexity": "low",
       "nodes": [...],
       "connections": [...],
       "execution_strategy": {...},
       "explanation": "What this workflow does"
     }
   ],
-  "summary": "Overview of all workflows detected"
+  "summary": "Overview of all workflows detected",
+  "canMerge": true,
+  "suggestedMergeStrategy": "Sequential execution with handoff between phases"
 }
 
 BEHAVIORAL RULES:
