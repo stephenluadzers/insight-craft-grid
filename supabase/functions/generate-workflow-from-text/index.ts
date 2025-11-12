@@ -268,11 +268,22 @@ GOAL: Generate autonomous, resilient, visual workflows that combine event-driven
       // Extract JSON from markdown code blocks if present
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || 
                        content.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      let jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      
+      // Clean up control characters that break JSON parsing
+      jsonStr = jsonStr
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
+        .replace(/\n/g, '\\n') // Escape newlines
+        .replace(/\r/g, '\\r') // Escape carriage returns
+        .replace(/\t/g, '\\t') // Escape tabs
+        .trim();
+      
       parsed = JSON.parse(jsonStr);
+      console.log('Successfully parsed workflow response');
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
-      throw new Error('AI returned invalid JSON format');
+      console.error('Content preview:', content.substring(0, 500));
+      throw new Error('AI returned invalid JSON format. Please try again.');
     }
 
     // Automatically inject guardrail nodes
