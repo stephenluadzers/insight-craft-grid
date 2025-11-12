@@ -38,6 +38,13 @@ serve(async (req) => {
 
 ${GUARDRAIL_SYSTEM_PROMPT}
 
+MULTI-WORKFLOW DETECTION:
+- If the input describes MULTIPLE distinct workflows, you MUST separate them
+- Each workflow should be independent and usable on its own
+- Return an array of workflows under the key "workflows"
+- Each workflow should have its own nodes, connections, and explanation
+- Example: A video showing "email automation" and "slack notification system" are TWO workflows
+
 ${existingWorkflow ? `
 IMPORTANT: You are IMPROVING an existing workflow. The user has provided their current workflow and wants you to enhance it based on their new description.
 
@@ -125,6 +132,8 @@ DESIGN SCHEMA:
    - Ensure at least one terminal node
 
 OUTPUT FORMAT (Return ONLY valid JSON, no markdown):
+
+FOR SINGLE WORKFLOW:
 {
   "nodes": [
     {
@@ -172,6 +181,27 @@ OUTPUT FORMAT (Return ONLY valid JSON, no markdown):
     "resumable": true
   },
   "explanation": "Architecture overview with layers explained"
+}
+
+FOR MULTIPLE WORKFLOWS (when description contains multiple distinct workflows):
+{
+  "workflows": [
+    {
+      "name": "Workflow 1 Name",
+      "nodes": [...],
+      "connections": [...],
+      "execution_strategy": {...},
+      "explanation": "What this workflow does"
+    },
+    {
+      "name": "Workflow 2 Name", 
+      "nodes": [...],
+      "connections": [...],
+      "execution_strategy": {...},
+      "explanation": "What this workflow does"
+    }
+  ],
+  "summary": "Overview of all workflows detected"
 }
 
 BEHAVIORAL RULES:
@@ -231,12 +261,27 @@ GOAL: Generate autonomous, resilient, visual workflows that combine event-driven
     }
 
     // Automatically inject guardrail nodes
-    if (parsed.nodes) {
+    if (parsed.workflows && Array.isArray(parsed.workflows)) {
+      // Multiple workflows detected
+      for (const workflow of parsed.workflows) {
+        if (workflow.nodes) {
+          const injectionResult = injectGuardrailNodes(workflow.nodes);
+          workflow.nodes = injectionResult.nodes;
+          workflow.guardrailExplanations = injectionResult.explanations;
+          workflow.complianceStandards = injectionResult.complianceStandards;
+          workflow.guardrailsAdded = injectionResult.guardrailsAdded;
+          workflow.riskScore = injectionResult.riskScore;
+        }
+      }
+      console.log('Multiple workflows detected:', parsed.workflows.length);
+    } else if (parsed.nodes) {
+      // Single workflow
       const injectionResult = injectGuardrailNodes(parsed.nodes);
       parsed.nodes = injectionResult.nodes;
       parsed.guardrailExplanations = injectionResult.explanations;
       parsed.complianceStandards = injectionResult.complianceStandards;
       parsed.guardrailsAdded = injectionResult.guardrailsAdded;
+      parsed.riskScore = injectionResult.riskScore;
       console.log('Guardrail nodes injected:', injectionResult.guardrailsAdded);
       console.log('Compliance standards detected:', injectionResult.complianceStandards);
     }

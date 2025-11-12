@@ -50,6 +50,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [generatedExplanation, setGeneratedExplanation] = useState("");
   const [showBusinessExport, setShowBusinessExport] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [multipleWorkflows, setMultipleWorkflows] = useState<any[]>([]);
+  const [selectedWorkflowIndex, setSelectedWorkflowIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -68,6 +70,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
     setIsGenerating(true);
     setGeneratedExplanation("");
+    setMultipleWorkflows([]);
+    setSelectedWorkflowIndex(null);
 
     try {
       const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
@@ -81,21 +85,31 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
       if (error) throw error;
 
-      setGeneratedExplanation(data.explanation || "Workflow generated successfully!");
-      
-      if (data.nodes && data.nodes.length > 0) {
-        onWorkflowGenerated(data.nodes, {
-          guardrailExplanations: data.guardrailExplanations,
-          complianceStandards: data.complianceStandards,
-          riskScore: data.riskScore
-        });
-        onOpenChange(false);
+      // Check if multiple workflows were detected
+      if (data.workflows && Array.isArray(data.workflows)) {
+        setMultipleWorkflows(data.workflows);
+        setGeneratedExplanation(data.summary || `Detected ${data.workflows.length} distinct workflows. Select one to apply.`);
         toast({
-          title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
-          description: existingWorkflow 
-            ? `Enhanced your workflow with new features`
-            : `Created ${data.nodes.length} nodes from your description`,
+          title: "Multiple Workflows Detected!",
+          description: `Found ${data.workflows.length} separate workflows. Choose which one to create.`,
         });
+      } else {
+        setGeneratedExplanation(data.explanation || "Workflow generated successfully!");
+        
+        if (data.nodes && data.nodes.length > 0) {
+          onWorkflowGenerated(data.nodes, {
+            guardrailExplanations: data.guardrailExplanations,
+            complianceStandards: data.complianceStandards,
+            riskScore: data.riskScore
+          });
+          onOpenChange(false);
+          toast({
+            title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
+            description: existingWorkflow 
+              ? `Enhanced your workflow with new features`
+              : `Created ${data.nodes.length} nodes from your description`,
+          });
+        }
       }
     } catch (error: any) {
       toast({
@@ -221,6 +235,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
     setIsAnalyzing(true);
     setGeneratedExplanation("");
+    setMultipleWorkflows([]);
+    setSelectedWorkflowIndex(null);
 
     try {
       // Convert all files to base64
@@ -245,21 +261,31 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
       if (error) throw error;
 
-      setGeneratedExplanation(data.insights || "Successfully extracted workflow from images");
-      
-      if (data.nodes && data.nodes.length > 0) {
-        onWorkflowGenerated(data.nodes, {
-          guardrailExplanations: data.guardrailExplanations,
-          complianceStandards: data.complianceStandards,
-          riskScore: data.riskScore
-        });
-        onOpenChange(false);
+      // Check if multiple workflows were detected
+      if (data.workflows && Array.isArray(data.workflows)) {
+        setMultipleWorkflows(data.workflows);
+        setGeneratedExplanation(data.summary || `Detected ${data.workflows.length} distinct workflows from the images. Select one to apply.`);
         toast({
-          title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
-          description: existingWorkflow
-            ? `Enhanced your workflow with insights from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`
-            : `Created ${data.nodes.length} nodes from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`,
+          title: "Multiple Workflows Detected!",
+          description: `Found ${data.workflows.length} separate workflows. Choose which one to create.`,
         });
+      } else {
+        setGeneratedExplanation(data.insights || "Successfully extracted workflow from images");
+        
+        if (data.nodes && data.nodes.length > 0) {
+          onWorkflowGenerated(data.nodes, {
+            guardrailExplanations: data.guardrailExplanations,
+            complianceStandards: data.complianceStandards,
+            riskScore: data.riskScore
+          });
+          onOpenChange(false);
+          toast({
+            title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
+            description: existingWorkflow
+              ? `Enhanced your workflow with insights from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`
+              : `Created ${data.nodes.length} nodes from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`,
+          });
+        }
       }
     } catch (error: any) {
       toast({
@@ -395,6 +421,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
     setIsAnalyzingYoutube(true);
     setGeneratedExplanation("");
+    setMultipleWorkflows([]);
+    setSelectedWorkflowIndex(null);
 
     try {
       console.log('Analyzing YouTube video:', youtubeUrl);
@@ -429,19 +457,29 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
       if (error) throw error;
 
-      setGeneratedExplanation(data.explanation || "Workflow generated from YouTube video!");
-      
-      if (data.nodes && data.nodes.length > 0) {
-        onWorkflowGenerated(data.nodes, {
-          guardrailExplanations: data.guardrailExplanations,
-          complianceStandards: data.complianceStandards,
-          riskScore: data.riskScore
-        });
-        onOpenChange(false);
+      // Check if multiple workflows were detected
+      if (data.workflows && Array.isArray(data.workflows)) {
+        setMultipleWorkflows(data.workflows);
+        setGeneratedExplanation(data.summary || `Detected ${data.workflows.length} distinct workflows from the video. Select one to apply.`);
         toast({
-          title: "Workflow Generated!",
-          description: `Created ${data.nodes.length} nodes from YouTube video`,
+          title: "Multiple Workflows Detected!",
+          description: `Found ${data.workflows.length} separate workflows in the video. Choose which one to create.`,
         });
+      } else {
+        setGeneratedExplanation(data.explanation || "Workflow generated from YouTube video!");
+        
+        if (data.nodes && data.nodes.length > 0) {
+          onWorkflowGenerated(data.nodes, {
+            guardrailExplanations: data.guardrailExplanations,
+            complianceStandards: data.complianceStandards,
+            riskScore: data.riskScore
+          });
+          onOpenChange(false);
+          toast({
+            title: "Workflow Generated!",
+            description: `Created ${data.nodes.length} nodes from YouTube video`,
+          });
+        }
       }
     } catch (error: any) {
       console.error('Error generating from YouTube:', error);
@@ -640,6 +678,66 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </ScrollArea>
               </div>
             )}
+
+            {multipleWorkflows.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
+                <div className="space-y-2">
+                  {multipleWorkflows.map((workflow, index) => (
+                    <div
+                      key={index}
+                      className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
+                        selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
+                      }`}
+                      onClick={() => setSelectedWorkflowIndex(index)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-medium">{workflow.name}</h4>
+                        <span className="text-xs text-muted-foreground">
+                          {workflow.nodes?.length || 0} nodes
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {workflow.explanation}
+                      </p>
+                      {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {workflow.complianceStandards.map((standard: string, i: number) => (
+                            <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
+                              {standard}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => {
+                    if (selectedWorkflowIndex !== null) {
+                      const selected = multipleWorkflows[selectedWorkflowIndex];
+                      onWorkflowGenerated(selected.nodes, {
+                        guardrailExplanations: selected.guardrailExplanations,
+                        complianceStandards: selected.complianceStandards,
+                        riskScore: selected.riskScore
+                      });
+                      setMultipleWorkflows([]);
+                      setSelectedWorkflowIndex(null);
+                      onOpenChange(false);
+                      toast({
+                        title: "Workflow Created!",
+                        description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                      });
+                    }
+                  }}
+                  disabled={selectedWorkflowIndex === null}
+                  className="w-full"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Create Selected Workflow
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="youtube" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
@@ -686,6 +784,66 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                   <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
                     <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
                   </ScrollArea>
+                </div>
+              )}
+
+              {multipleWorkflows.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {multipleWorkflows.map((workflow, index) => (
+                      <div
+                        key={index}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
+                          selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
+                        }`}
+                        onClick={() => setSelectedWorkflowIndex(index)}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-medium">{workflow.name}</h4>
+                          <span className="text-xs text-muted-foreground">
+                            {workflow.nodes?.length || 0} nodes
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {workflow.explanation}
+                        </p>
+                        {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
+                          <div className="flex gap-1 mt-2 flex-wrap">
+                            {workflow.complianceStandards.map((standard: string, i: number) => (
+                              <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
+                                {standard}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (selectedWorkflowIndex !== null) {
+                        const selected = multipleWorkflows[selectedWorkflowIndex];
+                        onWorkflowGenerated(selected.nodes, {
+                          guardrailExplanations: selected.guardrailExplanations,
+                          complianceStandards: selected.complianceStandards,
+                          riskScore: selected.riskScore
+                        });
+                        setMultipleWorkflows([]);
+                        setSelectedWorkflowIndex(null);
+                        onOpenChange(false);
+                        toast({
+                          title: "Workflow Created!",
+                          description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                        });
+                      }
+                    }}
+                    disabled={selectedWorkflowIndex === null}
+                    className="w-full"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Create Selected Workflow
+                  </Button>
                 </div>
               )}
             </div>
@@ -767,6 +925,66 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
                   <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
                 </ScrollArea>
+              </div>
+            )}
+
+            {multipleWorkflows.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {multipleWorkflows.map((workflow, index) => (
+                    <div
+                      key={index}
+                      className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
+                        selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
+                      }`}
+                      onClick={() => setSelectedWorkflowIndex(index)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-medium">{workflow.name}</h4>
+                        <span className="text-xs text-muted-foreground">
+                          {workflow.nodes?.length || 0} nodes
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {workflow.explanation}
+                      </p>
+                      {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
+                        <div className="flex gap-1 mt-2 flex-wrap">
+                          {workflow.complianceStandards.map((standard: string, i: number) => (
+                            <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
+                              {standard}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => {
+                    if (selectedWorkflowIndex !== null) {
+                      const selected = multipleWorkflows[selectedWorkflowIndex];
+                      onWorkflowGenerated(selected.nodes, {
+                        guardrailExplanations: selected.guardrailExplanations,
+                        complianceStandards: selected.complianceStandards,
+                        riskScore: selected.riskScore
+                      });
+                      setMultipleWorkflows([]);
+                      setSelectedWorkflowIndex(null);
+                      onOpenChange(false);
+                      toast({
+                        title: "Workflow Created!",
+                        description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                      });
+                    }
+                  }}
+                  disabled={selectedWorkflowIndex === null}
+                  className="w-full"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Create Selected Workflow
+                </Button>
               </div>
             )}
           </TabsContent>
