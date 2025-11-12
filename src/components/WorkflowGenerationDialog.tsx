@@ -633,9 +633,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             </div>
             
             {generatedExplanation && (
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="mt-4">
                 <h3 className="text-sm font-medium mb-2">Result:</h3>
-                <ScrollArea className="flex-1 border rounded-md p-4 bg-muted/30">
+                <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
                   <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
                 </ScrollArea>
               </div>
@@ -681,9 +681,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
               </div>
               
               {generatedExplanation && (
-                <div className="flex-1 overflow-hidden flex flex-col">
+                <div className="mt-4">
                   <h3 className="text-sm font-medium mb-2">Generated Workflow:</h3>
-                  <ScrollArea className="flex-1 border rounded-md p-4 bg-muted/30">
+                  <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
                     <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
                   </ScrollArea>
                 </div>
@@ -762,9 +762,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             )}
 
             {generatedExplanation && (
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="mt-4">
                 <h3 className="text-sm font-medium mb-2">Analysis Result:</h3>
-                <ScrollArea className="flex-1 border rounded-md p-4 bg-muted/30">
+                <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
                   <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
                 </ScrollArea>
               </div>
@@ -797,9 +797,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             </div>
 
             {generatedExplanation && (
-              <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="mt-4">
                 <h3 className="text-sm font-medium mb-2">Import Result:</h3>
-                <ScrollArea className="flex-1 border rounded-md p-4 bg-muted/30">
+                <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
                   <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
                 </ScrollArea>
               </div>
