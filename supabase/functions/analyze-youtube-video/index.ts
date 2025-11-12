@@ -1,3 +1,21 @@
+/**
+ * LEGAL DISCLAIMER:
+ * This software analyzes publicly available data from YouTube and other supported platforms 
+ * strictly for educational, analytical, and productivity purposes. It does not download, 
+ * store, or redistribute any video, audio, or copyrighted content.
+ * 
+ * The system extracts and transforms publicly accessible metadata (titles, descriptions, 
+ * tags, captions, and timing structures) to generate workflow diagrams and summaries.
+ * 
+ * This process is a transformative use under Section 107 of the U.S. Copyright Act and 
+ * complies with the YouTube Terms of Service (Sections 5.B and 6.C), as no unauthorized 
+ * reproduction, monetization, or rehosting of the source material occurs.
+ * 
+ * All intellectual property rights in the original videos remain with their respective creators. 
+ * Users are responsible for ensuring that their own use of the generated workflows complies 
+ * with applicable local laws and platform policies.
+ */
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
