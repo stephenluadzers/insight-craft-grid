@@ -3,6 +3,9 @@ project_id = "qrcolanlnwbtuqoaylkq"
 [functions.analyze-workflow-image]
 verify_jwt = false
 
+[functions.analyze-youtube-video]
+verify_jwt = false
+
 [functions.optimize-workflow]
 verify_jwt = false
 

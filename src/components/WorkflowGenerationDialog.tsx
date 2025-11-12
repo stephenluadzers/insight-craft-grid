@@ -5,7 +5,7 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package } from "lucide-react";
+import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package, Youtube } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
@@ -35,9 +35,11 @@ interface WorkflowGenerationDialogProps {
 
 export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAnalyzingYoutube, setIsAnalyzingYoutube] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [generatedExplanation, setGeneratedExplanation] = useState("");
   const [showBusinessExport, setShowBusinessExport] = useState(false);
@@ -375,6 +377,78 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     });
   };
 
+  const handleYoutubeGenerate = async () => {
+    if (!youtubeUrl.trim()) {
+      toast({
+        title: "URL Required",
+        description: "Please enter a YouTube video URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzingYoutube(true);
+    setGeneratedExplanation("");
+
+    try {
+      console.log('Analyzing YouTube video:', youtubeUrl);
+      
+      const { data: videoData, error: videoError } = await supabase.functions.invoke('analyze-youtube-video', {
+        body: { url: youtubeUrl.trim() }
+      });
+
+      if (videoError) throw videoError;
+      
+      console.log('YouTube video data:', videoData);
+      
+      if (!videoData.description) {
+        throw new Error('Could not extract data from YouTube video');
+      }
+
+      toast({
+        title: "Video Analyzed",
+        description: `Extracted data from: ${videoData.title}`,
+      });
+
+      const finalDescription = `Based on this YouTube video content, create a workflow:\n\n${videoData.description}`;
+
+      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
+      
+      const { data, error } = await supabase.functions.invoke('generate-workflow-from-text', {
+        body: { 
+          description: finalDescription,
+          existingWorkflow
+        }
+      });
+
+      if (error) throw error;
+
+      setGeneratedExplanation(data.explanation || "Workflow generated from YouTube video!");
+      
+      if (data.nodes && data.nodes.length > 0) {
+        onWorkflowGenerated(data.nodes, {
+          guardrailExplanations: data.guardrailExplanations,
+          complianceStandards: data.complianceStandards,
+          riskScore: data.riskScore
+        });
+        onOpenChange(false);
+        toast({
+          title: "Workflow Generated!",
+          description: `Created ${data.nodes.length} nodes from YouTube video`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error generating from YouTube:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate workflow from YouTube video",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzingYoutube(false);
+    }
+  };
+
   const exportCombined = async () => {
     setIsExporting(true);
     
@@ -481,10 +555,14 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         </DialogHeader>
 
         <Tabs defaultValue="text" className="flex-1 overflow-hidden flex flex-col space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="text">
               <FileText className="w-4 h-4 mr-2" />
               Text
+            </TabsTrigger>
+            <TabsTrigger value="youtube">
+              <Youtube className="w-4 h-4 mr-2" />
+              YouTube
             </TabsTrigger>
             <TabsTrigger value="image">
               <ImageIcon className="w-4 h-4 mr-2" />
@@ -556,6 +634,55 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </ScrollArea>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="youtube" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
+            <div className="space-y-4">
+              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
+                <Youtube className="w-12 h-12 text-muted-foreground" />
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-semibold">Generate from YouTube Video</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Paste a YouTube video URL to extract transcript and metadata for workflow generation
+                  </p>
+                </div>
+                <div className="w-full max-w-md space-y-3">
+                  <input
+                    type="url"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <Button
+                    onClick={handleYoutubeGenerate}
+                    disabled={isAnalyzingYoutube || !youtubeUrl.trim()}
+                    className="w-full"
+                  >
+                    {isAnalyzingYoutube ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing Video...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate from YouTube
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {generatedExplanation && (
+                <div className="flex-1 overflow-hidden flex flex-col">
+                  <h3 className="text-sm font-medium mb-2">Generated Workflow:</h3>
+                  <ScrollArea className="flex-1 border rounded-md p-4 bg-muted/30">
+                    <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
+                  </ScrollArea>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="image" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
