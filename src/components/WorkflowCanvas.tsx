@@ -872,6 +872,11 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         onWorkflowGenerated={handleWorkflowGenerated}
         nodes={nodes}
         workflowName={currentWorkflowName}
+        guardrailMetadata={{
+          guardrailExplanations,
+          complianceStandards,
+          riskScore,
+        }}
       />
 
       <WorkflowValidationDialog

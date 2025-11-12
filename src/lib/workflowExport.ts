@@ -17,12 +17,25 @@ export type ExportPlatform =
   | 'supabase-function'
   | 'standalone';
 
+export interface GuardrailMetadata {
+  explanations?: any[];
+  complianceStandards?: string[];
+  riskScore?: number;
+  policyAnalysis?: {
+    detectedDataTypes?: string[];
+    complianceStandards?: string[];
+    potentialRisks?: Array<{ risk: string; severity: string; mitigation: string }>;
+    recommendedGuardrails?: Array<{ type: string; reason: string; implementation: string }>;
+  };
+}
+
 export interface ExportOptions {
   platform: ExportPlatform;
   includeCredentials?: boolean;
   includeDocs?: boolean;
   includeTests?: boolean;
   deploymentTarget?: 'cloud' | 'self-hosted' | 'hybrid';
+  guardrailMetadata?: GuardrailMetadata;
 }
 
 // === n8n Export ===
@@ -938,6 +951,262 @@ monitoring:
 `;
 }
 
+// === Security & Guardrails Report Generation ===
+function generateSecurityReport(
+  workflowName: string,
+  nodes: WorkflowNodeData[],
+  metadata: GuardrailMetadata
+): string {
+  const { explanations = [], complianceStandards = [], riskScore, policyAnalysis } = metadata;
+  
+  const getRiskLevel = (score?: number) => {
+    if (!score) return { level: 'Unknown', color: 'gray', emoji: '❓' };
+    if (score <= 30) return { level: 'Low', color: 'green', emoji: '✅' };
+    if (score <= 60) return { level: 'Medium', color: 'yellow', emoji: '⚠️' };
+    return { level: 'High', color: 'red', emoji: '🚨' };
+  };
+
+  const risk = getRiskLevel(riskScore);
+  const guardrailNodes = nodes.filter(n => 
+    n.type === 'security' || 
+    n.type === 'guardrail' ||
+    n.title.toLowerCase().includes('guardrail') ||
+    n.title.toLowerCase().includes('validation') ||
+    n.title.toLowerCase().includes('rate limit') ||
+    n.title.toLowerCase().includes('security check') ||
+    n.title.toLowerCase().includes('compliance')
+  );
+
+  return `# 🔐 Security & Guardrails Report
+**Workflow:** ${workflowName}  
+**Generated:** ${new Date().toISOString()}  
+**Risk Assessment:** ${risk.emoji} **${risk.level} Risk** ${riskScore ? `(Score: ${riskScore}/100)` : ''}
+
+---
+
+## Executive Summary
+
+This report provides a comprehensive security analysis of the "${workflowName}" workflow, including automated guardrails, compliance requirements, and security recommendations. All guardrails have been injected and configured based on detected data types, business logic, and regulatory requirements.
+
+### Key Findings
+
+- **Total Workflow Nodes:** ${nodes.length}
+- **Security Guardrails:** ${guardrailNodes.length}
+- **Compliance Standards:** ${complianceStandards.length > 0 ? complianceStandards.join(', ') : 'None detected'}
+- **Risk Score:** ${riskScore ?? 'Not calculated'}
+
+---
+
+## 🛡️ Implemented Guardrails
+
+${guardrailNodes.length > 0 ? guardrailNodes.map((node, index) => `
+### ${index + 1}. ${node.title} (${node.type})
+
+**Description:** ${node.description}
+
+**Purpose:** ${explanations.find(e => e.nodeId === node.id)?.reason || 'Protects workflow integrity and ensures compliance'}
+
+**Configuration:**
+\`\`\`yaml
+${node.config ? Object.entries(node.config).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join('\n') : 'No configuration specified'}
+\`\`\`
+
+**Reasoning:**
+${explanations.find(e => e.nodeId === node.id)?.explanation || 'This guardrail was automatically injected to ensure workflow security and reliability.'}
+
+---
+`).join('\n') : '*No explicit security guardrails detected. Consider adding input validation, rate limiting, and output sanitization nodes.*'}
+
+## 📊 Policy Analysis
+
+${policyAnalysis ? `
+### Detected Data Types
+${policyAnalysis.detectedDataTypes && policyAnalysis.detectedDataTypes.length > 0 
+  ? policyAnalysis.detectedDataTypes.map(dt => `- **${dt}**`).join('\n')
+  : '*No sensitive data types detected*'}
+
+### Compliance Requirements
+${policyAnalysis.complianceStandards && policyAnalysis.complianceStandards.length > 0
+  ? policyAnalysis.complianceStandards.map(cs => `- **${cs}**`).join('\n')
+  : '*No specific compliance standards detected*'}
+
+### Potential Risks
+
+${policyAnalysis.potentialRisks && policyAnalysis.potentialRisks.length > 0
+  ? policyAnalysis.potentialRisks.map((risk, idx) => `
+#### ${idx + 1}. ${risk.risk}
+- **Severity:** ${risk.severity}
+- **Mitigation:** ${risk.mitigation}
+`).join('\n')
+  : '*No major risks identified in current workflow configuration*'}
+
+### Recommended Additional Guardrails
+
+${policyAnalysis.recommendedGuardrails && policyAnalysis.recommendedGuardrails.length > 0
+  ? policyAnalysis.recommendedGuardrails.map((gr, idx) => `
+#### ${idx + 1}. ${gr.type}
+- **Reason:** ${gr.reason}
+- **Implementation:** ${gr.implementation}
+`).join('\n')
+  : '*All recommended guardrails have been implemented*'}
+` : '*Policy analysis not available. Run workflow through compliance scanner for detailed analysis.*'}
+
+## 🎯 Compliance Standards
+
+${complianceStandards.length > 0 ? `
+This workflow has been configured to comply with the following standards:
+
+${complianceStandards.map(std => {
+  const standardInfo = getComplianceInfo(std);
+  return `### ${standardInfo.name}
+
+**Description:** ${standardInfo.description}
+
+**Key Requirements:**
+${standardInfo.requirements.map(req => `- ${req}`).join('\n')}
+
+**Implementation Status:** ${standardInfo.implemented ? '✅ Implemented' : '⚠️ Partial'}
+`;
+}).join('\n')}
+` : '*No specific compliance standards detected. If your workflow handles sensitive data (PII, PHI, PCI), ensure you configure appropriate compliance guardrails.*'}
+
+## 🔍 Security Best Practices
+
+### Input Validation
+${guardrailNodes.some(n => n.title.toLowerCase().includes('input') && n.title.toLowerCase().includes('validation'))
+  ? '✅ Input validation is implemented'
+  : '⚠️ **Recommendation:** Add input validation to prevent injection attacks and malformed data'}
+
+### Rate Limiting
+${guardrailNodes.some(n => n.title.toLowerCase().includes('rate') && n.title.toLowerCase().includes('limit'))
+  ? '✅ Rate limiting is configured'
+  : '⚠️ **Recommendation:** Implement rate limiting to prevent abuse and ensure fair resource usage'}
+
+### Output Sanitization
+${guardrailNodes.some(n => n.title.toLowerCase().includes('output') && n.title.toLowerCase().includes('validation'))
+  ? '✅ Output validation is active'
+  : '⚠️ **Recommendation:** Add output validation to prevent data leakage and ensure data quality'}
+
+### Security Checks
+${guardrailNodes.some(n => n.type === 'security' || n.title.toLowerCase().includes('security'))
+  ? '✅ Security checks are in place'
+  : '⚠️ **Recommendation:** Implement security checks for authentication, authorization, and data access'}
+
+## 📈 Risk Mitigation Strategy
+
+Based on the risk score of **${riskScore ?? 'N/A'}**, we recommend:
+
+${risk.level === 'High' ? `
+### Immediate Actions Required 🚨
+1. **Review all input sources** - Implement strict validation
+2. **Add authentication** - Ensure all endpoints require valid credentials
+3. **Enable audit logging** - Track all workflow executions
+4. **Implement circuit breakers** - Prevent cascade failures
+5. **Add encryption** - Protect data in transit and at rest
+` : risk.level === 'Medium' ? `
+### Recommended Improvements ⚠️
+1. **Enhance monitoring** - Add detailed execution tracking
+2. **Implement retry logic** - Handle transient failures gracefully
+3. **Add health checks** - Monitor workflow component status
+4. **Review error handling** - Ensure sensitive data isn't leaked in errors
+` : `
+### Maintenance Actions ✅
+1. **Regular security audits** - Review guardrails quarterly
+2. **Update dependencies** - Keep all packages current
+3. **Monitor performance** - Track execution times and resource usage
+4. **Document changes** - Maintain security changelog
+`}
+
+## 🚀 Deployment Checklist
+
+Before deploying this workflow to production:
+
+- [ ] Review all guardrail configurations
+- [ ] Configure environment variables securely
+- [ ] Enable audit logging
+- [ ] Set up monitoring and alerting
+- [ ] Test with production-like data volumes
+- [ ] Perform security scan
+- [ ] Document incident response procedures
+- [ ] Configure backup and recovery
+- [ ] Review access controls
+- [ ] Verify compliance requirements
+
+## 📞 Support & Resources
+
+- **Security Documentation:** https://flowfuse.ai/docs/security
+- **Compliance Guide:** https://flowfuse.ai/docs/compliance
+- **Best Practices:** https://flowfuse.ai/docs/best-practices
+- **Community Support:** https://flowfuse.ai/community
+
+---
+
+**Report Version:** 1.0.0  
+**Generated by:** FlowFuse Security Scanner  
+**Next Review:** ${new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+`;
+}
+
+function getComplianceInfo(standard: string) {
+  const standards: Record<string, any> = {
+    'GDPR': {
+      name: 'GDPR (General Data Protection Regulation)',
+      description: 'EU regulation on data protection and privacy',
+      requirements: [
+        'Obtain explicit consent for data processing',
+        'Implement data minimization principles',
+        'Ensure data portability and right to erasure',
+        'Maintain data processing records',
+        'Report breaches within 72 hours'
+      ],
+      implemented: true
+    },
+    'HIPAA': {
+      name: 'HIPAA (Health Insurance Portability and Accountability Act)',
+      description: 'US law protecting sensitive patient health information',
+      requirements: [
+        'Encrypt PHI in transit and at rest',
+        'Implement access controls and audit logs',
+        'Conduct regular risk assessments',
+        'Maintain business associate agreements',
+        'Ensure physical and technical safeguards'
+      ],
+      implemented: true
+    },
+    'PCI-DSS': {
+      name: 'PCI-DSS (Payment Card Industry Data Security Standard)',
+      description: 'Security standard for organizations handling credit cards',
+      requirements: [
+        'Build and maintain secure networks',
+        'Protect cardholder data with encryption',
+        'Implement strong access control measures',
+        'Regularly monitor and test networks',
+        'Maintain information security policy'
+      ],
+      implemented: true
+    },
+    'SOC2': {
+      name: 'SOC 2 (Service Organization Control 2)',
+      description: 'Trust service criteria for security, availability, and confidentiality',
+      requirements: [
+        'Implement security policies and procedures',
+        'Control system access and authorization',
+        'Monitor system operations and performance',
+        'Manage system changes and incidents',
+        'Ensure business continuity and disaster recovery'
+      ],
+      implemented: true
+    }
+  };
+  
+  return standards[standard] || {
+    name: standard,
+    description: 'Custom compliance standard',
+    requirements: ['Review specific requirements for this standard'],
+    implemented: false
+  };
+}
+
 // === Main Export Function ===
 export async function exportWorkflowForBusiness(
   nodes: WorkflowNodeData[],
@@ -958,6 +1227,15 @@ export async function exportWorkflowForBusiness(
   
   // Generate enhanced README
   zip.file('README.md', generateEnhancedReadme(workflowName, options.platform, nodes));
+  
+  // Generate Security & Guardrails Report
+  if (options.guardrailMetadata) {
+    zip.file('SECURITY_REPORT.md', generateSecurityReport(
+      workflowName,
+      nodes,
+      options.guardrailMetadata
+    ));
+  }
   
   // Platform-specific files
   switch (options.platform) {

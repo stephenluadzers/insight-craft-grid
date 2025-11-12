@@ -13,6 +13,12 @@ interface WorkflowBusinessExportProps {
   onOpenChange: (open: boolean) => void;
   nodes: WorkflowNodeData[];
   workflowName: string;
+  guardrailMetadata?: {
+    explanations?: any[];
+    complianceStandards?: string[];
+    riskScore?: number;
+    policyAnalysis?: any;
+  };
 }
 
 interface PlatformOption {
@@ -95,7 +101,8 @@ export function WorkflowBusinessExport({
   open, 
   onOpenChange, 
   nodes, 
-  workflowName 
+  workflowName,
+  guardrailMetadata
 }: WorkflowBusinessExportProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -109,6 +116,7 @@ export function WorkflowBusinessExport({
         platform,
         includeDocs: true,
         includeTests: false,
+        guardrailMetadata,
       });
 
       // Download the ZIP file
@@ -240,6 +248,8 @@ export function WorkflowBusinessExport({
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
                   <li>Ready-to-run code in your chosen platform</li>
                   <li>Complete setup and deployment instructions</li>
+                  <li>Security & Guardrails Report with reasoning</li>
+                  <li>Compliance analysis and risk assessment</li>
                   <li>Environment variable templates</li>
                   <li>Configuration examples</li>
                   <li>Original FlowFuse workflow JSON for reference</li>

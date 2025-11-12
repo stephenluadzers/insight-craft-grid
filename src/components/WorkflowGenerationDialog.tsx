@@ -28,12 +28,18 @@ const workflowNodeSchema = z.object({
 interface WorkflowGenerationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number }) => void;
+  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number; policyAnalysis?: any }) => void;
   nodes: WorkflowNodeData[];
   workflowName: string;
+  guardrailMetadata?: {
+    guardrailExplanations?: any[];
+    complianceStandards?: string[];
+    riskScore?: number;
+    policyAnalysis?: any;
+  };
 }
 
-export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName }: WorkflowGenerationDialogProps): JSX.Element => {
+export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -862,6 +868,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           onOpenChange={setShowBusinessExport}
           nodes={nodes || []}
           workflowName={workflowName}
+          guardrailMetadata={guardrailMetadata ? {
+            explanations: guardrailMetadata.guardrailExplanations,
+            complianceStandards: guardrailMetadata.complianceStandards,
+            riskScore: guardrailMetadata.riskScore,
+            policyAnalysis: guardrailMetadata.policyAnalysis,
+          } : undefined}
         />
       </DialogContent>
     </Dialog>
