@@ -418,6 +418,23 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     complianceStandards?: string[];
     riskScore?: number;
   }): void => {
+    console.log('handleWorkflowGenerated called with:', {
+      nodeCount: generatedNodes?.length || 0,
+      nodes: generatedNodes,
+      metadata
+    });
+    
+    // Validate input
+    if (!generatedNodes || !Array.isArray(generatedNodes) || generatedNodes.length === 0) {
+      console.error('Invalid or empty nodes array received');
+      toast({
+        title: "Workflow Generation Failed",
+        description: "No valid nodes were generated. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Position nodes in visible area, accounting for toolbar at bottom
     // Center horizontally in viewport, start from top with spacing
     const viewportWidth = window.innerWidth;
@@ -429,6 +446,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       x: node.x || startX,
       y: node.y || (startY + idx * 200), // 200px spacing between nodes
     }));
+    
+    console.log('Setting positioned nodes:', positionedNodes);
     setNodes(positionedNodes);
     setSelectedNodeId(null);
     

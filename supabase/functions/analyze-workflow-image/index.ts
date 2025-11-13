@@ -249,15 +249,39 @@ IMPORTANT: Always include this AI Transparency & Fair-Use Statement at the end o
       
       workflowData = JSON.parse(jsonStr);
       console.log('Successfully parsed workflow from image(s)');
-
-      // Automatically inject guardrail nodes
-      if (workflowData.nodes) {
-        const injectionResult = injectGuardrailNodes(workflowData.nodes);
-        workflowData.nodes = injectionResult.nodes;
-        workflowData.guardrailExplanations = injectionResult.explanations;
-        workflowData.complianceStandards = injectionResult.complianceStandards;
-        workflowData.guardrailsAdded = injectionResult.guardrailsAdded;
-        console.log('Guardrail nodes injected from image analysis:', injectionResult.guardrailsAdded);
+      
+      // If AI returned multiple workflows in a workflows array, validate each has nodes
+      if (workflowData.workflows && Array.isArray(workflowData.workflows)) {
+        console.log(`Detected ${workflowData.workflows.length} workflows from AI response`);
+        workflowData.workflows = workflowData.workflows.map((workflow: any, index: number) => {
+          if (!workflow.nodes || !Array.isArray(workflow.nodes)) {
+            console.warn(`Workflow ${index} missing nodes array, attempting to fix`);
+            // If workflow has no nodes but has other data, try to extract nodes
+            workflow.nodes = [];
+          }
+          
+          // Inject guardrails for each workflow
+          if (workflow.nodes.length > 0) {
+            const injectionResult = injectGuardrailNodes(workflow.nodes);
+            workflow.nodes = injectionResult.nodes;
+            workflow.guardrailExplanations = injectionResult.explanations;
+            workflow.complianceStandards = injectionResult.complianceStandards;
+            workflow.guardrailsAdded = injectionResult.guardrailsAdded;
+            console.log(`Guardrails injected for workflow ${index}:`, injectionResult.guardrailsAdded);
+          }
+          
+          return workflow;
+        });
+      } else {
+        // Single workflow - inject guardrails
+        if (workflowData.nodes) {
+          const injectionResult = injectGuardrailNodes(workflowData.nodes);
+          workflowData.nodes = injectionResult.nodes;
+          workflowData.guardrailExplanations = injectionResult.explanations;
+          workflowData.complianceStandards = injectionResult.complianceStandards;
+          workflowData.guardrailsAdded = injectionResult.guardrailsAdded;
+          console.log('Guardrail nodes injected from image analysis:', injectionResult.guardrailsAdded);
+        }
       }
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);

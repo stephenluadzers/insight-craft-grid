@@ -1106,6 +1106,23 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                     onClick={() => {
                       if (selectedWorkflowIndex !== null) {
                         const selected = multipleWorkflows[selectedWorkflowIndex];
+                        
+                        // Validate that the workflow has nodes
+                        if (!selected.nodes || !Array.isArray(selected.nodes) || selected.nodes.length === 0) {
+                          toast({
+                            title: "Invalid Workflow",
+                            description: "The selected workflow has no nodes. Please try another workflow or regenerate.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        
+                        console.log('Creating workflow from selection:', {
+                          name: selected.name,
+                          nodeCount: selected.nodes.length,
+                          nodes: selected.nodes
+                        });
+                        
                         onWorkflowGenerated(selected.nodes, {
                           guardrailExplanations: selected.guardrailExplanations,
                           complianceStandards: selected.complianceStandards,
@@ -1117,7 +1134,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                         onOpenChange(false);
                         toast({
                           title: "Workflow Created!",
-                          description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                          description: `Created "${selected.name}" with ${selected.nodes.length} nodes`,
                         });
                       }
                     }}
