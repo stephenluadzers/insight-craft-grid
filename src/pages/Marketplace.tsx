@@ -7,27 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Star, Download, Search } from "lucide-react";
 import { useState } from "react";
+import type { MarketplaceCategory, MarketplaceWorkflow } from "@/types/marketplace";
 
 const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: categories } = useQuery({
+  const { data: categories } = useQuery<MarketplaceCategory[]>({
     queryKey: ["marketplace-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("marketplace_categories")
+        .from("marketplace_categories" as any)
         .select("*")
         .order("sort_order");
       if (error) throw error;
-      return data;
+      return data as unknown as MarketplaceCategory[];
     },
   });
 
-  const { data: workflows } = useQuery({
+  const { data: workflows } = useQuery<MarketplaceWorkflow[]>({
     queryKey: ["marketplace-workflows", searchQuery],
     queryFn: async () => {
       let query = supabase
-        .from("marketplace_workflows")
+        .from("marketplace_workflows" as any)
         .select("*, marketplace_categories(name)")
         .eq("is_approved", true);
 
@@ -37,7 +38,7 @@ const Marketplace = () => {
 
       const { data, error } = await query.order("install_count", { ascending: false }).limit(50);
       if (error) throw error;
-      return data;
+      return data as unknown as MarketplaceWorkflow[];
     },
   });
 
