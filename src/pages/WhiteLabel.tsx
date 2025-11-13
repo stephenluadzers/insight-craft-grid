@@ -7,24 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Palette, Globe, Code } from "lucide-react";
+import { Copy, Palette, Globe, Key } from "lucide-react";
+import type { WhiteLabelConfig } from "@/types/marketplace";
 
 const WhiteLabel = () => {
   const { toast } = useToast();
 
-  const { data: config } = useQuery({
+  const { data: config } = useQuery<WhiteLabelConfig>({
     queryKey: ["white-label-config"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
-        .from("white_label_configurations")
+        .from("white_label_configurations" as any)
         .select("*")
+        .eq("workspace_id", user.id)
         .single();
 
-      if (error && error.code !== "PGRST116") throw error;
-      return data;
+      if (error) throw error;
+      return data as unknown as WhiteLabelConfig;
     },
   });
 
@@ -46,7 +48,7 @@ const WhiteLabel = () => {
         <TabsList>
           <TabsTrigger value="branding"><Palette className="w-4 h-4 mr-2" />Branding</TabsTrigger>
           <TabsTrigger value="domain"><Globe className="w-4 h-4 mr-2" />Domain</TabsTrigger>
-          <TabsTrigger value="api"><Code className="w-4 h-4 mr-2" />API</TabsTrigger>
+          <TabsTrigger value="api"><Key className="w-4 h-4 mr-2" />API</TabsTrigger>
         </TabsList>
 
         <TabsContent value="branding">

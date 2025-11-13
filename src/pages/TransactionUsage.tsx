@@ -2,39 +2,43 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Activity, TrendingUp, DollarSign, Calendar } from "lucide-react";
+import { Activity, TrendingUp, CreditCard, Calendar } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import type { UsageQuota, TransactionUsage } from "@/types/marketplace";
 
 const TransactionUsage = () => {
-  const { data: quota } = useQuery({
+  const { data: quota } = useQuery<UsageQuota>({
     queryKey: ["usage-quota"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
-        .from("usage_quotas")
-        .select("*, pricing_plans(*)")
-        .order("created_at", { ascending: false })
-        .limit(1)
+        .from("usage_quotas" as any)
+        .select("*, pricing_plans(name)")
+        .eq("workspace_id", user.id)
         .single();
 
       if (error) throw error;
-      return data;
+      return data as unknown as UsageQuota;
     },
   });
 
-  const { data: usageData } = useQuery({
+  const { data: usageData } = useQuery<TransactionUsage[]>({
     queryKey: ["transaction-usage"],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
       const { data, error } = await supabase
-        .from("transaction_usage")
+        .from("transaction_usage" as any)
         .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
+        .eq("workspace_id", user.id)
+        .order("date", { ascending: false })
+        .limit(30);
 
       if (error) throw error;
-      return data;
+      return data as unknown as TransactionUsage[];
     },
   });
 
@@ -85,11 +89,11 @@ const TransactionUsage = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Current Plan</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{quota?.pricing_plans?.name || "Free"}</div>
-            <p className="text-xs text-muted-foreground">${quota?.pricing_plans?.price_monthly || 0}/month</p>
+            <p className="text-xs text-muted-foreground">Pay-per-use billing</p>
           </CardContent>
         </Card>
       </div>
@@ -124,7 +128,7 @@ const TransactionUsage = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={usageData?.slice(0, 20)}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="created_at" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
+                <XAxis dataKey="date" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="transaction_count" fill="hsl(var(--primary))" />
