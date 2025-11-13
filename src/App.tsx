@@ -20,6 +20,9 @@ import Pricing from "./pages/Pricing";
 import Enterprise from "./pages/Enterprise";
 import Schedules from "./pages/Schedules";
 import Legal from "./pages/Legal";
+import WhiteLabel from "./pages/WhiteLabel";
+import Marketplace from "./pages/Marketplace";
+import TransactionUsage from "./pages/TransactionUsage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +49,9 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/schedules" element={<ProtectedRoute><Schedules /></ProtectedRoute>} />
             <Route path="/enterprise" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+            <Route path="/white-label" element={<ProtectedRoute><WhiteLabel /></ProtectedRoute>} />
+            <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
+            <Route path="/transaction-usage" element={<ProtectedRoute><TransactionUsage /></ProtectedRoute>} />
             <Route path="/legal" element={<Legal />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
