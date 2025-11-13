@@ -64,6 +64,12 @@ All colors MUST be HSL.
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-spring: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Liquid Glass Effects */
+    --glass-background: hsla(220, 15%, 98%, 0.7);
+    --glass-border: hsla(240, 65%, 55%, 0.15);
+    --glass-shadow: 0 8px 32px hsla(240, 35%, 30%, 0.12);
+    --glass-blur: 12px;
   }
 
   .dark {
@@ -116,6 +122,12 @@ All colors MUST be HSL.
     --shadow-md: 0 4px 16px hsla(240, 85%, 75%, 0.2);
     --shadow-lg: 0 8px 32px hsla(240, 85%, 75%, 0.25);
     --shadow-glow: 0 0 32px hsla(240, 85%, 75%, 0.4);
+
+    /* Liquid Glass Effects - Dark Mode */
+    --glass-background: hsla(230, 25%, 8%, 0.6);
+    --glass-border: hsla(240, 75%, 65%, 0.2);
+    --glass-shadow: 0 8px 32px hsla(240, 85%, 75%, 0.2);
+    --glass-blur: 16px;
   }
 }
 
@@ -155,6 +167,30 @@ All colors MUST be HSL.
 
 /* Utility classes for canvas and animations */
 @layer utilities {
+  /* Liquid Glass Effects */
+  .glass {
+    background: var(--glass-background);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+
+  .glass-strong {
+    background: hsla(var(--background) / 0.8);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-subtle {
+    background: hsla(var(--background) / 0.4);
+    border: 1px solid hsla(var(--border) / 0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
   .shadow-glow {
     box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
   }

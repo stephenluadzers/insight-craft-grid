@@ -64,6 +64,10 @@ export default {
         md: "var(--shadow-md)",
         lg: "var(--shadow-lg)",
         glow: "var(--shadow-glow)",
+        glass: "var(--glass-shadow)",
+      },
+      backdropBlur: {
+        glass: "var(--glass-blur)",
       },
       borderRadius: {
         lg: "var(--radius)",
