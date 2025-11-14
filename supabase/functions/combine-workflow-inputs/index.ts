@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, images, videoUrl, tiktokUrl, videoFile, documents, websiteUrls, existingWorkflow } = await req.json();
+    const { text, images, videoUrl, tiktokUrl, videoFile, videoUrls, videoFiles, documents, websiteUrls, existingWorkflow } = await req.json();
     
     console.log('Combining inputs:', { 
       hasText: !!text, 
@@ -20,6 +20,8 @@ serve(async (req) => {
       hasVideo: !!videoUrl,
       hasTikTok: !!tiktokUrl,
       hasVideoFile: !!videoFile,
+      videoUrlsCount: videoUrls?.length || 0,
+      videoFilesCount: videoFiles?.length || 0,
       documentCount: documents?.length || 0,
       websiteUrlCount: websiteUrls?.length || 0
     });
@@ -109,6 +111,90 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error('Video file analysis failed:', error);
+      }
+    }
+
+    // Process multiple video URLs if provided (new multi-source support)
+    if (videoUrls && videoUrls.length > 0) {
+      for (const url of videoUrls) {
+        if (!url || !url.trim()) continue;
+        
+        try {
+          let videoData, videoError;
+          const urlLower = url.toLowerCase();
+          
+          // Determine the platform and call appropriate function
+          if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+            const result = await supabaseClient.functions.invoke('analyze-youtube-video', {
+              body: { videoUrl: url, existingWorkflow }
+            });
+            videoData = result.data;
+            videoError = result.error;
+          } else if (urlLower.includes('tiktok.com')) {
+            const result = await supabaseClient.functions.invoke('analyze-tiktok-video', {
+              body: { videoUrl: url, existingWorkflow }
+            });
+            videoData = result.data;
+            videoError = result.error;
+          } else {
+            // Generic website with embedded video
+            const result = await supabaseClient.functions.invoke('analyze-workflow-website', {
+              body: { url, existingWorkflow }
+            });
+            videoData = result.data;
+            videoError = result.error;
+          }
+
+          if (!videoError && videoData) {
+            if (videoData.context) {
+              mergedContext = { ...mergedContext, ...videoData.context };
+            }
+            if (videoData.workflows) {
+              allWorkflowData.push(...videoData.workflows);
+            } else if (videoData.nodes) {
+              allWorkflowData.push(videoData);
+            }
+            
+            const platform = urlLower.includes('youtube') ? 'YouTube' :
+                           urlLower.includes('tiktok') ? 'TikTok' :
+                           urlLower.includes('snapchat') ? 'Snapchat' :
+                           urlLower.includes('instagram') ? 'Instagram' :
+                           urlLower.includes('vimeo') ? 'Vimeo' : 'Video';
+            
+            combinedDescription += `\n${platform} Analysis (${url.substring(0, 50)}...): ${videoData.insights || videoData.explanation || ''}`;
+          }
+        } catch (error) {
+          console.error(`Video analysis failed for ${url}:`, error);
+        }
+      }
+    }
+
+    // Process multiple video files if provided (new multi-source support)
+    if (videoFiles && videoFiles.length > 0) {
+      for (const file of videoFiles) {
+        try {
+          const { data: videoFileData, error: videoFileError } = await supabaseClient.functions.invoke('analyze-video-file', {
+            body: { 
+              videoData: file.data,
+              fileName: file.name,
+              existingWorkflow 
+            }
+          });
+
+          if (!videoFileError && videoFileData) {
+            if (videoFileData.context) {
+              mergedContext = { ...mergedContext, ...videoFileData.context };
+            }
+            if (videoFileData.workflows) {
+              allWorkflowData.push(...videoFileData.workflows);
+            } else if (videoFileData.nodes) {
+              allWorkflowData.push(videoFileData);
+            }
+            combinedDescription += `\nUploaded Video (${file.name}): ${videoFileData.insights || videoFileData.explanation || ''}`;
+          }
+        } catch (error) {
+          console.error(`Video file analysis failed for ${file.name}:`, error);
+        }
       }
     }
 
