@@ -5,7 +5,7 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package, Youtube, Globe, Plus, X, Github } from "lucide-react";
+import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package, Youtube, Globe, Plus, X, Github, FolderOpen } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
@@ -46,6 +46,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [videoUrls, setVideoUrls] = useState<string[]>([""]);
   const [githubRepoUrls, setGithubRepoUrls] = useState<string[]>([""]);
+  const [ideProjects, setIdeProjects] = useState<File[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -71,6 +72,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const ideProjectInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
@@ -657,10 +659,10 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     const validUrls = videoUrls.filter(u => u.trim());
     const validGithubUrls = githubRepoUrls.filter(u => u.trim());
     
-    if (validUrls.length === 0 && selectedVideos.length === 0 && validGithubUrls.length === 0) {
+    if (validUrls.length === 0 && selectedVideos.length === 0 && validGithubUrls.length === 0 && ideProjects.length === 0) {
       toast({
         title: "No Sources Provided",
-        description: "Please add at least one video URL, video file, or GitHub repository",
+        description: "Please add at least one video, GitHub repository, or IDE project",
         variant: "destructive",
       });
       return;
@@ -670,12 +672,26 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     try {
       const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
       
+      // Process IDE projects
+      const ideProjectData = ideProjects.length > 0 ? await Promise.all(
+        ideProjects.map(async (project) => ({
+          name: project.name,
+          data: await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(project);
+          })
+        }))
+      ) : undefined;
+      
       // Process multiple video URLs and files
       const { data, error } = await supabase.functions.invoke('combine-workflow-inputs', {
         body: {
           text: workflowIdea,
           videoUrls: validUrls,
           githubRepoUrls: validGithubUrls,
+          ideProjects: ideProjectData,
           videoFiles: selectedVideos.length > 0 ? await Promise.all(
             selectedVideos.map(async (video) => ({
               name: video.name,
@@ -695,12 +711,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       
       if (data.workflows && Array.isArray(data.workflows)) {
         setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.insights || `Generated ${data.workflows.length} workflows from ${validUrls.length + selectedVideos.length + validGithubUrls.length} sources.`);
+        setGeneratedExplanation(data.insights || `Generated ${data.workflows.length} workflows from ${validUrls.length + selectedVideos.length + validGithubUrls.length + ideProjects.length} sources.`);
       } else if (data.nodes) {
         onWorkflowGenerated(data.nodes, data.metadata);
         toast({
           title: "Success!",
-          description: `Workflow generated from ${validUrls.length + selectedVideos.length + validGithubUrls.length} sources`,
+          description: `Workflow generated from ${validUrls.length + selectedVideos.length + validGithubUrls.length + ideProjects.length} sources`,
         });
         onOpenChange(false);
       }
@@ -1083,21 +1099,71 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <FolderOpen className="w-4 h-4" />
+                    IDE Projects (VS Code, IntelliJ, WebStorm, etc.)
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Upload project folders as ZIP files to analyze entire applications
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <input
+                      ref={ideProjectInputRef}
+                      type="file"
+                      accept=".zip,.tar,.tar.gz"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setIdeProjects(Array.from(e.target.files));
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <Button
+                      onClick={() => ideProjectInputRef.current?.click()}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <FolderOpen className="w-4 h-4 mr-2" />
+                      Upload Project ZIP
+                    </Button>
+                  </div>
+                  {ideProjects.length > 0 && (
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      {ideProjects.map((project, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                          <span>🗂️ {project.name} ({(project.size / 1024 / 1024).toFixed(2)}MB)</span>
+                          <Button
+                            onClick={() => {
+                              setIdeProjects(ideProjects.filter((_, idx) => idx !== i));
+                            }}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   onClick={handleCombinedGenerate}
-                  disabled={isGenerating || (videoUrls.every(u => !u.trim()) && selectedVideos.length === 0 && githubRepoUrls.every(u => !u.trim()))}
+                  disabled={isGenerating || (videoUrls.every(u => !u.trim()) && selectedVideos.length === 0 && githubRepoUrls.every(u => !u.trim()) && ideProjects.length === 0)}
                   className="w-full"
                   size="lg"
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Analyzing {videoUrls.filter(u => u.trim()).length + selectedVideos.length + githubRepoUrls.filter(u => u.trim()).length} Sources...
+                      Analyzing {videoUrls.filter(u => u.trim()).length + selectedVideos.length + githubRepoUrls.filter(u => u.trim()).length + ideProjects.length} Sources...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 mr-2" />
-                      Generate from {videoUrls.filter(u => u.trim()).length + selectedVideos.length + githubRepoUrls.filter(u => u.trim()).length} Sources
+                      Generate from {videoUrls.filter(u => u.trim()).length + selectedVideos.length + githubRepoUrls.filter(u => u.trim()).length + ideProjects.length} Sources
                     </>
                   )}
                 </Button>
