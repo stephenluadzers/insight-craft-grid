@@ -92,17 +92,36 @@ serve(async (req) => {
     executionId = execution.id;
     const startTime = Date.now();
 
+    // Extract workflow context from the request body
+    const workflowContext = (req.body as any).context || {};
+    console.log('Workflow context:', workflowContext);
+    
+    // Replace context placeholders in node configs before execution
+    const processedNodes = nodes.map(node => {
+      if (node.data?.config) {
+        const processedConfig = JSON.parse(
+          JSON.stringify(node.data.config).replace(
+            /\{\{context\.(\w+)\}\}/g,
+            (_, key) => workflowContext[key] || `{{context.${key}}}`
+          )
+        );
+        return { ...node, data: { ...node.data, config: processedConfig } };
+      }
+      return node;
+    });
+
     const executionData: Record<string, any> = {
       previousResults: [],
       triggeredAt: new Date().toISOString(),
-      triggeredBy: triggeredBy || 'manual'
+      triggeredBy: triggeredBy || 'manual',
+      context: workflowContext
     };
 
     let finalStatus = 'success';
     let errorMessage = '';
 
     // Execute each node with detailed logging and retry logic
-    for (const node of nodes) {
+    for (const node of processedNodes) {
       const nodeStartTime = Date.now();
       console.log(`Executing node: ${node.id} (${node.type})`);
       
