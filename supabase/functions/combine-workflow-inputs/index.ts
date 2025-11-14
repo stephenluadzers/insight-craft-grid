@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, images, videoUrl, tiktokUrl, videoFile, videoUrls, videoFiles, githubRepoUrls, documents, websiteUrls, existingWorkflow } = await req.json();
+    const { text, images, videoUrl, tiktokUrl, videoFile, videoUrls, videoFiles, githubRepoUrls, ideProjects, documents, websiteUrls, existingWorkflow } = await req.json();
     
     console.log('Combining inputs:', { 
       hasText: !!text, 
@@ -23,6 +23,7 @@ serve(async (req) => {
       videoUrlsCount: videoUrls?.length || 0,
       videoFilesCount: videoFiles?.length || 0,
       githubRepoUrlsCount: githubRepoUrls?.length || 0,
+      ideProjectsCount: ideProjects?.length || 0,
       documentCount: documents?.length || 0,
       websiteUrlCount: websiteUrls?.length || 0
     });
@@ -227,6 +228,35 @@ serve(async (req) => {
           }
         } catch (error) {
           console.error(`GitHub repo analysis failed for ${repoUrl}:`, error);
+        }
+      }
+    }
+
+    // Process IDE projects if provided (new multi-source support)
+    if (ideProjects && ideProjects.length > 0) {
+      for (const project of ideProjects) {
+        try {
+          const { data: projectData, error: projectError } = await supabaseClient.functions.invoke('analyze-ide-project', {
+            body: { 
+              projectData: project.data,
+              projectName: project.name,
+              existingWorkflow 
+            }
+          });
+
+          if (!projectError && projectData) {
+            if (projectData.context) {
+              mergedContext = { ...mergedContext, ...projectData.context };
+            }
+            if (projectData.workflows) {
+              allWorkflowData.push(...projectData.workflows);
+            } else if (projectData.nodes) {
+              allWorkflowData.push(projectData);
+            }
+            combinedDescription += `\nIDE Project (${project.name}): ${projectData.insights || projectData.explanation || ''}`;
+          }
+        } catch (error) {
+          console.error(`IDE project analysis failed for ${project.name}:`, error);
         }
       }
     }
