@@ -12,12 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const { text, images, videoUrl, existingWorkflow } = await req.json();
+    const { text, images, videoUrl, documents, websiteUrls, existingWorkflow } = await req.json();
     
     console.log('Combining inputs:', { 
       hasText: !!text, 
       imageCount: images?.length || 0, 
-      hasVideo: !!videoUrl 
+      hasVideo: !!videoUrl,
+      documentCount: documents?.length || 0,
+      websiteUrlCount: websiteUrls?.length || 0
     });
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -81,6 +83,60 @@ serve(async (req) => {
       }
     }
 
+    // Process documents if provided
+    if (documents && documents.length > 0) {
+      for (const doc of documents) {
+        try {
+          const { data: docData, error: docError } = await supabaseClient.functions.invoke('analyze-workflow-document', {
+            body: { 
+              documentContent: doc.content,
+              documentName: doc.name,
+              existingWorkflow 
+            }
+          });
+
+          if (!docError && docData) {
+            if (docData.context) {
+              mergedContext = { ...mergedContext, ...docData.context };
+            }
+            if (docData.workflows) {
+              allWorkflowData.push(...docData.workflows);
+            } else if (docData.nodes) {
+              allWorkflowData.push(docData);
+            }
+            combinedDescription += `\nDocument Analysis (${doc.name}): ${docData.insights || docData.explanation || ''}`;
+          }
+        } catch (error) {
+          console.error('Document analysis failed:', error);
+        }
+      }
+    }
+
+    // Process website URLs if provided
+    if (websiteUrls && websiteUrls.length > 0) {
+      for (const url of websiteUrls) {
+        try {
+          const { data: websiteData, error: websiteError } = await supabaseClient.functions.invoke('analyze-workflow-website', {
+            body: { websiteUrl: url, existingWorkflow }
+          });
+
+          if (!websiteError && websiteData) {
+            if (websiteData.context) {
+              mergedContext = { ...mergedContext, ...websiteData.context };
+            }
+            if (websiteData.workflows) {
+              allWorkflowData.push(...websiteData.workflows);
+            } else if (websiteData.nodes) {
+              allWorkflowData.push(websiteData);
+            }
+            combinedDescription += `\nWebsite Analysis (${url}): ${websiteData.insights || websiteData.explanation || ''}`;
+          }
+        } catch (error) {
+          console.error('Website analysis failed:', error);
+        }
+      }
+    }
+
     // Process text description
     if (text) {
       combinedDescription += `\nText Description: ${text}`;
@@ -113,7 +169,9 @@ serve(async (req) => {
         inputSummary: {
           hasText: !!text,
           imageCount: images?.length || 0,
-          hasVideo: !!videoUrl
+          hasVideo: !!videoUrl,
+          documentCount: documents?.length || 0,
+          websiteUrlCount: websiteUrls?.length || 0
         }
       }),
       { 
