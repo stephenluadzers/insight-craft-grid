@@ -5,7 +5,7 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package, Youtube, Globe, Plus, X } from "lucide-react";
+import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package, Youtube, Globe, Plus, X, Github } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
@@ -45,6 +45,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [videoUrls, setVideoUrls] = useState<string[]>([""]);
+  const [githubRepoUrls, setGithubRepoUrls] = useState<string[]>([""]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -654,11 +655,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
   const handleCombinedGenerate = async () => {
     const validUrls = videoUrls.filter(u => u.trim());
+    const validGithubUrls = githubRepoUrls.filter(u => u.trim());
     
-    if (validUrls.length === 0 && selectedVideos.length === 0) {
+    if (validUrls.length === 0 && selectedVideos.length === 0 && validGithubUrls.length === 0) {
       toast({
-        title: "No Videos Provided",
-        description: "Please add at least one video URL or upload video files",
+        title: "No Sources Provided",
+        description: "Please add at least one video URL, video file, or GitHub repository",
         variant: "destructive",
       });
       return;
@@ -673,6 +675,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         body: {
           text: workflowIdea,
           videoUrls: validUrls,
+          githubRepoUrls: validGithubUrls,
           videoFiles: selectedVideos.length > 0 ? await Promise.all(
             selectedVideos.map(async (video) => ({
               name: video.name,
@@ -692,12 +695,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       
       if (data.workflows && Array.isArray(data.workflows)) {
         setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.insights || `Generated ${data.workflows.length} workflows from ${validUrls.length + selectedVideos.length} sources.`);
+        setGeneratedExplanation(data.insights || `Generated ${data.workflows.length} workflows from ${validUrls.length + selectedVideos.length + validGithubUrls.length} sources.`);
       } else if (data.nodes) {
         onWorkflowGenerated(data.nodes, data.metadata);
         toast({
           title: "Success!",
-          description: `Workflow generated from ${validUrls.length + selectedVideos.length} video sources`,
+          description: `Workflow generated from ${validUrls.length + selectedVideos.length + validGithubUrls.length} sources`,
         });
         onOpenChange(false);
       }
@@ -1026,21 +1029,75 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                   )}
                 </div>
 
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium flex items-center gap-2">
+                      <Github className="w-4 h-4" />
+                      GitHub Repository URLs
+                    </label>
+                    <Button
+                      onClick={() => setGithubRepoUrls([...githubRepoUrls, ""])}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Repo
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {githubRepoUrls.map((url, index) => (
+                      <div key={index} className="flex gap-2 items-start">
+                        <div className="flex-1">
+                          <input
+                            type="url"
+                            value={url}
+                            onChange={(e) => {
+                              const newUrls = [...githubRepoUrls];
+                              newUrls[index] = e.target.value;
+                              setGithubRepoUrls(newUrls);
+                            }}
+                            placeholder={`GitHub repository URL ${index + 1} (e.g., https://github.com/user/repo)`}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          />
+                          {url && url.includes('github.com') && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              💻 GitHub Repository
+                            </p>
+                          )}
+                        </div>
+                        {githubRepoUrls.length > 1 && (
+                          <Button
+                            onClick={() => {
+                              setGithubRepoUrls(githubRepoUrls.filter((_, i) => i !== index));
+                            }}
+                            variant="ghost"
+                            size="sm"
+                            className="mt-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <Button
                   onClick={handleCombinedGenerate}
-                  disabled={isGenerating || (videoUrls.every(u => !u.trim()) && selectedVideos.length === 0)}
+                  disabled={isGenerating || (videoUrls.every(u => !u.trim()) && selectedVideos.length === 0 && githubRepoUrls.every(u => !u.trim()))}
                   className="w-full"
                   size="lg"
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Analyzing {videoUrls.filter(u => u.trim()).length + selectedVideos.length} Sources...
+                      Analyzing {videoUrls.filter(u => u.trim()).length + selectedVideos.length + githubRepoUrls.filter(u => u.trim()).length} Sources...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 mr-2" />
-                      Generate from {videoUrls.filter(u => u.trim()).length + selectedVideos.length} Video Sources
+                      Generate from {videoUrls.filter(u => u.trim()).length + selectedVideos.length + githubRepoUrls.filter(u => u.trim()).length} Sources
                     </>
                   )}
                 </Button>

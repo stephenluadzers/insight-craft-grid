@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { text, images, videoUrl, tiktokUrl, videoFile, videoUrls, videoFiles, documents, websiteUrls, existingWorkflow } = await req.json();
+    const { text, images, videoUrl, tiktokUrl, videoFile, videoUrls, videoFiles, githubRepoUrls, documents, websiteUrls, existingWorkflow } = await req.json();
     
     console.log('Combining inputs:', { 
       hasText: !!text, 
@@ -22,6 +22,7 @@ serve(async (req) => {
       hasVideoFile: !!videoFile,
       videoUrlsCount: videoUrls?.length || 0,
       videoFilesCount: videoFiles?.length || 0,
+      githubRepoUrlsCount: githubRepoUrls?.length || 0,
       documentCount: documents?.length || 0,
       websiteUrlCount: websiteUrls?.length || 0
     });
@@ -194,6 +195,38 @@ serve(async (req) => {
           }
         } catch (error) {
           console.error(`Video file analysis failed for ${file.name}:`, error);
+        }
+      }
+    }
+
+    // Process GitHub repositories if provided (new multi-source support)
+    if (githubRepoUrls && githubRepoUrls.length > 0) {
+      for (const repoUrl of githubRepoUrls) {
+        if (!repoUrl || !repoUrl.trim()) continue;
+        
+        try {
+          const { data: repoData, error: repoError } = await supabaseClient.functions.invoke('analyze-github-repo', {
+            body: { 
+              repoUrl,
+              existingWorkflow 
+            }
+          });
+
+          if (!repoError && repoData) {
+            if (repoData.context) {
+              mergedContext = { ...mergedContext, ...repoData.context };
+            }
+            if (repoData.workflows) {
+              allWorkflowData.push(...repoData.workflows);
+            } else if (repoData.nodes) {
+              allWorkflowData.push(repoData);
+            }
+            
+            const repoName = repoUrl.split('github.com/')[1] || repoUrl;
+            combinedDescription += `\nGitHub Repository (${repoName}): ${repoData.insights || repoData.explanation || ''}`;
+          }
+        } catch (error) {
+          console.error(`GitHub repo analysis failed for ${repoUrl}:`, error);
         }
       }
     }
