@@ -18,7 +18,7 @@ export const Paywall = () => {
             <Lock className="w-8 h-8 text-primary" />
           </div>
           <CardTitle className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Unlock FlowMind Pro
+            Unlock Remora Flow Pro
           </CardTitle>
           <CardDescription className="text-lg">
             Get full access to AI-powered workflow automation

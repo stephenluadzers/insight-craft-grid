@@ -17,7 +17,7 @@ export default function Legal() {
                 <div>
                   <h1 className="text-4xl font-bold">AI Transparency & Fair-Use Statement</h1>
                   <p className="text-muted-foreground mt-2">
-                    Remora Development | FlowMind & Shadow IDE
+                    Remora Development | Remora Flow
                   </p>
                 </div>
               </div>
@@ -39,7 +39,7 @@ export default function Legal() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p>
-                      FlowMind and its associated applications operate under principles of{" "}
+                      Remora Flow operates under principles of{" "}
                       <strong>transparency, fair use, and responsible AI development</strong>.
                     </p>
                     <p>

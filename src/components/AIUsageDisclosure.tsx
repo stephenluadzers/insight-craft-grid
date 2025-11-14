@@ -34,7 +34,7 @@ export function AIUsageDisclosure() {
             AI Features & Data Usage
           </DialogTitle>
           <DialogDescription>
-            Learn how FlowFuse uses AI to enhance your workflow automation experience
+            Learn how Remora Flow uses AI to enhance your workflow automation experience
           </DialogDescription>
         </DialogHeader>
 
@@ -95,7 +95,7 @@ export function AIUsageDisclosure() {
               </div>
               <div className="space-y-2 text-sm text-muted-foreground ml-7">
                 <p>
-                  FlowFuse uses <strong>Lovable AI Gateway</strong>, which provides access to industry-leading AI
+                  Remora Flow uses <strong>Lovable AI Gateway</strong>, which provides access to industry-leading AI
                   models including Google Gemini and OpenAI GPT.
                 </p>
                 <p className="font-semibold mt-2">Data Handling:</p>
@@ -115,7 +115,7 @@ export function AIUsageDisclosure() {
             <div className="space-y-2">
               <h3 className="font-semibold">Your Control</h3>
               <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-7">
-                <li>AI features are entirely optional - you can use FlowFuse without them</li>
+                <li>AI features are entirely optional - you can use Remora Flow without them</li>
                 <li>Each AI action is triggered by you - nothing happens automatically</li>
                 <li>You can review and modify all AI-generated content before saving</li>
                 <li>Disable AI features anytime in Settings → Privacy → AI Features</li>
