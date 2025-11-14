@@ -47,7 +47,8 @@ serve(async (req) => {
       
     } catch (error) {
       console.error('Error fetching website:', error);
-      throw new Error(`Failed to fetch website content: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to fetch website content: ${errorMessage}`);
     }
 
     const systemPrompt = `You are an AI Workflow Architect analyzing website content to extract workflow structures and customer/business context.
