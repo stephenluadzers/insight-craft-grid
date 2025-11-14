@@ -51,7 +51,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className={collapsed ? "sr-only" : ""}>
-            Workflow Automation
+            Remora Flow
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
