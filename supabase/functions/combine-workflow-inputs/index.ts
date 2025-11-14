@@ -12,12 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    const { text, images, videoUrl, documents, websiteUrls, existingWorkflow } = await req.json();
+    const { text, images, videoUrl, tiktokUrl, documents, websiteUrls, existingWorkflow } = await req.json();
     
     console.log('Combining inputs:', { 
       hasText: !!text, 
       imageCount: images?.length || 0, 
       hasVideo: !!videoUrl,
+      hasTikTok: !!tiktokUrl,
       documentCount: documents?.length || 0,
       websiteUrlCount: websiteUrls?.length || 0
     });
@@ -37,7 +38,7 @@ serve(async (req) => {
     let combinedDescription = '';
     let allWorkflowData: any[] = [];
 
-    // Process video if provided
+    // Process YouTube video if provided
     if (videoUrl) {
       try {
         const { data: videoData, error: videoError } = await supabaseClient.functions.invoke('analyze-youtube-video', {
@@ -53,10 +54,33 @@ serve(async (req) => {
           } else if (videoData.nodes) {
             allWorkflowData.push(videoData);
           }
-          combinedDescription += `\nVideo Analysis: ${videoData.insights || videoData.explanation || ''}`;
+          combinedDescription += `\nYouTube Video Analysis: ${videoData.insights || videoData.explanation || ''}`;
         }
       } catch (error) {
-        console.error('Video analysis failed:', error);
+        console.error('YouTube video analysis failed:', error);
+      }
+    }
+
+    // Process TikTok video if provided
+    if (tiktokUrl) {
+      try {
+        const { data: tiktokData, error: tiktokError } = await supabaseClient.functions.invoke('analyze-tiktok-video', {
+          body: { videoUrl: tiktokUrl, existingWorkflow }
+        });
+
+        if (!tiktokError && tiktokData) {
+          if (tiktokData.context) {
+            mergedContext = { ...mergedContext, ...tiktokData.context };
+          }
+          if (tiktokData.workflows) {
+            allWorkflowData.push(...tiktokData.workflows);
+          } else if (tiktokData.nodes) {
+            allWorkflowData.push(tiktokData);
+          }
+          combinedDescription += `\nTikTok Video Analysis: ${tiktokData.insights || tiktokData.explanation || ''}`;
+        }
+      } catch (error) {
+        console.error('TikTok video analysis failed:', error);
       }
     }
 

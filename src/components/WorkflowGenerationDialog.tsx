@@ -42,10 +42,12 @@ interface WorkflowGenerationDialogProps {
 export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [tiktokUrl, setTiktokUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzingYoutube, setIsAnalyzingYoutube] = useState(false);
+  const [isAnalyzingTiktok, setIsAnalyzingTiktok] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [generatedExplanation, setGeneratedExplanation] = useState("");
   const [showBusinessExport, setShowBusinessExport] = useState(false);
@@ -502,6 +504,68 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     }
   };
 
+  const handleTiktokGenerate = async () => {
+    if (!tiktokUrl.trim()) {
+      toast({
+        title: "URL Required",
+        description: "Please enter a TikTok video URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzingTiktok(true);
+    setGeneratedExplanation("");
+    setMultipleWorkflows([]);
+    setSelectedWorkflowIndex(null);
+
+    try {
+      console.log('Analyzing TikTok video:', tiktokUrl);
+      
+      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
+      
+      const { data, error } = await supabase.functions.invoke('analyze-tiktok-video', {
+        body: { 
+          videoUrl: tiktokUrl.trim(),
+          existingWorkflow
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "TikTok Analyzed",
+        description: "Extracted workflow from TikTok video",
+      });
+
+      if (data.workflows && Array.isArray(data.workflows)) {
+        setMultipleWorkflows(data.workflows);
+        setGeneratedExplanation(data.insights || `Detected ${data.workflows.length} workflows from TikTok.`);
+      } else if (data.nodes && data.nodes.length > 0) {
+        setGeneratedExplanation(data.insights || "Workflow generated from TikTok!");
+        onWorkflowGenerated(data.nodes, {
+          guardrailExplanations: data.guardrailExplanations,
+          complianceStandards: data.complianceStandards,
+          riskScore: data.riskScore
+        });
+        onOpenChange(false);
+        toast({
+          title: "Workflow Generated!",
+          description: `Created ${data.nodes.length} nodes from TikTok`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error generating from TikTok:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate workflow from TikTok",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzingTiktok(false);
+    }
+  };
+
   const exportCombined = async () => {
     setIsExporting(true);
     
@@ -608,7 +672,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         </DialogHeader>
 
         <Tabs defaultValue="text" className="flex-1 overflow-hidden flex flex-col space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="combined">
               <Package className="w-4 h-4 mr-2" />
               Combined
@@ -620,6 +684,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             <TabsTrigger value="youtube">
               <Youtube className="w-4 h-4 mr-2" />
               YouTube
+            </TabsTrigger>
+            <TabsTrigger value="tiktok">
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+              </svg>
+              TikTok
             </TabsTrigger>
             <TabsTrigger value="image">
               <ImageIcon className="w-4 h-4 mr-2" />
@@ -976,6 +1046,110 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export as FlowBundle
+                  </Button>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="tiktok" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
+            <div className="space-y-4">
+              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
+                <svg className="w-12 h-12 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                </svg>
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-semibold">Generate from TikTok Video</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Paste a TikTok video URL to analyze and extract workflow patterns
+                  </p>
+                </div>
+                <div className="w-full max-w-md space-y-3">
+                  <input
+                    type="url"
+                    value={tiktokUrl}
+                    onChange={(e) => setTiktokUrl(e.target.value)}
+                    placeholder="https://www.tiktok.com/@user/video/..."
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <Button
+                    onClick={handleTiktokGenerate}
+                    disabled={isAnalyzingTiktok || !tiktokUrl.trim()}
+                    className="w-full"
+                  >
+                    {isAnalyzingTiktok ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing TikTok...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate from TikTok
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              {generatedExplanation && (
+                <div className="mt-4">
+                  <h3 className="text-sm font-medium mb-2">Generated Workflow:</h3>
+                  <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
+                    <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {multipleWorkflows.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {multipleWorkflows.map((workflow, index) => (
+                      <div
+                        key={index}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
+                          selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
+                        }`}
+                        onClick={() => setSelectedWorkflowIndex(index)}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{workflow.name}</h4>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {workflow.nodes?.length || 0} nodes
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {workflow.explanation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={() => {
+                      if (selectedWorkflowIndex !== null) {
+                        const selected = multipleWorkflows[selectedWorkflowIndex];
+                        onWorkflowGenerated(selected.nodes, {
+                          guardrailExplanations: selected.guardrailExplanations,
+                          complianceStandards: selected.complianceStandards,
+                          riskScore: selected.riskScore
+                        });
+                        setMultipleWorkflows([]);
+                        setSelectedWorkflowIndex(null);
+                        onOpenChange(false);
+                        toast({
+                          title: "Workflow Created!",
+                          description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                        });
+                      }
+                    }}
+                    disabled={selectedWorkflowIndex === null}
+                    className="w-full"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Create Selected
                   </Button>
                 </div>
               )}
