@@ -2483,35 +2483,58 @@ export type Database = {
       workflow_schedules: {
         Row: {
           created_at: string | null
+          created_by: string
           cron_expression: string
+          description: string | null
           enabled: boolean | null
           id: string
           last_run_at: string | null
+          name: string
           next_run_at: string | null
+          timezone: string
           updated_at: string | null
           workflow_id: string
+          workspace_id: string
         }
         Insert: {
           created_at?: string | null
+          created_by: string
           cron_expression: string
+          description?: string | null
           enabled?: boolean | null
           id?: string
           last_run_at?: string | null
+          name: string
           next_run_at?: string | null
+          timezone?: string
           updated_at?: string | null
           workflow_id: string
+          workspace_id: string
         }
         Update: {
           created_at?: string | null
+          created_by?: string
           cron_expression?: string
+          description?: string | null
           enabled?: boolean | null
           id?: string
           last_run_at?: string | null
+          name?: string
           next_run_at?: string | null
+          timezone?: string
           updated_at?: string | null
           workflow_id?: string
+          workspace_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workflow_schedules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workflow_security_scans: {
         Row: {
