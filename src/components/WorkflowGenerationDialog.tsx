@@ -54,6 +54,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [selectedWorkflowIndex, setSelectedWorkflowIndex] = useState<number | null>(null);
   const [canMergeWorkflows, setCanMergeWorkflows] = useState(false);
   const [mergeStrategy, setMergeStrategy] = useState("");
+  const [combinedInputs, setCombinedInputs] = useState<{
+    text?: string;
+    images?: File[];
+    videoUrl?: string;
+  }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -603,7 +608,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         </DialogHeader>
 
         <Tabs defaultValue="text" className="flex-1 overflow-hidden flex flex-col space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="combined">
+              <Package className="w-4 h-4 mr-2" />
+              Combined
+            </TabsTrigger>
             <TabsTrigger value="text">
               <FileText className="w-4 h-4 mr-2" />
               Text
