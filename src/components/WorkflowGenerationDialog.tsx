@@ -5,7 +5,7 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package, Youtube, Globe } from "lucide-react";
+import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package, Youtube, Globe, Plus, X } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
@@ -44,6 +44,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [videoUrls, setVideoUrls] = useState<string[]>([""]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -56,6 +57,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
+  const [selectedVideos, setSelectedVideos] = useState<File[]>([]);
   const [multipleWorkflows, setMultipleWorkflows] = useState<any[]>([]);
   const [selectedWorkflowIndex, setSelectedWorkflowIndex] = useState<number | null>(null);
   const [canMergeWorkflows, setCanMergeWorkflows] = useState(false);
@@ -651,28 +653,60 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   };
 
   const handleCombinedGenerate = async () => {
+    const validUrls = videoUrls.filter(u => u.trim());
+    
+    if (validUrls.length === 0 && selectedVideos.length === 0) {
+      toast({
+        title: "No Videos Provided",
+        description: "Please add at least one video URL or upload video files",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
+      
+      // Process multiple video URLs and files
       const { data, error } = await supabase.functions.invoke('combine-workflow-inputs', {
         body: {
           text: workflowIdea,
-          youtubeUrl,
-          tiktokUrl,
-          websiteUrl,
+          videoUrls: validUrls,
+          videoFiles: selectedVideos.length > 0 ? await Promise.all(
+            selectedVideos.map(async (video) => ({
+              name: video.name,
+              data: await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(video);
+              })
+            }))
+          ) : undefined,
           existingWorkflow
         }
       });
+      
       if (error) throw error;
+      
       if (data.workflows && Array.isArray(data.workflows)) {
         setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.insights || `Generated ${data.workflows.length} workflows.`);
+        setGeneratedExplanation(data.insights || `Generated ${data.workflows.length} workflows from ${validUrls.length + selectedVideos.length} sources.`);
       } else if (data.nodes) {
         onWorkflowGenerated(data.nodes, data.metadata);
+        toast({
+          title: "Success!",
+          description: `Workflow generated from ${validUrls.length + selectedVideos.length} video sources`,
+        });
         onOpenChange(false);
       }
     } catch (error: any) {
-      toast({ title: "Failed", description: error.message, variant: "destructive" });
+      toast({ 
+        title: "Generation Failed", 
+        description: error.message || "Failed to generate workflow from multiple sources", 
+        variant: "destructive" 
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -885,91 +919,128 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
               <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 space-y-3">
                 <Package className="w-10 h-10 text-muted-foreground" />
                 <div className="text-center space-y-1">
-                  <h3 className="text-lg font-semibold">Combined Input</h3>
+                  <h3 className="text-lg font-semibold">Combined Multi-Source Input</h3>
                   <p className="text-sm text-muted-foreground">
-                    Use multiple sources together: text descriptions, videos (YouTube/TikTok/files), images, and websites
+                    Add multiple videos from YouTube, TikTok, Snapchat, websites - combine them all into one workflow
                   </p>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Text Description</label>
+                  <label className="text-sm font-medium">Text Description (Optional)</label>
                   <Textarea
                     value={workflowIdea}
                     onChange={(e) => setWorkflowIdea(e.target.value)}
-                    placeholder="Describe your workflow idea..."
-                    rows={4}
+                    placeholder="Add context or instructions for combining these videos..."
+                    rows={3}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Video URL (YouTube/TikTok) or Website</label>
-                  <input
-                    type="url"
-                    value={youtubeUrl || tiktokUrl || websiteUrl}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value.includes('youtube.com') || value.includes('youtu.be')) {
-                        setYoutubeUrl(value);
-                        setTiktokUrl('');
-                        setWebsiteUrl('');
-                      } else if (value.includes('tiktok.com')) {
-                        setTiktokUrl(value);
-                        setYoutubeUrl('');
-                        setWebsiteUrl('');
-                      } else {
-                        setWebsiteUrl(value);
-                        setYoutubeUrl('');
-                        setTiktokUrl('');
-                      }
-                    }}
-                    placeholder="https://youtube.com/... or https://tiktok.com/... or any website URL"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Image or Video File</label>
-                  <div className="flex gap-2">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Video URLs (Multiple Sources)</label>
                     <Button
-                      onClick={() => imageInputRef.current?.click()}
+                      onClick={() => setVideoUrls([...videoUrls, ""])}
                       variant="outline"
                       size="sm"
                     >
-                      <ImageIcon className="w-4 h-4 mr-2" />
-                      Select Image
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Video URL
                     </Button>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {videoUrls.map((url, index) => (
+                      <div key={index} className="flex gap-2 items-start">
+                        <div className="flex-1">
+                          <input
+                            type="url"
+                            value={url}
+                            onChange={(e) => {
+                              const newUrls = [...videoUrls];
+                              newUrls[index] = e.target.value;
+                              setVideoUrls(newUrls);
+                            }}
+                            placeholder={`Video URL ${index + 1} (YouTube, TikTok, Snapchat, etc.)`}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          />
+                          {url && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {url.includes('youtube.com') || url.includes('youtu.be') ? '📺 YouTube' :
+                               url.includes('tiktok.com') ? '🎵 TikTok' :
+                               url.includes('snapchat.com') ? '👻 Snapchat' :
+                               url.includes('instagram.com') ? '📷 Instagram' :
+                               url.includes('vimeo.com') ? '🎬 Vimeo' :
+                               '🌐 Website'}
+                            </p>
+                          )}
+                        </div>
+                        {videoUrls.length > 1 && (
+                          <Button
+                            onClick={() => {
+                              setVideoUrls(videoUrls.filter((_, i) => i !== index));
+                            }}
+                            variant="ghost"
+                            size="sm"
+                            className="mt-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Or Upload Video Files</label>
+                  <div className="flex gap-2 flex-wrap">
+                    <input
+                      ref={videoInputRef}
+                      type="file"
+                      accept="video/*"
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          setSelectedVideos(Array.from(e.target.files));
+                        }
+                      }}
+                      className="hidden"
+                    />
                     <Button
                       onClick={() => videoInputRef.current?.click()}
                       variant="outline"
                       size="sm"
                     >
                       <Upload className="w-4 h-4 mr-2" />
-                      Select Video
+                      Upload Video Files
                     </Button>
                   </div>
-                  {(selectedImage || selectedVideo) && (
-                    <p className="text-sm text-muted-foreground">
-                      {selectedImage ? `Image: ${selectedImage.name}` : `Video: ${selectedVideo.name}`}
-                    </p>
+                  {selectedVideos.length > 0 && (
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      {selectedVideos.map((video, i) => (
+                        <p key={i}>📹 {video.name} ({(video.size / 1024 / 1024).toFixed(2)}MB)</p>
+                      ))}
+                    </div>
                   )}
                 </div>
 
                 <Button
                   onClick={handleCombinedGenerate}
-                  disabled={isGenerating}
+                  disabled={isGenerating || (videoUrls.every(u => !u.trim()) && selectedVideos.length === 0)}
                   className="w-full"
+                  size="lg"
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Analyzing Combined Inputs...
+                      Analyzing {videoUrls.filter(u => u.trim()).length + selectedVideos.length} Sources...
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 mr-2" />
-                      Generate from All Inputs
+                      Generate from {videoUrls.filter(u => u.trim()).length + selectedVideos.length} Video Sources
                     </>
                   )}
                 </Button>
