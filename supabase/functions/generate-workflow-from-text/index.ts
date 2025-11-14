@@ -68,11 +68,18 @@ serve(async (req) => {
 
 ${GUARDRAIL_SYSTEM_PROMPT}
 
+CUSTOMER DATA EXTRACTION:
+- ALWAYS extract any customer/contextual information from the description (names, emails, IDs, preferences, order details, etc.)
+- Store extracted data in a "context" object at the workflow level
+- Inject relevant context data into node configurations where applicable
+- Use {{context.fieldName}} syntax in node configs to reference context data (e.g., "email": "{{context.customerEmail}}")
+- This allows data to flow automatically through the workflow during execution
+
 MULTI-WORKFLOW DETECTION:
 - If the input describes MULTIPLE distinct workflows, you MUST separate them
 - Each workflow should be independent and usable on its own
 - Return an array of workflows under the key "workflows"
-- Each workflow should have its own nodes, connections, and explanation
+- Each workflow should have its own nodes, connections, explanation, and context
 - Example: A video showing "email automation" and "slack notification system" are TWO workflows
 
 CONTEXT LABELING (for multiple workflows):
@@ -225,16 +232,21 @@ FOR MULTIPLE WORKFLOWS (when description contains multiple distinct workflows):
   "workflows": [
     {
       "name": "Workflow 1 Name",
+      "context": {
+        "customerName": "extracted name",
+        "email": "extracted@email.com"
+      },
       "contextTags": ["Setup", "Integration"],
       "phase": "initial",
       "estimatedComplexity": "medium",
-      "nodes": [...],
+      "nodes": [...with {{context.field}} in configs...],
       "connections": [...],
       "execution_strategy": {...},
       "explanation": "What this workflow does"
     },
     {
       "name": "Workflow 2 Name", 
+      "context": {},
       "contextTags": ["Deployment", "Monitoring"],
       "phase": "final",
       "estimatedComplexity": "low",

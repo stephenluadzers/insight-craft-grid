@@ -28,6 +28,9 @@ export const NodeConfigDialog = ({ node, open, onOpenChange, onSave }: NodeConfi
   const [config, setConfig] = useState(JSON.stringify(node?.config || {}, null, 2));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
+  
+  // Check if config contains context placeholders
+  const hasContextPlaceholders = config.includes('{{context.');
 
   const handleSave = () => {
     if (!node) return;
@@ -136,6 +139,11 @@ export const NodeConfigDialog = ({ node, open, onOpenChange, onSave }: NodeConfi
           ) : (
             <div className="space-y-2">
               <Label htmlFor="config">Configuration (JSON)</Label>
+              {hasContextPlaceholders && (
+                <div className="text-sm text-muted-foreground mb-2 p-2 glass rounded-md border border-border/50">
+                  💡 <span className="font-semibold">Dynamic Data:</span> This config uses <code className="text-xs bg-muted px-1 py-0.5 rounded">{'{{context.field}}'}</code> syntax - values will be replaced with actual customer data during execution
+                </div>
+              )}
               <Textarea
                 id="config"
                 value={config}
