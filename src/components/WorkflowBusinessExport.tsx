@@ -3,9 +3,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Download, Code, Container, Cloud, Workflow, FileCode2, Package } from "lucide-react";
+import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2 } from "lucide-react";
 import { WorkflowNodeData } from "./WorkflowNode";
 import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
+import { exportWorkflowToYAML, downloadYAML } from "@/lib/workflowExportYAML";
 import { useToast } from "@/hooks/use-toast";
 
 interface WorkflowBusinessExportProps {
@@ -170,6 +171,45 @@ export function WorkflowBusinessExport({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Quick YAML Export */}
+          <div className="border rounded-lg p-4 bg-muted/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <FileJson className="w-5 h-5" />
+                <h3 className="font-semibold">Quick Export</h3>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              Export your complete workflow architecture with all decision branches and nodes to YAML or n8n JSON format.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  const yaml = exportWorkflowToYAML(nodes, workflowName);
+                  downloadYAML(yaml, `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`);
+                  toast({
+                    title: "YAML Exported",
+                    description: "Workflow exported to YAML format with complete architecture",
+                  });
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                <FileJson className="w-4 h-4 mr-2" />
+                Export to YAML
+              </Button>
+              <Button
+                onClick={() => handleExport('n8n')}
+                disabled={isExporting}
+                variant="outline"
+                className="flex-1"
+              >
+                {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Workflow className="w-4 h-4 mr-2" />}
+                Export to n8n JSON
+              </Button>
+            </div>
+          </div>
+
           {/* Category Filter */}
           <div className="flex gap-2 flex-wrap">
             <Button
