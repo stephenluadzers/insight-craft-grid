@@ -52,6 +52,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [generatedExplanation, setGeneratedExplanation] = useState("");
   const [showBusinessExport, setShowBusinessExport] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const [multipleWorkflows, setMultipleWorkflows] = useState<any[]>([]);
   const [selectedWorkflowIndex, setSelectedWorkflowIndex] = useState<number | null>(null);
   const [canMergeWorkflows, setCanMergeWorkflows] = useState(false);
@@ -63,6 +64,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleGenerate = async () => {
@@ -566,6 +568,105 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     }
   };
 
+  const handleVideoSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const videoFile = files[0];
+    const maxSize = 100 * 1024 * 1024; // 100MB limit
+
+    if (videoFile.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "Video file must be under 100MB. Please compress or trim your video.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if it's a video file
+    if (!videoFile.type.startsWith('video/')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a video file (MP4, MOV, AVI, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedVideo(videoFile);
+    toast({
+      title: "Video Selected",
+      description: `${videoFile.name} (${(videoFile.size / 1024 / 1024).toFixed(2)}MB) ready for analysis`,
+    });
+  };
+
+  const handleGenerateFromVideo = async () => {
+    if (!selectedVideo) {
+      toast({
+        title: "No Video Selected",
+        description: "Please select a video file first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    setGeneratedExplanation("");
+    setMultipleWorkflows([]);
+    setSelectedWorkflowIndex(null);
+
+    try {
+      // Convert video to base64 for first frame analysis
+      const reader = new FileReader();
+      const videoDataPromise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(selectedVideo);
+      });
+
+      const videoData = await videoDataPromise;
+
+      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
+
+      const { data, error } = await supabase.functions.invoke('analyze-video-file', {
+        body: {
+          videoData,
+          fileName: selectedVideo.name,
+          existingWorkflow
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.workflows && Array.isArray(data.workflows)) {
+        setMultipleWorkflows(data.workflows);
+        setGeneratedExplanation(data.insights || `Detected ${data.workflows.length} workflows from video.`);
+      } else if (data.nodes && data.nodes.length > 0) {
+        setGeneratedExplanation(data.insights || "Workflow generated from video!");
+        onWorkflowGenerated(data.nodes, {
+          guardrailExplanations: data.guardrailExplanations,
+          complianceStandards: data.complianceStandards,
+          riskScore: data.riskScore
+        });
+        onOpenChange(false);
+        toast({
+          title: "Workflow Generated!",
+          description: `Created ${data.nodes.length} nodes from video`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error generating from video:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate workflow from video",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const exportCombined = async () => {
     setIsExporting(true);
     
@@ -672,7 +773,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         </DialogHeader>
 
         <Tabs defaultValue="text" className="flex-1 overflow-hidden flex flex-col space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="combined">
               <Package className="w-4 h-4 mr-2" />
               Combined
@@ -690,6 +791,13 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
               </svg>
               TikTok
+            </TabsTrigger>
+            <TabsTrigger value="video">
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
+                <polygon points="10 12 16 9 16 15 10 12"/>
+              </svg>
+              Video
             </TabsTrigger>
             <TabsTrigger value="image">
               <ImageIcon className="w-4 h-4 mr-2" />
@@ -1154,6 +1262,125 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="video" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
+            <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
+              <svg className="w-12 h-12 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
+                <polygon points="10 12 16 9 16 15 10 12"/>
+              </svg>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-semibold">Upload Any Video File</h3>
+                <p className="text-sm text-muted-foreground">
+                  Upload video files from any source (MP4, MOV, AVI, etc.) to analyze and extract workflows
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Works with tutorials, screencasts, app walkthroughs, whiteboard recordings, and more
+                </p>
+              </div>
+              <input
+                ref={videoInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleVideoSelection}
+                className="hidden"
+              />
+              <div className="flex gap-2 items-center">
+                <Button
+                  onClick={() => videoInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  variant="outline"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Select Video File
+                </Button>
+                {selectedVideo && (
+                  <Button
+                    onClick={handleGenerateFromVideo}
+                    disabled={isAnalyzing}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Analyzing Video...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate from Video
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+              {selectedVideo && (
+                <div className="text-sm text-muted-foreground text-center">
+                  <p className="font-medium">{selectedVideo.name}</p>
+                  <p className="text-xs">Size: {(selectedVideo.size / 1024 / 1024).toFixed(2)}MB</p>
+                </div>
+              )}
+            </div>
+            
+            {generatedExplanation && (
+              <div className="mt-4">
+                <h3 className="text-sm font-medium mb-2">Analysis Result:</h3>
+                <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
+                  <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
+                </ScrollArea>
+              </div>
+            )}
+
+            {multipleWorkflows.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {multipleWorkflows.map((workflow, index) => (
+                    <div
+                      key={index}
+                      className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
+                        selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
+                      }`}
+                      onClick={() => setSelectedWorkflowIndex(index)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-medium">{workflow.name}</h4>
+                        <span className="text-xs text-muted-foreground">
+                          {workflow.nodes?.length || 0} nodes
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {workflow.explanation}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => {
+                    if (selectedWorkflowIndex !== null) {
+                      const selected = multipleWorkflows[selectedWorkflowIndex];
+                      onWorkflowGenerated(selected.nodes, {
+                        guardrailExplanations: selected.guardrailExplanations,
+                        complianceStandards: selected.complianceStandards,
+                        riskScore: selected.riskScore
+                      });
+                      setMultipleWorkflows([]);
+                      setSelectedWorkflowIndex(null);
+                      onOpenChange(false);
+                      toast({
+                        title: "Workflow Created!",
+                        description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
+                      });
+                    }
+                  }}
+                  disabled={selectedWorkflowIndex === null}
+                  className="w-full"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Create Selected
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="image" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
