@@ -1,0 +1,137 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { text, images, videoUrl, existingWorkflow } = await req.json();
+    
+    console.log('Combining inputs:', { 
+      hasText: !!text, 
+      imageCount: images?.length || 0, 
+      hasVideo: !!videoUrl 
+    });
+
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+
+    let mergedContext: Record<string, any> = {};
+    let combinedDescription = '';
+    let allWorkflowData: any[] = [];
+
+    // Process video if provided
+    if (videoUrl) {
+      try {
+        const { data: videoData, error: videoError } = await supabaseClient.functions.invoke('analyze-youtube-video', {
+          body: { videoUrl, existingWorkflow }
+        });
+
+        if (!videoError && videoData) {
+          if (videoData.context) {
+            mergedContext = { ...mergedContext, ...videoData.context };
+          }
+          if (videoData.workflows) {
+            allWorkflowData.push(...videoData.workflows);
+          } else if (videoData.nodes) {
+            allWorkflowData.push(videoData);
+          }
+          combinedDescription += `\nVideo Analysis: ${videoData.insights || videoData.explanation || ''}`;
+        }
+      } catch (error) {
+        console.error('Video analysis failed:', error);
+      }
+    }
+
+    // Process images if provided
+    if (images && images.length > 0) {
+      try {
+        const { data: imageData, error: imageError } = await supabaseClient.functions.invoke('analyze-workflow-image', {
+          body: { images, existingWorkflow }
+        });
+
+        if (!imageError && imageData) {
+          if (imageData.context) {
+            mergedContext = { ...mergedContext, ...imageData.context };
+          }
+          if (imageData.workflows) {
+            allWorkflowData.push(...imageData.workflows);
+          } else if (imageData.nodes) {
+            allWorkflowData.push(imageData);
+          }
+          combinedDescription += `\nImage Analysis: ${imageData.insights || imageData.explanation || ''}`;
+        }
+      } catch (error) {
+        console.error('Image analysis failed:', error);
+      }
+    }
+
+    // Process text description
+    if (text) {
+      combinedDescription += `\nText Description: ${text}`;
+    }
+
+    // Now generate the final workflow with all combined context and insights
+    const { data: finalData, error: finalError } = await supabaseClient.functions.invoke('generate-workflow-from-text', {
+      body: {
+        description: `${combinedDescription}\n\nExtracted Context: ${JSON.stringify(mergedContext)}`,
+        existingWorkflow
+      }
+    });
+
+    if (finalError) throw finalError;
+
+    // Merge context into the final workflow
+    if (finalData.workflows) {
+      finalData.workflows = finalData.workflows.map((workflow: any) => ({
+        ...workflow,
+        context: { ...mergedContext, ...(workflow.context || {}) }
+      }));
+    } else if (finalData.nodes) {
+      finalData.context = mergedContext;
+    }
+
+    return new Response(
+      JSON.stringify({
+        ...finalData,
+        combinedContext: mergedContext,
+        inputSummary: {
+          hasText: !!text,
+          imageCount: images?.length || 0,
+          hasVideo: !!videoUrl
+        }
+      }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
+    );
+
+  } catch (error) {
+    console.error('Error combining inputs:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error combining inputs' 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});
