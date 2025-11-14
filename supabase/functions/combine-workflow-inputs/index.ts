@@ -12,13 +12,14 @@ serve(async (req) => {
   }
 
   try {
-    const { text, images, videoUrl, tiktokUrl, documents, websiteUrls, existingWorkflow } = await req.json();
+    const { text, images, videoUrl, tiktokUrl, videoFile, documents, websiteUrls, existingWorkflow } = await req.json();
     
     console.log('Combining inputs:', { 
       hasText: !!text, 
       imageCount: images?.length || 0, 
       hasVideo: !!videoUrl,
       hasTikTok: !!tiktokUrl,
+      hasVideoFile: !!videoFile,
       documentCount: documents?.length || 0,
       websiteUrlCount: websiteUrls?.length || 0
     });
@@ -81,6 +82,33 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error('TikTok video analysis failed:', error);
+      }
+    }
+
+    // Process uploaded video file if provided
+    if (videoFile) {
+      try {
+        const { data: videoFileData, error: videoFileError } = await supabaseClient.functions.invoke('analyze-video-file', {
+          body: { 
+            videoData: videoFile.data,
+            fileName: videoFile.name,
+            existingWorkflow 
+          }
+        });
+
+        if (!videoFileError && videoFileData) {
+          if (videoFileData.context) {
+            mergedContext = { ...mergedContext, ...videoFileData.context };
+          }
+          if (videoFileData.workflows) {
+            allWorkflowData.push(...videoFileData.workflows);
+          } else if (videoFileData.nodes) {
+            allWorkflowData.push(videoFileData);
+          }
+          combinedDescription += `\nUploaded Video Analysis (${videoFile.name}): ${videoFileData.insights || videoFileData.explanation || ''}`;
+        }
+      } catch (error) {
+        console.error('Video file analysis failed:', error);
       }
     }
 
