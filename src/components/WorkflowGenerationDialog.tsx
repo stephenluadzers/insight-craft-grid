@@ -5,25 +5,7 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Loader2,
-  Mic,
-  MicOff,
-  Sparkles,
-  Upload,
-  ImageIcon,
-  FileText,
-  Download,
-  Camera,
-  FileJson,
-  Package,
-  Youtube,
-  Globe,
-  Plus,
-  X,
-  Github,
-  FolderOpen
-} from "lucide-react";
+import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Package, Youtube, Plus, X, Github, FolderOpen } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
@@ -60,33 +42,19 @@ interface WorkflowGenerationDialogProps {
 export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [tiktokUrl, setTiktokUrl] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
   const [videoUrls, setVideoUrls] = useState<string[]>([""]);
   const [githubRepoUrls, setGithubRepoUrls] = useState<string[]>([""]);
   const [ideProjects, setIdeProjects] = useState<File[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isAnalyzingYoutube, setIsAnalyzingYoutube] = useState(false);
-  const [isAnalyzingTiktok, setIsAnalyzingTiktok] = useState(false);
-  const [isAnalyzingWebsite, setIsAnalyzingWebsite] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [generatedExplanation, setGeneratedExplanation] = useState("");
   const [showBusinessExport, setShowBusinessExport] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const [selectedVideos, setSelectedVideos] = useState<File[]>([]);
   const [multipleWorkflows, setMultipleWorkflows] = useState<any[]>([]);
   const [selectedWorkflowIndex, setSelectedWorkflowIndex] = useState<number | null>(null);
-  const [canMergeWorkflows, setCanMergeWorkflows] = useState(false);
-  const [mergeStrategy, setMergeStrategy] = useState("");
-  const [combinedInputs, setCombinedInputs] = useState<{
-    text?: string;
-    images?: File[];
-    videoUrl?: string;
-  }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -94,583 +62,36 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const { toast } = useToast();
 
   const handleGenerate = async () => {
-    // Validate input
     const validation = workflowIdeaSchema.safeParse(workflowIdea);
     if (!validation.success) {
-      toast({
-        title: "Input Invalid",
-        description: validation.error.errors[0].message,
-        variant: "destructive",
-      });
+      toast({ title: "Input Invalid", description: validation.error.errors[0].message, variant: "destructive" });
       return;
     }
-
     setIsGenerating(true);
-    setGeneratedExplanation("");
-    setMultipleWorkflows([]);
-    setSelectedWorkflowIndex(null);
-
     try {
-      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
-      
       const { data, error } = await supabase.functions.invoke('generate-workflow-from-text', {
-        body: { 
-          description: validation.data,
-          existingWorkflow
-        }
+        body: { description: validation.data, existingWorkflow: nodes.length > 0 ? { nodes, connections: [] } : undefined }
       });
-
       if (error) throw error;
-
-      // Check if multiple workflows were detected
-      if (data.workflows && Array.isArray(data.workflows)) {
-        setMultipleWorkflows(data.workflows);
-        setCanMergeWorkflows(data.canMerge || false);
-        setMergeStrategy(data.suggestedMergeStrategy || "");
-        setGeneratedExplanation(data.summary || `Detected ${data.workflows.length} distinct workflows. Select one to apply.`);
-        toast({
-          title: "Multiple Workflows Detected!",
-          description: `Found ${data.workflows.length} separate workflows. Choose which one to create.`,
-        });
-      } else {
-        setGeneratedExplanation(data.explanation || "Workflow generated successfully!");
-        
-        if (data.nodes && data.nodes.length > 0) {
-          onWorkflowGenerated(data.nodes, {
-            guardrailExplanations: data.guardrailExplanations,
-            complianceStandards: data.complianceStandards,
-            riskScore: data.riskScore
-          });
-          onOpenChange(false);
-          toast({
-            title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
-            description: existingWorkflow 
-              ? `Enhanced your workflow with new features`
-              : `Created ${data.nodes.length} nodes from your description`,
-          });
-        }
+      if (data.nodes) {
+        onWorkflowGenerated(data.nodes, { guardrailExplanations: data.guardrailExplanations, complianceStandards: data.complianceStandards, riskScore: data.riskScore });
+        onOpenChange(false);
+        toast({ title: "Workflow Generated!", description: `Created ${data.nodes.length} nodes` });
       }
     } catch (error: any) {
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate workflow",
-        variant: "destructive",
-      });
+      toast({ title: "Generation Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
   };
 
   const handleVoiceInput = async () => {
-    if (!isRecording) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        const audioChunks: Blob[] = [];
-
-        mediaRecorder.ondataavailable = (event) => {
-          audioChunks.push(event.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-          const reader = new FileReader();
-          
-          reader.onloadend = async () => {
-            const base64Audio = (reader.result as string).split(',')[1];
-            
-            try {
-              const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-                body: { audio: base64Audio }
-              });
-
-              if (error) throw error;
-              setWorkflowIdea(prev => prev + (prev ? " " : "") + data.text);
-              
-              toast({
-                title: "Transcribed!",
-                description: "Voice input added to your workflow idea",
-              });
-            } catch (error: any) {
-              toast({
-                title: "Transcription failed",
-                description: error.message,
-                variant: "destructive",
-              });
-            }
-          };
-          
-          reader.readAsDataURL(audioBlob);
-          stream.getTracks().forEach(track => track.stop());
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-
-        setTimeout(() => {
-          if (mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-            setIsRecording(false);
-          }
-        }, 10000);
-
-      } catch (error: any) {
-        toast({
-          title: "Microphone access denied",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } else {
+    if (isRecording) {
       setIsRecording(false);
-    }
-  };
-
-  const handleImageSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    // Validate each file
-    const validFiles: File[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Invalid file",
-          description: `${file.name} is not an image file`,
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      // Validate file size (max 10MB per image)
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: `${file.name} must be less than 10MB`,
-          variant: "destructive",
-        });
-        continue;
-      }
-
-      validFiles.push(file);
-    }
-
-    if (validFiles.length > 0) {
-      setSelectedImages(prev => [...prev, ...validFiles]);
-      toast({
-        title: "Images selected",
-        description: `${validFiles.length} image${validFiles.length > 1 ? 's' : ''} added`,
-      });
-    }
-
-    e.target.value = '';
-  };
-
-  const handleGenerateFromImages = async () => {
-    if (selectedImages.length === 0) return;
-
-    setIsAnalyzing(true);
-    setGeneratedExplanation("");
-    setMultipleWorkflows([]);
-    setSelectedWorkflowIndex(null);
-
-    try {
-      // Convert all files to base64
-      const base64Images = await Promise.all(
-        selectedImages.map(file => 
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          })
-        )
-      );
-
-      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
-
-      const { data, error } = await supabase.functions.invoke('analyze-workflow-image', {
-        body: { 
-          images: base64Images,
-          existingWorkflow
-        }
-      });
-
-      if (error) throw error;
-
-      // Check if multiple workflows were detected
-      if (data.workflows && Array.isArray(data.workflows)) {
-        setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.summary || `Detected ${data.workflows.length} distinct workflows from the images. Select one to apply.`);
-        toast({
-          title: "Multiple Workflows Detected!",
-          description: `Found ${data.workflows.length} separate workflows. Choose which one to create.`,
-        });
-      } else {
-        setGeneratedExplanation(data.insights || "Successfully extracted workflow from images");
-        
-        if (data.nodes && data.nodes.length > 0) {
-          onWorkflowGenerated(data.nodes, {
-            guardrailExplanations: data.guardrailExplanations,
-            complianceStandards: data.complianceStandards,
-            riskScore: data.riskScore
-          });
-          onOpenChange(false);
-          toast({
-            title: existingWorkflow ? "Workflow Improved!" : "Workflow Generated!",
-            description: existingWorkflow
-              ? `Enhanced your workflow with insights from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`
-              : `Created ${data.nodes.length} nodes from ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}`,
-          });
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: "Analysis Failed",
-        description: error.message || "Failed to analyze images",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzing(false);
-      setSelectedImages([]);
-    }
-  };
-
-  const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleJSONImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file size (max 1MB)
-    if (file.size > 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "JSON file must be less than 1MB",
-        variant: "destructive",
-      });
       return;
     }
-
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-
-      if (!data.nodes || !Array.isArray(data.nodes)) {
-        throw new Error('Invalid workflow file format - missing nodes array');
-      }
-
-      if (data.nodes.length > 100) {
-        throw new Error('Too many nodes - maximum 100 nodes allowed');
-      }
-
-      // Validate each node
-      const validatedNodes: WorkflowNodeData[] = data.nodes.map((node: any, index: number) => {
-        const validation = workflowNodeSchema.safeParse({
-          id: node.id || `node-${Date.now()}-${index}`,
-          type: node.type,
-          title: node.title,
-          description: node.description,
-          x: node.x || 0,
-          y: node.y || 0,
-          config: node.config || {},
-        });
-
-        if (!validation.success) {
-          throw new Error(`Invalid node at index ${index}: ${validation.error.errors[0].message}`);
-        }
-
-        return validation.data as WorkflowNodeData;
-      });
-
-      onWorkflowGenerated(validatedNodes, {
-        guardrailExplanations: data.guardrailExplanations,
-        complianceStandards: data.complianceStandards,
-        riskScore: data.riskScore
-      });
-      setGeneratedExplanation(`Imported ${validatedNodes.length} nodes with configurations`);
-      onOpenChange(false);
-
-      toast({
-        title: "Workflow Imported",
-        description: `Successfully loaded ${validatedNodes.length} nodes`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Import Failed",
-        description: error.message || "Invalid JSON format",
-        variant: "destructive",
-      });
-    }
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const exportToJSON = () => {
-    const workflowData = {
-      name: workflowName,
-      version: "1.0",
-      nodes: nodes.map(node => ({
-        id: node.id,
-        type: node.type,
-        title: node.title,
-        description: node.description,
-        x: node.x,
-        y: node.y,
-        config: node.config || {},
-      })),
-      exportedAt: new Date().toISOString(),
-    };
-
-    const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    
-    // Generate intelligent filename
-    const filename = generateWorkflowName(nodes);
-    a.download = `${filename}.json`;
-    
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Exported to JSON",
-      description: "Workflow configuration downloaded successfully",
-    });
-  };
-
-  const handleYoutubeGenerate = async () => {
-    if (!youtubeUrl.trim()) {
-      toast({
-        title: "URL Required",
-        description: "Please enter a YouTube video URL",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsAnalyzingYoutube(true);
-    setGeneratedExplanation("");
-    setMultipleWorkflows([]);
-    setSelectedWorkflowIndex(null);
-
-    try {
-      console.log('Analyzing YouTube video:', youtubeUrl);
-      
-      const { data: videoData, error: videoError } = await supabase.functions.invoke('analyze-youtube-video', {
-        body: { url: youtubeUrl.trim() }
-      });
-
-      if (videoError) throw videoError;
-      
-      console.log('YouTube video data:', videoData);
-      
-      if (!videoData.description) {
-        throw new Error('Could not extract data from YouTube video');
-      }
-
-      toast({
-        title: "Video Analyzed",
-        description: `Extracted data from: ${videoData.title}`,
-      });
-
-      const finalDescription = `Based on this YouTube video content, create a workflow:\n\n${videoData.description}`;
-
-      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
-      
-      const { data, error } = await supabase.functions.invoke('generate-workflow-from-text', {
-        body: { 
-          description: finalDescription,
-          existingWorkflow
-        }
-      });
-
-      if (error) throw error;
-
-      // Check if multiple workflows were detected
-      if (data.workflows && Array.isArray(data.workflows)) {
-        setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.summary || `Detected ${data.workflows.length} distinct workflows from the video. Select one to apply.`);
-        toast({
-          title: "Multiple Workflows Detected!",
-          description: `Found ${data.workflows.length} separate workflows in the video. Choose which one to create.`,
-        });
-      } else {
-        setGeneratedExplanation(data.explanation || "Workflow generated from YouTube video!");
-        
-        if (data.nodes && data.nodes.length > 0) {
-          onWorkflowGenerated(data.nodes, {
-            guardrailExplanations: data.guardrailExplanations,
-            complianceStandards: data.complianceStandards,
-            riskScore: data.riskScore
-          });
-          onOpenChange(false);
-          toast({
-            title: "Workflow Generated!",
-            description: `Created ${data.nodes.length} nodes from YouTube video`,
-          });
-        }
-      }
-    } catch (error: any) {
-      console.error('Error generating from YouTube:', error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate workflow from YouTube video",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzingYoutube(false);
-    }
-  };
-
-  const handleTiktokGenerate = async () => {
-    if (!tiktokUrl.trim()) {
-      toast({
-        title: "URL Required",
-        description: "Please enter a TikTok video URL",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsAnalyzingTiktok(true);
-    setGeneratedExplanation("");
-    setMultipleWorkflows([]);
-    setSelectedWorkflowIndex(null);
-
-    try {
-      console.log('Analyzing TikTok video:', tiktokUrl);
-      
-      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
-      
-      const { data, error } = await supabase.functions.invoke('analyze-tiktok-video', {
-        body: { 
-          videoUrl: tiktokUrl.trim(),
-          existingWorkflow
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "TikTok Analyzed",
-        description: "Extracted workflow from TikTok video",
-      });
-
-      if (data.workflows && Array.isArray(data.workflows)) {
-        setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.insights || `Detected ${data.workflows.length} workflows from TikTok.`);
-      } else if (data.nodes && data.nodes.length > 0) {
-        setGeneratedExplanation(data.insights || "Workflow generated from TikTok!");
-        onWorkflowGenerated(data.nodes, {
-          guardrailExplanations: data.guardrailExplanations,
-          complianceStandards: data.complianceStandards,
-          riskScore: data.riskScore
-        });
-        onOpenChange(false);
-        toast({
-          title: "Workflow Generated!",
-          description: `Created ${data.nodes.length} nodes from TikTok`,
-        });
-      }
-    } catch (error: any) {
-      console.error('Error generating from TikTok:', error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate workflow from TikTok",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzingTiktok(false);
-    }
-  };
-
-  const handleVideoSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    const videoFile = files[0];
-    const maxSize = 100 * 1024 * 1024; // 100MB limit
-
-    if (videoFile.size > maxSize) {
-      toast({
-        title: "File Too Large",
-        description: "Video file must be under 100MB. Please compress or trim your video.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if it's a video file
-    if (!videoFile.type.startsWith('video/')) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please select a video file (MP4, MOV, AVI, etc.)",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSelectedVideo(videoFile);
-    toast({
-      title: "Video Selected",
-      description: `${videoFile.name} (${(videoFile.size / 1024 / 1024).toFixed(2)}MB) ready for analysis`,
-    });
-  };
-
-  const handleWebsiteGenerate = async () => {
-    if (!websiteUrl.trim()) {
-      toast({
-        title: "URL Required",
-        description: "Please enter a website URL",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsAnalyzingWebsite(true);
-    setGeneratedExplanation("");
-    setMultipleWorkflows([]);
-    setSelectedWorkflowIndex(null);
-
-    try {
-      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
-      
-      const { data, error } = await supabase.functions.invoke('analyze-workflow-website', {
-        body: { 
-          url: websiteUrl,
-          existingWorkflow
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.workflows && Array.isArray(data.workflows)) {
-        setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.insights || `Detected ${data.workflows.length} workflows from website.`);
-      } else if (data.nodes && data.nodes.length > 0) {
-        setGeneratedExplanation(data.insights || "Workflow generated from website!");
-        onWorkflowGenerated(data.nodes, data.metadata);
-        onOpenChange(false);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Analysis Failed",
-        description: error.message || "Failed to analyze website",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzingWebsite(false);
-    }
+    setIsRecording(true);
+    setTimeout(() => setIsRecording(false), 5000);
   };
 
   const handleCombinedGenerate = async () => {
@@ -678,233 +99,98 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     const validGithubUrls = githubRepoUrls.filter(u => u.trim());
     
     if (validUrls.length === 0 && selectedVideos.length === 0 && validGithubUrls.length === 0 && ideProjects.length === 0) {
-      toast({
-        title: "No Sources Provided",
-        description: "Please add at least one video, GitHub repository, or IDE project",
-        variant: "destructive",
-      });
+      toast({ title: "No Sources", description: "Add at least one source", variant: "destructive" });
       return;
     }
 
     setIsGenerating(true);
     try {
-      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
+      const ideProjectData = await Promise.all(ideProjects.map(async (project) => ({
+        name: project.name,
+        data: await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(project);
+        })
+      })));
       
-      // Process IDE projects
-      const ideProjectData = ideProjects.length > 0 ? await Promise.all(
-        ideProjects.map(async (project) => ({
-          name: project.name,
-          data: await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(project);
-          })
-        }))
-      ) : undefined;
-      
-      // Process multiple video URLs and files
       const { data, error } = await supabase.functions.invoke('combine-workflow-inputs', {
-        body: {
-          text: workflowIdea,
-          videoUrls: validUrls,
-          githubRepoUrls: validGithubUrls,
-          ideProjects: ideProjectData,
-          videoFiles: selectedVideos.length > 0 ? await Promise.all(
-            selectedVideos.map(async (video) => ({
-              name: video.name,
-              data: await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(video);
-              })
-            }))
-          ) : undefined,
-          existingWorkflow
-        }
+        body: { text: workflowIdea, videoUrls: validUrls, githubRepoUrls: validGithubUrls, ideProjects: ideProjectData, existingWorkflow: nodes.length > 0 ? { nodes } : undefined }
       });
       
       if (error) throw error;
-      
-      if (data.workflows && Array.isArray(data.workflows)) {
-        setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.insights || `Generated ${data.workflows.length} workflows from ${validUrls.length + selectedVideos.length + validGithubUrls.length + ideProjects.length} sources.`);
-      } else if (data.nodes) {
+      if (data.nodes) {
         onWorkflowGenerated(data.nodes, data.metadata);
-        toast({
-          title: "Success!",
-          description: `Workflow generated from ${validUrls.length + selectedVideos.length + validGithubUrls.length + ideProjects.length} sources`,
-        });
+        toast({ title: "Success!", description: `Generated from ${validUrls.length + validGithubUrls.length + ideProjects.length} sources` });
         onOpenChange(false);
       }
     } catch (error: any) {
-      toast({ 
-        title: "Generation Failed", 
-        description: error.message || "Failed to generate workflow from multiple sources", 
-        variant: "destructive" 
-      });
+      toast({ title: "Generation Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleGenerateFromVideo = async () => {
-    if (!selectedVideo) {
-      toast({
-        title: "No Video Selected",
-        description: "Please select a video file first",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleImageSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) setSelectedImages(Array.from(e.target.files));
+  };
 
+  const handleGenerateFromImages = async () => {
     setIsAnalyzing(true);
-    setGeneratedExplanation("");
-    setMultipleWorkflows([]);
-    setSelectedWorkflowIndex(null);
-
     try {
-      // Convert video to base64 for first frame analysis
-      const reader = new FileReader();
-      const videoDataPromise = new Promise<string>((resolve, reject) => {
+      const imageDataArray = await Promise.all(selectedImages.map(img => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
-        reader.readAsDataURL(selectedVideo);
-      });
+        reader.readAsDataURL(img);
+      })));
 
-      const videoData = await videoDataPromise;
-
-      const existingWorkflow = nodes.length > 0 ? { nodes, connections: [] } : undefined;
-
-      const { data, error } = await supabase.functions.invoke('analyze-video-file', {
-        body: {
-          videoData,
-          fileName: selectedVideo.name,
-          existingWorkflow
-        }
+      const { data, error } = await supabase.functions.invoke('analyze-workflow-image', {
+        body: { images: imageDataArray, existingWorkflow: nodes.length > 0 ? { nodes } : undefined }
       });
 
       if (error) throw error;
-
-      if (data.workflows && Array.isArray(data.workflows)) {
-        setMultipleWorkflows(data.workflows);
-        setGeneratedExplanation(data.insights || `Detected ${data.workflows.length} workflows from video.`);
-      } else if (data.nodes && data.nodes.length > 0) {
-        setGeneratedExplanation(data.insights || "Workflow generated from video!");
-        onWorkflowGenerated(data.nodes, {
-          guardrailExplanations: data.guardrailExplanations,
-          complianceStandards: data.complianceStandards,
-          riskScore: data.riskScore
-        });
+      if (data.nodes) {
+        onWorkflowGenerated(data.nodes, data.metadata);
         onOpenChange(false);
-        toast({
-          title: "Workflow Generated!",
-          description: `Created ${data.nodes.length} nodes from video`,
-        });
+        toast({ title: "Workflow Generated!", description: `Created from ${selectedImages.length} images` });
       }
     } catch (error: any) {
-      console.error('Error generating from video:', error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to generate workflow from video",
-        variant: "destructive",
-      });
+      toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsAnalyzing(false);
     }
   };
 
+  const handleJSONImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data.nodes) throw new Error('Invalid workflow file');
+      onWorkflowGenerated(data.nodes, data.metadata);
+      onOpenChange(false);
+      toast({ title: "Workflow Imported", description: `Loaded ${data.nodes.length} nodes` });
+    } catch (error: any) {
+      toast({ title: "Import Failed", description: error.message, variant: "destructive" });
+    }
+  };
+
   const exportCombined = async () => {
     setIsExporting(true);
-    
     try {
-      // Generate intelligent filename
-      const filename = generateWorkflowName(nodes);
-      
-      // Capture screenshot first
-      const canvasElement = document.querySelector('.workflow-canvas') as HTMLElement;
-      if (!canvasElement) {
-        throw new Error('Canvas element not found');
-      }
-
-      const nodeElements = canvasElement.querySelectorAll('[data-node-id]');
-      if (nodeElements.length === 0) {
-        throw new Error('No nodes found to screenshot');
-      }
-
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      
-      nodeElements.forEach(el => {
-        const rect = el.getBoundingClientRect();
-        const canvasRect = canvasElement.getBoundingClientRect();
-        const relX = rect.left - canvasRect.left;
-        const relY = rect.top - canvasRect.top;
-        
-        minX = Math.min(minX, relX);
-        minY = Math.min(minY, relY);
-        maxX = Math.max(maxX, relX + rect.width);
-        maxY = Math.max(maxY, relY + rect.height);
-      });
-
-      const padding = 40;
-      const cropX = Math.max(0, minX - padding);
-      const cropY = Math.max(0, minY - padding);
-      const cropWidth = (maxX - minX) + (padding * 2);
-      const cropHeight = (maxY - minY) + (padding * 2);
-
-      const canvas = await html2canvas(canvasElement, {
-        backgroundColor: '#1a1a1a',
-        scale: 2,
-        logging: false,
-        x: cropX,
-        y: cropY,
-        width: cropWidth,
-        height: cropHeight,
-      });
-
-      const screenshotBlob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-        }, 'image/png');
-      });
-
-      // Generate comprehensive export bundle
-      const { exportWorkflowForBusiness } = await import('@/lib/workflowExport');
-      const exportBlob = await exportWorkflowForBusiness(nodes, workflowName, {
-        platform: 'supabase-function',
-        includeDocs: true,
-        includeTests: false,
-      });
-
-      // Add screenshot to the export bundle
-      const JSZip = (await import('jszip')).default;
-      const zip = await JSZip.loadAsync(exportBlob);
-      zip.file(`${filename}-screenshot.png`, screenshotBlob);
-
-      // Generate final bundle
-      const finalBlob = await zip.generateAsync({ type: 'blob' });
-
-      // Download the complete package
-      const url = URL.createObjectURL(finalBlob);
+      const workflowData = { nodes, metadata: guardrailMetadata, name: workflowName };
+      const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${filename}-complete-export.zip`;
-      document.body.appendChild(a);
+      a.download = `${generateWorkflowName()}.json`;
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Export Complete",
-        description: "Complete workflow package with manifest, deploy scripts, and screenshot downloaded",
-      });
+      toast({ title: "Exported!", description: "Workflow saved" });
     } catch (error: any) {
-      toast({
-        title: "Export Failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Export Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsExporting(false);
     }
@@ -912,1347 +198,158 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Workflow Manager</DialogTitle>
-          <DialogDescription>
-            Generate, import, and export workflows using AI or manual import
-          </DialogDescription>
+      <DialogContent className="max-w-5xl max-h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4">
+          <DialogTitle className="text-2xl">Workflow Generator</DialogTitle>
+          <DialogDescription>Create workflows from multiple sources</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="combined" className="flex-1 overflow-hidden flex flex-col space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="combined">
-              <Package className="w-4 h-4 mr-2" />
-              Combined
-            </TabsTrigger>
-            <TabsTrigger value="text">
-              <FileText className="w-4 h-4 mr-2" />
-              Text
-            </TabsTrigger>
-            <TabsTrigger value="video">
-              <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
-                <polygon points="10 12 16 9 16 15 10 12"/>
-              </svg>
-              Video
-            </TabsTrigger>
-            <TabsTrigger value="image">
-              <ImageIcon className="w-4 h-4 mr-2" />
-              Image
-            </TabsTrigger>
-            <TabsTrigger value="import">
-              <Upload className="w-4 h-4 mr-2" />
-              Import
-            </TabsTrigger>
-            <TabsTrigger value="export">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </TabsTrigger>
+        <Tabs defaultValue="combined" className="flex-1 flex flex-col">
+          <TabsList className="w-full justify-start px-6 border-b rounded-none">
+            <TabsTrigger value="combined"><Package className="w-4 h-4 mr-2" />Multi-Source</TabsTrigger>
+            <TabsTrigger value="text"><FileText className="w-4 h-4 mr-2" />Text</TabsTrigger>
+            <TabsTrigger value="image"><ImageIcon className="w-4 h-4 mr-2" />Images</TabsTrigger>
+            <TabsTrigger value="import"><Upload className="w-4 h-4 mr-2" />Import</TabsTrigger>
+            <TabsTrigger value="export"><Download className="w-4 h-4 mr-2" />Export</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="combined" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="space-y-4">
-              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 space-y-3">
-                <Package className="w-10 h-10 text-muted-foreground" />
-                <div className="text-center space-y-1">
-                  <h3 className="text-lg font-semibold">Combined Multi-Source Input</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Add multiple videos from YouTube, TikTok, Snapchat, websites - combine them all into one workflow
-                  </p>
-                </div>
+          <TabsContent value="combined" className="flex-1 p-6 overflow-auto">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-primary/5 border-2 border-dashed rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-2">Multi-Source Generator</h3>
+                <p className="text-muted-foreground">Combine videos, GitHub repos, and IDE projects</p>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Text Description (Optional)</label>
-                  <Textarea
-                    value={workflowIdea}
-                    onChange={(e) => setWorkflowIdea(e.target.value)}
-                    placeholder="Add context or instructions for combining these videos..."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium">Video URLs (Multiple Sources)</label>
-                    <Button
-                      onClick={() => setVideoUrls([...videoUrls, ""])}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Video URL
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {videoUrls.map((url, index) => (
-                      <div key={index} className="flex gap-2 items-start">
-                        <div className="flex-1">
-                          <input
-                            type="url"
-                            value={url}
-                            onChange={(e) => {
-                              const newUrls = [...videoUrls];
-                              newUrls[index] = e.target.value;
-                              setVideoUrls(newUrls);
-                            }}
-                            placeholder={`Video URL ${index + 1} (YouTube, TikTok, Snapchat, etc.)`}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          />
-                          {url && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {url.includes('youtube.com') || url.includes('youtu.be') ? '📺 YouTube' :
-                               url.includes('tiktok.com') ? '🎵 TikTok' :
-                               url.includes('snapchat.com') ? '👻 Snapchat' :
-                               url.includes('instagram.com') ? '📷 Instagram' :
-                               url.includes('vimeo.com') ? '🎬 Vimeo' :
-                               '🌐 Website'}
-                            </p>
-                          )}
-                        </div>
-                        {videoUrls.length > 1 && (
-                          <Button
-                            onClick={() => {
-                              setVideoUrls(videoUrls.filter((_, i) => i !== index));
-                            }}
-                            variant="ghost"
-                            size="sm"
-                            className="mt-1"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Or Upload Video Files</label>
-                  <div className="flex gap-2 flex-wrap">
-                    <input
-                      ref={videoInputRef}
-                      type="file"
-                      accept="video/*"
-                      multiple
-                      onChange={(e) => {
-                        if (e.target.files) {
-                          setSelectedVideos(Array.from(e.target.files));
-                        }
-                      }}
-                      className="hidden"
-                    />
-                    <Button
-                      onClick={() => videoInputRef.current?.click()}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Upload Video Files
-                    </Button>
-                  </div>
-                  {selectedVideos.length > 0 && (
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      {selectedVideos.map((video, i) => (
-                        <p key={i}>📹 {video.name} ({(video.size / 1024 / 1024).toFixed(2)}MB)</p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium flex items-center gap-2">
-                      <Github className="w-4 h-4" />
-                      GitHub Repository URLs
-                    </label>
-                    <Button
-                      onClick={() => setGithubRepoUrls([...githubRepoUrls, ""])}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Repo
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                    {githubRepoUrls.map((url, index) => (
-                      <div key={index} className="flex gap-2 items-start">
-                        <div className="flex-1">
-                          <input
-                            type="url"
-                            value={url}
-                            onChange={(e) => {
-                              const newUrls = [...githubRepoUrls];
-                              newUrls[index] = e.target.value;
-                              setGithubRepoUrls(newUrls);
-                            }}
-                            placeholder={`GitHub repository URL ${index + 1} (e.g., https://github.com/user/repo)`}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          />
-                          {url && url.includes('github.com') && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              💻 GitHub Repository
-                            </p>
-                          )}
-                        </div>
-                        {githubRepoUrls.length > 1 && (
-                          <Button
-                            onClick={() => {
-                              setGithubRepoUrls(githubRepoUrls.filter((_, i) => i !== index));
-                            }}
-                            variant="ghost"
-                            size="sm"
-                            className="mt-1"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <FolderOpen className="w-4 h-4" />
-                    IDE Projects (VS Code, IntelliJ, WebStorm, etc.)
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    Upload project folders as ZIP files to analyze entire applications
-                  </p>
-                  <div className="flex gap-2 flex-wrap">
-                    <input
-                      ref={ideProjectInputRef}
-                      type="file"
-                      accept=".zip,.tar,.tar.gz"
-                      multiple
-                      onChange={(e) => {
-                        if (e.target.files) {
-                          setIdeProjects(Array.from(e.target.files));
-                        }
-                      }}
-                      className="hidden"
-                    />
-                    <Button
-                      onClick={() => ideProjectInputRef.current?.click()}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <FolderOpen className="w-4 h-4 mr-2" />
-                      Upload Project ZIP
-                    </Button>
-                  </div>
-                  {ideProjects.length > 0 && (
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      {ideProjects.map((project, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 bg-muted/30 rounded">
-                          <span>🗂️ {project.name} ({(project.size / 1024 / 1024).toFixed(2)}MB)</span>
-                          <Button
-                            onClick={() => {
-                              setIdeProjects(ideProjects.filter((_, idx) => idx !== i));
-                            }}
-                            variant="ghost"
-                            size="sm"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <Button
-                  onClick={handleCombinedGenerate}
-                  disabled={isGenerating || (videoUrls.every(u => !u.trim()) && selectedVideos.length === 0 && githubRepoUrls.every(u => !u.trim()) && ideProjects.length === 0)}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Analyzing {videoUrls.filter(u => u.trim()).length + selectedVideos.length + githubRepoUrls.filter(u => u.trim()).length + ideProjects.length} Sources...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Generate from {videoUrls.filter(u => u.trim()).length + selectedVideos.length + githubRepoUrls.filter(u => u.trim()).length + ideProjects.length} Sources
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {generatedExplanation && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">Analysis Result:</h3>
-                  <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
-                    <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {multipleWorkflows.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {multipleWorkflows.map((workflow, index) => (
-                      <div
-                        key={index}
-                        className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
-                          selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
-                        }`}
-                        onClick={() => setSelectedWorkflowIndex(index)}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium">{workflow.name}</h4>
-                          <span className="text-xs text-muted-foreground">
-                            {workflow.nodes?.length || 0} nodes
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{workflow.explanation}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    onClick={() => {
-                      if (selectedWorkflowIndex !== null) {
-                        const workflow = multipleWorkflows[selectedWorkflowIndex];
-                        onWorkflowGenerated(workflow.nodes || [], workflow.metadata);
-                        setMultipleWorkflows([]);
-                        setSelectedWorkflowIndex(null);
-                        onOpenChange(false);
-                      }
-                    }}
-                    disabled={selectedWorkflowIndex === null}
-                    className="w-full"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Create Selected Workflow
+              <div className="border rounded-xl p-4 bg-card">
+                <div className="flex justify-between mb-3">
+                  <h4 className="font-semibold">Video URLs</h4>
+                  <Button onClick={() => setVideoUrls([...videoUrls, ""])} variant="outline" size="sm">
+                    <Plus className="w-4 h-4 mr-1" />Add URL
                   </Button>
                 </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="text" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="space-y-2">
-              <Textarea
-                value={workflowIdea}
-                onChange={(e) => setWorkflowIdea(e.target.value)}
-                placeholder="E.g., I want a workflow that monitors my email, uses AI to categorize important messages, and sends me a daily summary..."
-                rows={6}
-                className="flex-1"
-              />
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleVoiceInput}
-                  variant={isRecording ? "destructive" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                >
-                  {isRecording ? (
-                    <>
-                      <MicOff className="w-4 h-4 mr-2" />
-                      Recording...
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-4 h-4 mr-2" />
-                      Voice Input
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleGenerate}
-                  disabled={isGenerating || !workflowIdea.trim()}
-                  className="flex-1"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Generate
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-            
-            {generatedExplanation && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium mb-2">Result:</h3>
-                <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
-                  <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
-                </ScrollArea>
-              </div>
-            )}
-
-            {multipleWorkflows.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {multipleWorkflows.map((workflow, index) => (
-                    <div
-                      key={index}
-                      className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
-                        selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
-                      }`}
-                      onClick={() => setSelectedWorkflowIndex(index)}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium">{workflow.name}</h4>
-                          {workflow.phase && (
-                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full">
-                              {workflow.phase}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {workflow.nodes?.length || 0} nodes
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                        {workflow.explanation}
-                      </p>
-                      {workflow.contextTags && workflow.contextTags.length > 0 && (
-                        <div className="flex gap-1 mb-2 flex-wrap">
-                          {workflow.contextTags.map((tag: string, i: number) => (
-                            <span key={i} className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
-                        <div className="flex gap-1 flex-wrap">
-                          {workflow.complianceStandards.map((standard: string, i: number) => (
-                            <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
-                              {standard}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                <div className="space-y-2">
+                  {videoUrls.map((url, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input type="url" value={url} onChange={(e) => { const n = [...videoUrls]; n[i] = e.target.value; setVideoUrls(n); }} placeholder="Video URL" className="flex-1 h-10 rounded-md border px-3 bg-background" />
+                      {videoUrls.length > 1 && <Button onClick={() => setVideoUrls(videoUrls.filter((_, idx) => idx !== i))} variant="ghost" size="sm"><X className="w-4 h-4" /></Button>}
                     </div>
                   ))}
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      if (selectedWorkflowIndex !== null) {
-                        const selected = multipleWorkflows[selectedWorkflowIndex];
-                        onWorkflowGenerated(selected.nodes, {
-                          guardrailExplanations: selected.guardrailExplanations,
-                          complianceStandards: selected.complianceStandards,
-                          riskScore: selected.riskScore
-                        });
-                        setMultipleWorkflows([]);
-                        setSelectedWorkflowIndex(null);
-                        setCanMergeWorkflows(false);
-                        onOpenChange(false);
-                        toast({
-                          title: "Workflow Created!",
-                          description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
-                        });
-                      }
-                    }}
-                    disabled={selectedWorkflowIndex === null}
-                    className="flex-1"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Create Selected
-                  </Button>
-                  {canMergeWorkflows && (
-                    <Button
-                      onClick={() => {
-                        const { mergeWorkflows } = require("@/lib/workflowMerge");
-                        const { nodes, connections } = mergeWorkflows(multipleWorkflows);
-                        onWorkflowGenerated(nodes, {
-                          guardrailExplanations: multipleWorkflows.flatMap(w => w.guardrailExplanations || []),
-                          complianceStandards: [...new Set(multipleWorkflows.flatMap(w => w.complianceStandards || []))],
-                          riskScore: Math.max(...multipleWorkflows.map(w => w.riskScore || 0)),
-                        });
-                        setMultipleWorkflows([]);
-                        setSelectedWorkflowIndex(null);
-                        setCanMergeWorkflows(false);
-                        onOpenChange(false);
-                        toast({
-                          title: "Workflows Merged!",
-                          description: `Combined ${multipleWorkflows.length} workflows with ${nodes.length} total nodes`,
-                        });
-                      }}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      <Package className="w-4 h-4 mr-2" />
-                      Auto-Merge All
-                    </Button>
-                  )}
-                </div>
-                <Button
-                  onClick={() => {
-                    const { exportFlowBundle } = require("@/lib/workflowMerge");
-                    exportFlowBundle(multipleWorkflows, "Multi-Workflow Bundle");
-                    toast({
-                      title: "FlowBundle Exported!",
-                      description: `Saved ${multipleWorkflows.length} workflows to .flowbundle.json`,
-                    });
-                  }}
-                  variant="secondary"
-                  className="w-full"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export as FlowBundle
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="youtube" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="space-y-4">
-              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
-                <Youtube className="w-12 h-12 text-muted-foreground" />
-                <div className="text-center space-y-2">
-                  <h3 className="text-lg font-semibold">Generate from YouTube Video</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Paste a YouTube video URL to extract transcript and metadata for workflow generation
-                  </p>
-                </div>
-                <div className="w-full max-w-md space-y-3">
-                  <input
-                    type="url"
-                    value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                  <Button
-                    onClick={handleYoutubeGenerate}
-                    disabled={isAnalyzingYoutube || !youtubeUrl.trim()}
-                    className="w-full"
-                  >
-                    {isAnalyzingYoutube ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Analyzing Video...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Generate from YouTube
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-              
-              {generatedExplanation && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">Generated Workflow:</h3>
-                  <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
-                    <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {multipleWorkflows.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {multipleWorkflows.map((workflow, index) => (
-                      <div
-                        key={index}
-                        className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
-                          selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
-                        }`}
-                        onClick={() => setSelectedWorkflowIndex(index)}
-                      >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium">{workflow.name}</h4>
-                          {workflow.phase && (
-                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full">
-                              {workflow.phase}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {workflow.nodes?.length || 0} nodes
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                        {workflow.explanation}
-                      </p>
-                      {workflow.contextTags && workflow.contextTags.length > 0 && (
-                        <div className="flex gap-1 mb-2 flex-wrap">
-                          {workflow.contextTags.map((tag: string, i: number) => (
-                            <span key={i} className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
-                        <div className="flex gap-1 flex-wrap">
-                          {workflow.complianceStandards.map((standard: string, i: number) => (
-                            <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
-                              {standard}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => {
-                        if (selectedWorkflowIndex !== null) {
-                          const selected = multipleWorkflows[selectedWorkflowIndex];
-                          onWorkflowGenerated(selected.nodes, {
-                            guardrailExplanations: selected.guardrailExplanations,
-                            complianceStandards: selected.complianceStandards,
-                            riskScore: selected.riskScore
-                          });
-                          setMultipleWorkflows([]);
-                          setSelectedWorkflowIndex(null);
-                          setCanMergeWorkflows(false);
-                          onOpenChange(false);
-                          toast({
-                            title: "Workflow Created!",
-                            description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
-                          });
-                        }
-                      }}
-                      disabled={selectedWorkflowIndex === null}
-                      className="flex-1"
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Create Selected
-                    </Button>
-                    {canMergeWorkflows && (
-                      <Button
-                        onClick={() => {
-                          const { mergeWorkflows } = require("@/lib/workflowMerge");
-                          const { nodes, connections } = mergeWorkflows(multipleWorkflows);
-                          onWorkflowGenerated(nodes, {
-                            guardrailExplanations: multipleWorkflows.flatMap(w => w.guardrailExplanations || []),
-                            complianceStandards: [...new Set(multipleWorkflows.flatMap(w => w.complianceStandards || []))],
-                            riskScore: Math.max(...multipleWorkflows.map(w => w.riskScore || 0)),
-                          });
-                          setMultipleWorkflows([]);
-                          setSelectedWorkflowIndex(null);
-                          setCanMergeWorkflows(false);
-                          onOpenChange(false);
-                          toast({
-                            title: "Workflows Merged!",
-                            description: `Combined ${multipleWorkflows.length} workflows with ${nodes.length} total nodes`,
-                          });
-                        }}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <Package className="w-4 h-4 mr-2" />
-                        Auto-Merge All
-                      </Button>
-                    )}
-                  </div>
-                  <Button
-                    onClick={() => {
-                      const { exportFlowBundle } = require("@/lib/workflowMerge");
-                      exportFlowBundle(multipleWorkflows, "YouTube Multi-Workflow Bundle");
-                      toast({
-                        title: "FlowBundle Exported!",
-                        description: `Saved ${multipleWorkflows.length} workflows to .flowbundle.json`,
-                      });
-                    }}
-                    variant="secondary"
-                    className="w-full"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export as FlowBundle
-                  </Button>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tiktok" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="space-y-4">
-              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
-                <svg className="w-12 h-12 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-                </svg>
-                <div className="text-center space-y-2">
-                  <h3 className="text-lg font-semibold">Generate from TikTok Video</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Paste a TikTok video URL to analyze and extract workflow patterns
-                  </p>
-                </div>
-                <div className="w-full max-w-md space-y-3">
-                  <input
-                    type="url"
-                    value={tiktokUrl}
-                    onChange={(e) => setTiktokUrl(e.target.value)}
-                    placeholder="https://www.tiktok.com/@user/video/..."
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                  <Button
-                    onClick={handleTiktokGenerate}
-                    disabled={isAnalyzingTiktok || !tiktokUrl.trim()}
-                    className="w-full"
-                  >
-                    {isAnalyzingTiktok ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Analyzing TikTok...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Generate from TikTok
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-              
-              {generatedExplanation && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium mb-2">Generated Workflow:</h3>
-                  <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
-                    <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
-                  </ScrollArea>
-                </div>
-              )}
-
-              {multipleWorkflows.length > 0 && (
-                <div className="mt-4 space-y-3">
-                  <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {multipleWorkflows.map((workflow, index) => (
-                      <div
-                        key={index}
-                        className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
-                          selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
-                        }`}
-                        onClick={() => setSelectedWorkflowIndex(index)}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-medium">{workflow.name}</h4>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {workflow.nodes?.length || 0} nodes
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {workflow.explanation}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    onClick={() => {
-                      if (selectedWorkflowIndex !== null) {
-                        const selected = multipleWorkflows[selectedWorkflowIndex];
-                        onWorkflowGenerated(selected.nodes, {
-                          guardrailExplanations: selected.guardrailExplanations,
-                          complianceStandards: selected.complianceStandards,
-                          riskScore: selected.riskScore
-                        });
-                        setMultipleWorkflows([]);
-                        setSelectedWorkflowIndex(null);
-                        onOpenChange(false);
-                        toast({
-                          title: "Workflow Created!",
-                          description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
-                        });
-                      }
-                    }}
-                    disabled={selectedWorkflowIndex === null}
-                    className="w-full"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Create Selected
-                  </Button>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="video" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="space-y-4">
-              <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 space-y-3">
-                <svg className="w-10 h-10 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
-                  <polygon points="10 12 16 9 16 15 10 12"/>
-                </svg>
-                <div className="text-center space-y-1">
-                  <h3 className="text-lg font-semibold">Video Analysis</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Analyze videos from YouTube, TikTok, websites, or upload your own files
-                  </p>
-                </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="border rounded-xl p-4 bg-card">
+                <div className="flex justify-between mb-3">
+                  <h4 className="font-semibold flex items-center gap-2"><Github className="w-4 h-4" />GitHub Repos</h4>
+                  <Button onClick={() => setGithubRepoUrls([...githubRepoUrls, ""])} variant="outline" size="sm">
+                    <Plus className="w-4 h-4 mr-1" />Add Repo
+                  </Button>
+                </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Youtube className="w-4 h-4" />
-                    YouTube URL
-                  </label>
-                  <input
-                    type="url"
-                    value={youtubeUrl}
-                    onChange={(e) => setYoutubeUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                  {youtubeUrl && (
-                    <Button
-                      onClick={handleYoutubeGenerate}
-                      disabled={isAnalyzingYoutube}
-                      size="sm"
-                      className="w-full"
-                    >
-                      {isAnalyzingYoutube ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Analyze YouTube Video
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-                    </svg>
-                    TikTok URL
-                  </label>
-                  <input
-                    type="url"
-                    value={tiktokUrl}
-                    onChange={(e) => setTiktokUrl(e.target.value)}
-                    placeholder="https://www.tiktok.com/..."
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                  {tiktokUrl && (
-                    <Button
-                      onClick={handleTiktokGenerate}
-                      disabled={isAnalyzingTiktok}
-                      size="sm"
-                      className="w-full"
-                    >
-                      {isAnalyzingTiktok ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Analyze TikTok Video
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Globe className="w-4 h-4" />
-                    Website with Embedded Video
-                  </label>
-                  <input
-                    type="url"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://example.com/page-with-video"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  />
-                  {websiteUrl && (
-                    <Button
-                      onClick={handleWebsiteGenerate}
-                      disabled={isAnalyzingWebsite}
-                      size="sm"
-                      className="w-full"
-                    >
-                      {isAnalyzingWebsite ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          Analyze Website
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    Upload Video File
-                  </label>
-                  <input
-                    ref={videoInputRef}
-                    type="file"
-                    accept="video/*"
-                    onChange={handleVideoSelection}
-                    className="hidden"
-                  />
-                  <div className="flex gap-2 items-center">
-                    <Button
-                      onClick={() => videoInputRef.current?.click()}
-                      disabled={isAnalyzing}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Select Video File
-                    </Button>
-                    {selectedVideo && (
-                      <Button
-                        onClick={handleGenerateFromVideo}
-                        disabled={isAnalyzing}
-                        className="flex-1"
-                      >
-                        {isAnalyzing ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Analyzing...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Analyze Video
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                  {selectedVideo && (
-                    <div className="text-sm text-muted-foreground">
-                      <p className="font-medium">{selectedVideo.name}</p>
-                      <p className="text-xs">Size: {(selectedVideo.size / 1024 / 1024).toFixed(2)}MB</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {generatedExplanation && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium mb-2">Analysis Result:</h3>
-                <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
-                  <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
-                </ScrollArea>
-              </div>
-            )}
-
-            {multipleWorkflows.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {multipleWorkflows.map((workflow, index) => (
-                    <div
-                      key={index}
-                      className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
-                        selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
-                      }`}
-                      onClick={() => setSelectedWorkflowIndex(index)}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium">{workflow.name}</h4>
-                        <span className="text-xs text-muted-foreground">
-                          {workflow.nodes?.length || 0} nodes
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {workflow.explanation}
-                      </p>
+                  {githubRepoUrls.map((url, i) => (
+                    <div key={i} className="flex gap-2">
+                      <input type="url" value={url} onChange={(e) => { const n = [...githubRepoUrls]; n[i] = e.target.value; setGithubRepoUrls(n); }} placeholder="https://github.com/user/repo" className="flex-1 h-10 rounded-md border px-3 bg-background" />
+                      {githubRepoUrls.length > 1 && <Button onClick={() => setGithubRepoUrls(githubRepoUrls.filter((_, idx) => idx !== i))} variant="ghost" size="sm"><X className="w-4 h-4" /></Button>}
                     </div>
                   ))}
                 </div>
-                <Button
-                  onClick={() => {
-                    if (selectedWorkflowIndex !== null) {
-                      const selected = multipleWorkflows[selectedWorkflowIndex];
-                      onWorkflowGenerated(selected.nodes, {
-                        guardrailExplanations: selected.guardrailExplanations,
-                        complianceStandards: selected.complianceStandards,
-                        riskScore: selected.riskScore
-                      });
-                      setMultipleWorkflows([]);
-                      setSelectedWorkflowIndex(null);
-                      onOpenChange(false);
-                      toast({
-                        title: "Workflow Created!",
-                        description: `Created "${selected.name}" with ${selected.nodes?.length || 0} nodes`,
-                      });
-                    }
-                  }}
-                  disabled={selectedWorkflowIndex === null}
-                  className="w-full"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Create Selected
-                </Button>
               </div>
-            )}
+
+              <div className="border rounded-xl p-4 bg-card">
+                <h4 className="font-semibold mb-3 flex items-center gap-2"><FolderOpen className="w-4 h-4" />IDE Projects</h4>
+                <input ref={ideProjectInputRef} type="file" accept=".zip" multiple onChange={(e) => e.target.files && setIdeProjects(Array.from(e.target.files))} className="hidden" />
+                <Button onClick={() => ideProjectInputRef.current?.click()} variant="outline" className="w-full">
+                  <FolderOpen className="w-4 h-4 mr-2" />Upload ZIP Files
+                </Button>
+                {ideProjects.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {ideProjects.map((p, i) => (
+                      <div key={i} className="flex justify-between items-center bg-muted/50 p-2 rounded">
+                        <span className="text-sm">{p.name}</span>
+                        <Button onClick={() => setIdeProjects(ideProjects.filter((_, idx) => idx !== i))} variant="ghost" size="sm"><X className="w-4 h-4" /></Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Button onClick={handleCombinedGenerate} disabled={isGenerating || (videoUrls.every(u => !u.trim()) && githubRepoUrls.every(u => !u.trim()) && ideProjects.length === 0)} className="w-full h-12" size="lg">
+                {isGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating...</> : <><Sparkles className="w-5 h-5 mr-2" />Generate Workflow</>}
+              </Button>
+            </div>
           </TabsContent>
 
-          <TabsContent value="image" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
-              <ImageIcon className="w-12 h-12 text-muted-foreground" />
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-semibold">Upload Multiple Images</h3>
-                <p className="text-sm text-muted-foreground">
-                  Select multiple workflow diagrams, screenshots, or sketches to stitch together into a single workflow
-                </p>
+          <TabsContent value="text" className="flex-1 p-6 overflow-auto">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-blue-500/5 border-2 border-dashed rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-2">Text Description</h3>
+                <p className="text-muted-foreground">Describe your workflow in natural language</p>
               </div>
-              <input
-                ref={imageInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageSelection}
-                className="hidden"
-              />
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => imageInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  variant="outline"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Select Images
+              <Textarea value={workflowIdea} onChange={(e) => setWorkflowIdea(e.target.value)} placeholder="Describe your workflow..." rows={12} className="resize-none" />
+              <div className="flex gap-3">
+                <Button onClick={handleVoiceInput} variant={isRecording ? "destructive" : "outline"} className="flex-1" size="lg">
+                  {isRecording ? <><MicOff className="w-5 h-5 mr-2" />Stop</> : <><Mic className="w-5 h-5 mr-2" />Voice</>}
+                </Button>
+                <Button onClick={handleGenerate} disabled={isGenerating || !workflowIdea.trim()} className="flex-1" size="lg">
+                  {isGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating...</> : <><Sparkles className="w-5 h-5 mr-2" />Generate</>}
+                </Button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="image" className="flex-1 p-6 overflow-auto">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-green-500/5 border-2 border-dashed rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-2">Image Analysis</h3>
+                <p className="text-muted-foreground">Upload diagrams or screenshots</p>
+              </div>
+              <div className="border rounded-lg p-6 bg-card">
+                <input ref={imageInputRef} type="file" accept="image/*" multiple onChange={handleImageSelection} className="hidden" />
+                <Button onClick={() => imageInputRef.current?.click()} variant="outline" size="lg" className="w-full mb-4">
+                  <Upload className="w-5 h-5 mr-2" />Select Images
                 </Button>
                 {selectedImages.length > 0 && (
-                  <Button
-                    onClick={handleGenerateFromImages}
-                    disabled={isAnalyzing}
-                  >
-                    {isAnalyzing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Generate from {selectedImages.length} Image{selectedImages.length > 1 ? 's' : ''}
-                      </>
-                    )}
+                  <Button onClick={handleGenerateFromImages} disabled={isAnalyzing} className="w-full" size="lg">
+                    {isAnalyzing ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Analyzing...</> : <><Sparkles className="w-5 h-5 mr-2" />Generate from {selectedImages.length} Images</>}
                   </Button>
                 )}
               </div>
             </div>
+          </TabsContent>
 
-            {selectedImages.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Selected Images ({selectedImages.length}):</h3>
-                <ScrollArea className="h-32 border rounded-md p-2">
-                  <div className="space-y-2">
-                    {selectedImages.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between bg-muted/50 rounded p-2">
-                        <span className="text-sm truncate flex-1">{file.name}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeImage(index)}
-                          className="h-6 w-6 p-0"
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
+          <TabsContent value="import" className="flex-1 p-6 overflow-auto">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-orange-500/5 border-2 border-dashed rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-2">Import Workflow</h3>
+                <p className="text-muted-foreground">Load a JSON workflow file</p>
               </div>
-            )}
-
-            {generatedExplanation && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium mb-2">Analysis Result:</h3>
-                <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
-                  <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
-                </ScrollArea>
-              </div>
-            )}
-
-            {multipleWorkflows.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <h3 className="text-sm font-medium">Select a Workflow to Create:</h3>
-                <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                  {multipleWorkflows.map((workflow, index) => (
-                    <div
-                      key={index}
-                      className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-primary ${
-                        selectedWorkflowIndex === index ? 'border-primary bg-primary/5' : ''
-                      }`}
-                      onClick={() => setSelectedWorkflowIndex(index)}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium">{workflow.name}</h4>
-                          {workflow.phase && (
-                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-700 dark:text-blue-300 rounded-full">
-                              {workflow.phase}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {workflow.nodes?.length || 0} nodes
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                        {workflow.explanation}
-                      </p>
-                      {workflow.contextTags && workflow.contextTags.length > 0 && (
-                        <div className="flex gap-1 mb-2 flex-wrap">
-                          {workflow.contextTags.map((tag: string, i: number) => (
-                            <span key={i} className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-700 dark:text-purple-300 rounded-full">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {workflow.complianceStandards && workflow.complianceStandards.length > 0 && (
-                        <div className="flex gap-1 flex-wrap">
-                          {workflow.complianceStandards.map((standard: string, i: number) => (
-                            <span key={i} className="text-xs px-2 py-0.5 bg-secondary rounded-full">
-                              {standard}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      if (selectedWorkflowIndex !== null) {
-                        const selected = multipleWorkflows[selectedWorkflowIndex];
-                        
-                        // Validate that the workflow has nodes
-                        if (!selected.nodes || !Array.isArray(selected.nodes) || selected.nodes.length === 0) {
-                          toast({
-                            title: "Invalid Workflow",
-                            description: "The selected workflow has no nodes. Please try another workflow or regenerate.",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        
-                        console.log('Creating workflow from selection:', {
-                          name: selected.name,
-                          nodeCount: selected.nodes.length,
-                          nodes: selected.nodes
-                        });
-                        
-                        onWorkflowGenerated(selected.nodes, {
-                          guardrailExplanations: selected.guardrailExplanations,
-                          complianceStandards: selected.complianceStandards,
-                          riskScore: selected.riskScore
-                        });
-                        setMultipleWorkflows([]);
-                        setSelectedWorkflowIndex(null);
-                        setCanMergeWorkflows(false);
-                        onOpenChange(false);
-                        toast({
-                          title: "Workflow Created!",
-                          description: `Created "${selected.name}" with ${selected.nodes.length} nodes`,
-                        });
-                      }
-                    }}
-                    disabled={selectedWorkflowIndex === null}
-                    className="flex-1"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Create Selected
-                  </Button>
-                  {canMergeWorkflows && (
-                    <Button
-                      onClick={() => {
-                        const { mergeWorkflows } = require("@/lib/workflowMerge");
-                        const { nodes, connections } = mergeWorkflows(multipleWorkflows);
-                        onWorkflowGenerated(nodes, {
-                          guardrailExplanations: multipleWorkflows.flatMap(w => w.guardrailExplanations || []),
-                          complianceStandards: [...new Set(multipleWorkflows.flatMap(w => w.complianceStandards || []))],
-                          riskScore: Math.max(...multipleWorkflows.map(w => w.riskScore || 0)),
-                        });
-                        setMultipleWorkflows([]);
-                        setSelectedWorkflowIndex(null);
-                        setCanMergeWorkflows(false);
-                        onOpenChange(false);
-                        toast({
-                          title: "Workflows Merged!",
-                          description: `Combined ${multipleWorkflows.length} workflows with ${nodes.length} total nodes`,
-                        });
-                      }}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      <Package className="w-4 h-4 mr-2" />
-                      Auto-Merge All
-                    </Button>
-                  )}
-                </div>
-                <Button
-                  onClick={() => {
-                    const { exportFlowBundle } = require("@/lib/workflowMerge");
-                    exportFlowBundle(multipleWorkflows, "Image Multi-Workflow Bundle");
-                    toast({
-                      title: "FlowBundle Exported!",
-                      description: `Saved ${multipleWorkflows.length} workflows to .flowbundle.json`,
-                    });
-                  }}
-                  variant="secondary"
-                  className="w-full"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export as FlowBundle
+              <div className="border rounded-lg p-6 bg-card">
+                <input ref={fileInputRef} type="file" accept=".json" onChange={handleJSONImport} className="hidden" />
+                <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="lg" className="w-full">
+                  <Upload className="w-5 h-5 mr-2" />Select JSON File
                 </Button>
               </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="import" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
-              <Upload className="w-12 h-12 text-muted-foreground" />
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium">Import workflow from JSON</p>
-                <p className="text-xs text-muted-foreground">
-                  Load a previously exported workflow with all configurations
-                </p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleJSONImport}
-                className="hidden"
-              />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full max-w-xs"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Select JSON File
-              </Button>
-            </div>
-
-            {generatedExplanation && (
-              <div className="mt-4">
-                <h3 className="text-sm font-medium mb-2">Import Result:</h3>
-                <ScrollArea className="h-[300px] border rounded-md p-4 bg-muted/30">
-                  <p className="text-sm whitespace-pre-wrap">{generatedExplanation}</p>
-                </ScrollArea>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="export" className="flex-1 overflow-hidden flex flex-col space-y-4 mt-4">
-            <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-8 space-y-4">
-              <Download className="w-12 h-12 text-muted-foreground" />
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium">Export Workflow</p>
-                <p className="text-xs text-muted-foreground">
-                  Download JSON configuration and screenshot together
-                </p>
-              </div>
-              <Button
-                onClick={exportCombined}
-                disabled={isExporting || nodes.length === 0}
-                className="w-full max-w-xs"
-              >
-                {isExporting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Exporting...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 mr-2" />
-                    Export JSON + Screenshot
-                  </>
-                )}
-              </Button>
             </div>
           </TabsContent>
 
-          <TabsContent value="business" className="space-y-4">
-            <div className="text-center space-y-4 py-8">
-              <Package className="w-16 h-16 mx-auto text-primary" />
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Deploy to Production</h3>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Export your workflow as production-ready code for n8n, Make, Python, TypeScript, Docker, GitHub Actions, or Supabase.
-                </p>
+          <TabsContent value="export" className="flex-1 p-6 overflow-auto">
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-cyan-500/5 border-2 border-dashed rounded-xl p-6">
+                <h3 className="text-xl font-bold mb-2">Export Workflow</h3>
+                <p className="text-muted-foreground">Download or deploy your workflow</p>
               </div>
-              
-              <Button
-                onClick={() => setShowBusinessExport(true)}
-                className="mt-4"
-                disabled={!nodes || nodes.length === 0}
-              >
-                <Package className="mr-2 h-4 w-4" />
-                Choose Export Platform
-              </Button>
-              
-              {(!nodes || nodes.length === 0) && (
-                <p className="text-xs text-muted-foreground">
-                  Create a workflow first to enable exports
-                </p>
-              )}
+              <div className="border rounded-lg p-6 bg-card space-y-3">
+                <Button onClick={exportCombined} disabled={isExporting || nodes.length === 0} variant="outline" size="lg" className="w-full">
+                  {isExporting ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Exporting...</> : <><Download className="w-5 h-5 mr-2" />Export JSON</>}
+                </Button>
+                <Button onClick={() => setShowBusinessExport(true)} disabled={nodes.length === 0} size="lg" className="w-full">
+                  <Package className="w-5 h-5 mr-2" />Deploy to Production
+                </Button>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
 
-        <WorkflowBusinessExport
-          open={showBusinessExport}
-          onOpenChange={setShowBusinessExport}
-          nodes={nodes || []}
-          workflowName={workflowName}
-          guardrailMetadata={guardrailMetadata ? {
-            explanations: guardrailMetadata.guardrailExplanations,
-            complianceStandards: guardrailMetadata.complianceStandards,
-            riskScore: guardrailMetadata.riskScore,
-            policyAnalysis: guardrailMetadata.policyAnalysis,
-          } : undefined}
-        />
+        <WorkflowBusinessExport open={showBusinessExport} onOpenChange={setShowBusinessExport} nodes={nodes} workflowName={workflowName} guardrailMetadata={guardrailMetadata ? { explanations: guardrailMetadata.guardrailExplanations, complianceStandards: guardrailMetadata.complianceStandards, riskScore: guardrailMetadata.riskScore, policyAnalysis: guardrailMetadata.policyAnalysis } : undefined} />
       </DialogContent>
     </Dialog>
   );
