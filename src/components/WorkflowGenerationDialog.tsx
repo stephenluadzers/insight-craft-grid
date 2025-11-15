@@ -5,7 +5,25 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Camera, FileJson, Package, Youtube, Globe, Plus, X, Github, FolderOpen } from "lucide-react";
+import {
+  Loader2,
+  Mic,
+  MicOff,
+  Sparkles,
+  Upload,
+  ImageIcon,
+  FileText,
+  Download,
+  Camera,
+  FileJson,
+  Package,
+  Youtube,
+  Globe,
+  Plus,
+  X,
+  Github,
+  FolderOpen
+} from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import html2canvas from "html2canvas";
@@ -902,7 +920,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="text" className="flex-1 overflow-hidden flex flex-col space-y-4">
+        <Tabs defaultValue="combined" className="flex-1 overflow-hidden flex flex-col space-y-4">
           <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="combined">
               <Package className="w-4 h-4 mr-2" />
