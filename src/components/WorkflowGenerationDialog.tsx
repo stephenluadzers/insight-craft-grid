@@ -55,15 +55,25 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       const { data, error } = await supabase.functions.invoke('generate-workflow-from-text', {
         body: { description: validation.data, existingWorkflow: nodes.length > 0 ? { nodes, connections: [] } : undefined }
       });
+      
+      console.log('Generate response:', { data, error });
+      
       if (error) throw error;
+      
+      if (!data) {
+        throw new Error('No data returned from generation');
+      }
       
       // Auto-apply workflow when detected
       if (data.nodes) {
         onWorkflowGenerated(data.nodes, { guardrailExplanations: data.guardrailExplanations, complianceStandards: data.complianceStandards, riskScore: data.riskScore });
         toast({ title: "Workflow Created!", description: `Created ${data.nodes.length} nodes` });
         onOpenChange(false);
+      } else {
+        throw new Error('Invalid response format: missing nodes data');
       }
     } catch (error: any) {
+      console.error('Generation error:', error);
       toast({ title: "Generation Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);
@@ -104,7 +114,13 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         body: { text: workflowIdea, videoUrls: validUrls, githubRepoUrls: validGithubUrls, ideProjects: ideProjectData, existingWorkflow: nodes.length > 0 ? { nodes } : undefined }
       });
       
+      console.log('Combined generate response:', { data, error });
+      
       if (error) throw error;
+      
+      if (!data) {
+        throw new Error('No data returned from generation');
+      }
       
       // Handle multiple workflows or single workflow - auto-apply when detected
       if (data.workflows && Array.isArray(data.workflows) && data.workflows.length === 1) {
@@ -117,8 +133,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         onWorkflowGenerated(data.nodes, data.metadata);
         toast({ title: "Workflow Created!", description: `Generated from ${validUrls.length + validGithubUrls.length + ideProjects.length} sources` });
         onOpenChange(false);
+      } else {
+        throw new Error('Invalid response format: missing nodes or workflows data');
       }
     } catch (error: any) {
+      console.error('Combined generation error:', error);
       toast({ title: "Generation Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsGenerating(false);
@@ -143,15 +162,24 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         body: { images: imageDataArray, existingWorkflow: nodes.length > 0 ? { nodes } : undefined }
       });
 
+      console.log('Image analysis response:', { data, error });
+
       if (error) throw error;
+      
+      if (!data) {
+        throw new Error('No data returned from image analysis');
+      }
       
       // Auto-apply workflow when detected
       if (data.nodes) {
         onWorkflowGenerated(data.nodes, data.metadata);
         toast({ title: "Workflow Created!", description: `Created from ${selectedImages.length} images` });
         onOpenChange(false);
+      } else {
+        throw new Error('Invalid response format: missing nodes data');
       }
     } catch (error: any) {
+      console.error('Image analysis error:', error);
       toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsAnalyzing(false);
