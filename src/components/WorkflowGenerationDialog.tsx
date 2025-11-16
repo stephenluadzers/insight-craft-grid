@@ -56,10 +56,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         body: { description: validation.data, existingWorkflow: nodes.length > 0 ? { nodes, connections: [] } : undefined }
       });
       if (error) throw error;
+      
+      // Auto-apply workflow when detected
       if (data.nodes) {
         onWorkflowGenerated(data.nodes, { guardrailExplanations: data.guardrailExplanations, complianceStandards: data.complianceStandards, riskScore: data.riskScore });
+        toast({ title: "Workflow Created!", description: `Created ${data.nodes.length} nodes` });
         onOpenChange(false);
-        toast({ title: "Workflow Generated!", description: `Created ${data.nodes.length} nodes` });
       }
     } catch (error: any) {
       toast({ title: "Generation Failed", description: error.message, variant: "destructive" });
@@ -103,9 +105,17 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       });
       
       if (error) throw error;
-      if (data.nodes) {
+      
+      // Handle multiple workflows or single workflow - auto-apply when detected
+      if (data.workflows && Array.isArray(data.workflows) && data.workflows.length === 1) {
+        // Automatically apply single workflow
+        onWorkflowGenerated(data.workflows[0].nodes, data.workflows[0].metadata);
+        toast({ title: "Workflow Created!", description: data.workflows[0].name || "Workflow generated successfully" });
+        onOpenChange(false);
+      } else if (data.nodes) {
+        // Single workflow format - auto-apply immediately
         onWorkflowGenerated(data.nodes, data.metadata);
-        toast({ title: "Success!", description: `Generated from ${validUrls.length + validGithubUrls.length + ideProjects.length} sources` });
+        toast({ title: "Workflow Created!", description: `Generated from ${validUrls.length + validGithubUrls.length + ideProjects.length} sources` });
         onOpenChange(false);
       }
     } catch (error: any) {
@@ -134,10 +144,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       });
 
       if (error) throw error;
+      
+      // Auto-apply workflow when detected
       if (data.nodes) {
         onWorkflowGenerated(data.nodes, data.metadata);
+        toast({ title: "Workflow Created!", description: `Created from ${selectedImages.length} images` });
         onOpenChange(false);
-        toast({ title: "Workflow Generated!", description: `Created from ${selectedImages.length} images` });
       }
     } catch (error: any) {
       toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
