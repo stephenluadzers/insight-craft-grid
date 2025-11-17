@@ -56,25 +56,35 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         body: { description: validation.data, existingWorkflow: nodes.length > 0 ? { nodes, connections: [] } : undefined }
       });
       
-      console.log('Generate response:', { data, error });
+      console.log('Generate response:', { data, error, fullData: JSON.stringify(data) });
       
-      if (error) throw error;
+      if (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
       
       if (!data) {
         throw new Error('No data returned from generation');
       }
       
-      // Auto-apply workflow when detected
-      if (data.nodes) {
-        onWorkflowGenerated(data.nodes, { guardrailExplanations: data.guardrailExplanations, complianceStandards: data.complianceStandards, riskScore: data.riskScore });
+      // The response contains nodes directly
+      if (data.nodes && Array.isArray(data.nodes)) {
+        console.log('Processing workflow with', data.nodes.length, 'nodes');
+        onWorkflowGenerated(data.nodes, { 
+          guardrailExplanations: data.guardrailExplanations, 
+          complianceStandards: data.complianceStandards, 
+          riskScore: data.riskScore,
+          policyAnalysis: data.policyAnalysis
+        });
         toast({ title: "Workflow Created!", description: `Created ${data.nodes.length} nodes` });
         onOpenChange(false);
       } else {
-        throw new Error('Invalid response format: missing nodes data');
+        console.error('Invalid response structure:', data);
+        throw new Error(`Invalid response format: ${JSON.stringify(Object.keys(data))}`);
       }
     } catch (error: any) {
       console.error('Generation error:', error);
-      toast({ title: "Generation Failed", description: error.message, variant: "destructive" });
+      toast({ title: "Generation Failed", description: error.message || String(error), variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -114,31 +124,47 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         body: { text: workflowIdea, videoUrls: validUrls, githubRepoUrls: validGithubUrls, ideProjects: ideProjectData, existingWorkflow: nodes.length > 0 ? { nodes } : undefined }
       });
       
-      console.log('Combined generate response:', { data, error });
+      console.log('Combined generate response:', { data, error, fullData: JSON.stringify(data) });
       
-      if (error) throw error;
+      if (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
       
       if (!data) {
         throw new Error('No data returned from generation');
       }
       
       // Handle multiple workflows or single workflow - auto-apply when detected
-      if (data.workflows && Array.isArray(data.workflows) && data.workflows.length === 1) {
-        // Automatically apply single workflow
-        onWorkflowGenerated(data.workflows[0].nodes, data.workflows[0].metadata);
-        toast({ title: "Workflow Created!", description: data.workflows[0].name || "Workflow generated successfully" });
-        onOpenChange(false);
-      } else if (data.nodes) {
-        // Single workflow format - auto-apply immediately
-        onWorkflowGenerated(data.nodes, data.metadata);
+      if (data.workflows && Array.isArray(data.workflows)) {
+        if (data.workflows.length === 1) {
+          console.log('Auto-applying single workflow');
+          onWorkflowGenerated(data.workflows[0].nodes, data.workflows[0].metadata);
+          toast({ title: "Workflow Created!", description: data.workflows[0].name || "Workflow generated successfully" });
+          onOpenChange(false);
+        } else if (data.workflows.length > 1) {
+          console.warn('Multiple workflows returned, only applying first one');
+          onWorkflowGenerated(data.workflows[0].nodes, data.workflows[0].metadata);
+          toast({ title: "Workflow Created!", description: `Generated ${data.workflows.length} workflows, applied first one` });
+          onOpenChange(false);
+        }
+      } else if (data.nodes && Array.isArray(data.nodes)) {
+        console.log('Processing single workflow with', data.nodes.length, 'nodes');
+        onWorkflowGenerated(data.nodes, { 
+          guardrailExplanations: data.guardrailExplanations,
+          complianceStandards: data.complianceStandards,
+          riskScore: data.riskScore,
+          policyAnalysis: data.policyAnalysis
+        });
         toast({ title: "Workflow Created!", description: `Generated from ${validUrls.length + validGithubUrls.length + ideProjects.length} sources` });
         onOpenChange(false);
       } else {
-        throw new Error('Invalid response format: missing nodes or workflows data');
+        console.error('Invalid response structure:', data);
+        throw new Error(`Invalid response format: ${JSON.stringify(Object.keys(data))}`);
       }
     } catch (error: any) {
       console.error('Combined generation error:', error);
-      toast({ title: "Generation Failed", description: error.message, variant: "destructive" });
+      toast({ title: "Generation Failed", description: error.message || String(error), variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
@@ -162,25 +188,35 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         body: { images: imageDataArray, existingWorkflow: nodes.length > 0 ? { nodes } : undefined }
       });
 
-      console.log('Image analysis response:', { data, error });
+      console.log('Image analysis response:', { data, error, fullData: JSON.stringify(data) });
 
-      if (error) throw error;
+      if (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
       
       if (!data) {
         throw new Error('No data returned from image analysis');
       }
       
       // Auto-apply workflow when detected
-      if (data.nodes) {
-        onWorkflowGenerated(data.nodes, data.metadata);
+      if (data.nodes && Array.isArray(data.nodes)) {
+        console.log('Processing workflow with', data.nodes.length, 'nodes from images');
+        onWorkflowGenerated(data.nodes, {
+          guardrailExplanations: data.guardrailExplanations,
+          complianceStandards: data.complianceStandards,
+          riskScore: data.riskScore,
+          policyAnalysis: data.policyAnalysis
+        });
         toast({ title: "Workflow Created!", description: `Created from ${selectedImages.length} images` });
         onOpenChange(false);
       } else {
-        throw new Error('Invalid response format: missing nodes data');
+        console.error('Invalid response structure:', data);
+        throw new Error(`Invalid response format: ${JSON.stringify(Object.keys(data))}`);
       }
     } catch (error: any) {
       console.error('Image analysis error:', error);
-      toast({ title: "Analysis Failed", description: error.message, variant: "destructive" });
+      toast({ title: "Analysis Failed", description: error.message || String(error), variant: "destructive" });
     } finally {
       setIsAnalyzing(false);
     }
