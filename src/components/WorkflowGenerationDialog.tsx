@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Package, X, Github, FolderOpen } from "lucide-react";
-import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import { z } from "zod";
 import { generateWorkflowName } from "@/lib/workflowUtils";
@@ -263,7 +262,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           <DialogDescription>Create workflows from multiple sources</DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="combined" className="flex-1 flex flex-col min-h-0">
+        <Tabs defaultValue="combined" className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <TabsList className="w-full justify-start px-6 border-b rounded-none shrink-0">
             <TabsTrigger value="combined"><Package className="w-4 h-4 mr-2" />Multi-Source</TabsTrigger>
             <TabsTrigger value="text"><FileText className="w-4 h-4 mr-2" />Text</TabsTrigger>
@@ -272,9 +271,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             <TabsTrigger value="export"><Download className="w-4 h-4 mr-2" />Export</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="flex-1">
-            <div className="px-6 pb-6">
-              <TabsContent value="combined" className="mt-6 space-y-6">
+          <div className="flex-1 overflow-y-auto">
+            <div className="px-6 py-6">
+              <TabsContent value="combined" className="mt-0 space-y-6">
                 <div className="bg-primary/5 border-2 border-dashed rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-2">Multi-Source Generator</h3>
                   <p className="text-muted-foreground">Combine videos, GitHub repos, and IDE projects</p>
@@ -325,7 +324,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </Button>
               </TabsContent>
 
-              <TabsContent value="text" className="mt-6 space-y-6">
+              <TabsContent value="text" className="mt-0 space-y-6">
                 <div className="bg-blue-500/5 border-2 border-dashed rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-2">Text Description</h3>
                   <p className="text-muted-foreground">Describe your workflow in natural language</p>
@@ -341,7 +340,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </div>
               </TabsContent>
 
-              <TabsContent value="image" className="mt-6 space-y-6">
+              <TabsContent value="image" className="mt-0 space-y-6">
                 <div className="bg-green-500/5 border-2 border-dashed rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-2">Image Analysis</h3>
                   <p className="text-muted-foreground">Upload diagrams or screenshots</p>
@@ -359,7 +358,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </div>
               </TabsContent>
 
-              <TabsContent value="import" className="mt-6 space-y-6">
+              <TabsContent value="import" className="mt-0 space-y-6">
                 <div className="bg-orange-500/5 border-2 border-dashed rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-2">Import Workflow</h3>
                   <p className="text-muted-foreground">Load a JSON workflow file</p>
@@ -372,7 +371,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </div>
               </TabsContent>
 
-              <TabsContent value="export" className="mt-6 space-y-6">
+              <TabsContent value="export" className="mt-0 space-y-6">
                 <div className="bg-cyan-500/5 border-2 border-dashed rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-2">Export Workflow</h3>
                   <p className="text-muted-foreground">Download or deploy your workflow</p>
@@ -387,7 +386,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </div>
               </TabsContent>
             </div>
-          </ScrollArea>
+          </div>
         </Tabs>
 
         <WorkflowBusinessExport open={showBusinessExport} onOpenChange={setShowBusinessExport} nodes={nodes} workflowName={workflowName} guardrailMetadata={guardrailMetadata ? { explanations: guardrailMetadata.guardrailExplanations, complianceStandards: guardrailMetadata.complianceStandards, riskScore: guardrailMetadata.riskScore, policyAnalysis: guardrailMetadata.policyAnalysis } : undefined} />
