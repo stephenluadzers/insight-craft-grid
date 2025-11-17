@@ -5,7 +5,7 @@ import { Textarea } from "./ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Package, Plus, X, Github, FolderOpen } from "lucide-react";
+import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Package, X, Github, FolderOpen } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { WorkflowNodeData } from "./WorkflowNode";
 import { z } from "zod";
@@ -30,8 +30,8 @@ interface WorkflowGenerationDialogProps {
 
 export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
-  const [videoUrls, setVideoUrls] = useState<string[]>([""]);
-  const [githubRepoUrls, setGithubRepoUrls] = useState<string[]>([""]);
+  const [videoUrlsText, setVideoUrlsText] = useState("");
+  const [githubRepoUrlsText, setGithubRepoUrlsText] = useState("");
   const [ideProjects, setIdeProjects] = useState<File[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -100,8 +100,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   };
 
   const handleCombinedGenerate = async () => {
-    const validUrls = videoUrls.filter(u => u.trim());
-    const validGithubUrls = githubRepoUrls.filter(u => u.trim());
+    const validUrls = videoUrlsText.split('\n').map(u => u.trim()).filter(u => u);
+    const validGithubUrls = githubRepoUrlsText.split('\n').map(u => u.trim()).filter(u => u);
     
     if (validUrls.length === 0 && validGithubUrls.length === 0 && ideProjects.length === 0) {
       toast({ title: "No Sources", description: "Add at least one source", variant: "destructive" });
@@ -281,37 +281,25 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                 </div>
 
                 <div className="border rounded-xl p-4 bg-card">
-                  <div className="flex justify-between mb-3">
-                    <h4 className="font-semibold">Video URLs</h4>
-                    <Button onClick={() => setVideoUrls([...videoUrls, ""])} variant="outline" size="sm">
-                      <Plus className="w-4 h-4 mr-1" />Add URL
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {videoUrls.map((url, i) => (
-                      <div key={i} className="flex gap-2">
-                        <input type="url" value={url} onChange={(e) => { const n = [...videoUrls]; n[i] = e.target.value; setVideoUrls(n); }} placeholder="Video URL" className="flex-1 h-10 rounded-md border px-3 bg-background" />
-                        {videoUrls.length > 1 && <Button onClick={() => setVideoUrls(videoUrls.filter((_, idx) => idx !== i))} variant="ghost" size="sm"><X className="w-4 h-4" /></Button>}
-                      </div>
-                    ))}
-                  </div>
+                  <h4 className="font-semibold mb-3">Video URLs</h4>
+                  <Textarea 
+                    value={videoUrlsText} 
+                    onChange={(e) => setVideoUrlsText(e.target.value)} 
+                    placeholder="Paste video URLs (one per line)&#10;https://youtube.com/watch?v=...&#10;https://vimeo.com/..." 
+                    rows={4} 
+                    className="resize-none font-mono text-sm"
+                  />
                 </div>
 
                 <div className="border rounded-xl p-4 bg-card">
-                  <div className="flex justify-between mb-3">
-                    <h4 className="font-semibold flex items-center gap-2"><Github className="w-4 h-4" />GitHub Repos</h4>
-                    <Button onClick={() => setGithubRepoUrls([...githubRepoUrls, ""])} variant="outline" size="sm">
-                      <Plus className="w-4 h-4 mr-1" />Add Repo
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {githubRepoUrls.map((url, i) => (
-                      <div key={i} className="flex gap-2">
-                        <input type="url" value={url} onChange={(e) => { const n = [...githubRepoUrls]; n[i] = e.target.value; setGithubRepoUrls(n); }} placeholder="https://github.com/user/repo" className="flex-1 h-10 rounded-md border px-3 bg-background" />
-                        {githubRepoUrls.length > 1 && <Button onClick={() => setGithubRepoUrls(githubRepoUrls.filter((_, idx) => idx !== i))} variant="ghost" size="sm"><X className="w-4 h-4" /></Button>}
-                      </div>
-                    ))}
-                  </div>
+                  <h4 className="font-semibold mb-3 flex items-center gap-2"><Github className="w-4 h-4" />GitHub Repos</h4>
+                  <Textarea 
+                    value={githubRepoUrlsText} 
+                    onChange={(e) => setGithubRepoUrlsText(e.target.value)} 
+                    placeholder="Paste GitHub repository URLs (one per line)&#10;https://github.com/user/repo1&#10;https://github.com/user/repo2" 
+                    rows={4} 
+                    className="resize-none font-mono text-sm"
+                  />
                 </div>
 
                 <div className="border rounded-xl p-4 bg-card">
@@ -332,7 +320,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                   )}
                 </div>
 
-                <Button onClick={handleCombinedGenerate} disabled={isGenerating || (videoUrls.every(u => !u.trim()) && githubRepoUrls.every(u => !u.trim()) && ideProjects.length === 0)} className="w-full h-12" size="lg">
+                <Button onClick={handleCombinedGenerate} disabled={isGenerating || (!videoUrlsText.trim() && !githubRepoUrlsText.trim() && ideProjects.length === 0)} className="w-full h-12" size="lg">
                   {isGenerating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating...</> : <><Sparkles className="w-5 h-5 mr-2" />Generate Workflow</>}
                 </Button>
               </TabsContent>
