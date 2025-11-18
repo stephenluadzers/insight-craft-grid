@@ -1,3 +1,4 @@
+// Workflow Generation Dialog Component
 import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Button } from "./ui/button";
@@ -239,9 +240,15 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const exportCombined = async () => {
     setIsExporting(true);
     try {
-      const { downloadWorkflowWithDocumentation } = await import('@/lib/workflowDownload');
-      await downloadWorkflowWithDocumentation(nodes, generateWorkflowName(nodes), true);
-      toast({ title: "Exported!", description: "Workflow package with screenshot downloaded" });
+      const workflowData = { nodes, metadata: guardrailMetadata, name: workflowName };
+      const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${generateWorkflowName(nodes)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Exported!", description: "Workflow saved" });
     } catch (error: any) {
       console.error('Export error:', error);
       toast({ title: "Export Failed", description: error.message, variant: "destructive" });
