@@ -239,15 +239,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const exportCombined = async () => {
     setIsExporting(true);
     try {
-      const workflowData = { nodes, metadata: guardrailMetadata, name: workflowName };
-      const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${generateWorkflowName(nodes)}.json`;
-      a.click();
-      toast({ title: "Exported!", description: "Workflow saved" });
+      const { downloadWorkflowWithDocumentation } = await import('@/lib/workflowDownload');
+      await downloadWorkflowWithDocumentation(nodes, generateWorkflowName(nodes), true);
+      toast({ title: "Exported!", description: "Workflow package with screenshot downloaded" });
     } catch (error: any) {
+      console.error('Export error:', error);
       toast({ title: "Export Failed", description: error.message, variant: "destructive" });
     } finally {
       setIsExporting(false);
@@ -256,14 +252,14 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b">
           <DialogTitle className="text-2xl">Workflow Generator</DialogTitle>
           <DialogDescription>Create workflows from multiple sources</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="combined" className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <TabsList className="w-full justify-start px-6 border-b rounded-none shrink-0">
+          <TabsList className="w-full justify-start px-6 py-2 border-b rounded-none shrink-0 bg-background">
             <TabsTrigger value="combined"><Package className="w-4 h-4 mr-2" />Multi-Source</TabsTrigger>
             <TabsTrigger value="text"><FileText className="w-4 h-4 mr-2" />Text</TabsTrigger>
             <TabsTrigger value="image"><ImageIcon className="w-4 h-4 mr-2" />Images</TabsTrigger>
@@ -271,8 +267,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             <TabsTrigger value="export"><Download className="w-4 h-4 mr-2" />Export</TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto">
-            <div className="px-6 py-6">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="px-6 py-6 pb-8">
               <TabsContent value="combined" className="mt-0 space-y-6">
                 <div className="bg-primary/5 border-2 border-dashed rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-2">Multi-Source Generator</h3>
