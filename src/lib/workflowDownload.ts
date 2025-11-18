@@ -1,5 +1,6 @@
 import { WorkflowNodeData } from "@/components/WorkflowNode";
 import JSZip from "jszip";
+import html2canvas from "html2canvas";
 
 interface ROICalculation {
   timeSavings: {
