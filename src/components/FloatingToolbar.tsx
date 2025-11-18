@@ -1,6 +1,6 @@
 import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library, Shield } from "lucide-react";
 import { Button } from "./ui/button";
-import { NodeType } from "./WorkflowNode";
+import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";

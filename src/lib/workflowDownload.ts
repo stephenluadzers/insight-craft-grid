@@ -1,4 +1,4 @@
-import { WorkflowNodeData } from "@/components/WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 import JSZip from "jszip";
 import html2canvas from "html2canvas";
 

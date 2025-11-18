@@ -1,7 +1,7 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Activity, DollarSign, Shield, Layers } from "lucide-react";
-import { WorkflowNodeData } from "./WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 
 interface WorkflowMetricsOverlayProps {
   nodes: WorkflowNodeData[];

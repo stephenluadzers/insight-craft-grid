@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2 } from "lucide-react";
-import { WorkflowNodeData } from "./WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
 import { exportWorkflowToYAML, downloadYAML } from "@/lib/workflowExportYAML";
 import { useToast } from "@/hooks/use-toast";

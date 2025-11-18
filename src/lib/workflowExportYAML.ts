@@ -3,7 +3,7 @@
  * Exports workflows to human-readable YAML format
  */
 
-import { WorkflowNodeData } from "@/components/WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 
 export function exportWorkflowToYAML(nodes: WorkflowNodeData[], workflowName: string): string {
   const yaml = `# Remora Flow Workflow Export

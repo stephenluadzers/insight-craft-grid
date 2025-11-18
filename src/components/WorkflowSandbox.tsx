@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { WorkflowNodeData } from './WorkflowNode';
+import { WorkflowNodeData } from '@/types/workflow';
 
 interface WorkflowSandboxProps {
   workflowId: string;

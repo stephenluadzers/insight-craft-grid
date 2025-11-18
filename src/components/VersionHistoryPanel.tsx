@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { History, RotateCcw, GitBranch } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { WorkflowNodeData } from "./WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 
 interface WorkflowVersion {
   id: string;

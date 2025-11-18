@@ -1,4 +1,4 @@
-import { WorkflowNodeData } from "@/components/WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 
 interface WorkflowToMerge {
   name: string;

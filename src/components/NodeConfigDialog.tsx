@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { WorkflowNodeData } from "./WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { GuardrailConfigPanel } from "./GuardrailConfigPanel";
