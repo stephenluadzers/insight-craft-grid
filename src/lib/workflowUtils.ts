@@ -1,4 +1,4 @@
-import { WorkflowNodeData } from "@/components/WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 
 /**
  * Generates a meaningful filename based on workflow node types and titles

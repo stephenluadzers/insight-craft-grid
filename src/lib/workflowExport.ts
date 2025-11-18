@@ -3,7 +3,7 @@
  * Exports FlowFuse workflows to multiple platforms and formats
  */
 
-import { WorkflowNodeData } from "@/components/WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 import JSZip from "jszip";
 
 export type ExportPlatform = 

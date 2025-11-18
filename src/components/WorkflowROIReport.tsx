@@ -11,7 +11,7 @@ import {
   Sparkles,
   BarChart3,
 } from 'lucide-react';
-import { WorkflowNodeData } from './WorkflowNode';
+import { WorkflowNodeData } from '@/types/workflow';
 import { generateWorkflowDownloadPackage } from '@/lib/workflowDownload';
 import { toast } from 'sonner';
 

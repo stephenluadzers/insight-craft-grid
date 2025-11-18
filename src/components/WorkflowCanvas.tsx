@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from "react";
-import { WorkflowNode, WorkflowNodeData, NodeType } from "./WorkflowNode";
+import { WorkflowNode } from "./WorkflowNode";
+import { WorkflowNodeData, NodeType } from "@/types/workflow";
 import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";

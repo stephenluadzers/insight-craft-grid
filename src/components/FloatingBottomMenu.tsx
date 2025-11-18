@@ -7,7 +7,7 @@ import {
   FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download, Github, Upload,
   Layers, FolderOpen, TestTube2, TrendingUp, Play
 } from "lucide-react";
-import { NodeType } from "./WorkflowNode";
+import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
 import { IntegrationLibrary } from "./IntegrationLibrary";
 import { GitHubImportDialog } from "./GitHubImportDialog";

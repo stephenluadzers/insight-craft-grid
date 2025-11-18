@@ -5,7 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Loader2 } from "lucide-react";
-import { WorkflowNodeData } from "./WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 import { generateWorkflowName } from "@/lib/workflowUtils";
 
 interface SaveWorkflowDialogProps {

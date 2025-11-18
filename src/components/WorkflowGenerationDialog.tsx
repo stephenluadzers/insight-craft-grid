@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Package, X, Github, FolderOpen } from "lucide-react";
-import { WorkflowNodeData } from "./WorkflowNode";
+import { WorkflowNodeData } from "@/types/workflow";
 import { z } from "zod";
 import { generateWorkflowName } from "@/lib/workflowUtils";
 import { WorkflowBusinessExport } from "./WorkflowBusinessExport";
