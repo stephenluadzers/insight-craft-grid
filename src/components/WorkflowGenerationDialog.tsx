@@ -274,8 +274,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             <TabsTrigger value="export"><Download className="w-4 h-4 mr-2" />Export</TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="px-6 py-6 pb-8">
+          <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+            <div className="px-6 py-6 pb-16">
               <TabsContent value="combined" className="mt-0 space-y-6">
                 <div className="bg-primary/5 border-2 border-dashed rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-2">Multi-Source Generator</h3>
