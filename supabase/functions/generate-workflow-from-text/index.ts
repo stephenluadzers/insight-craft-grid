@@ -61,6 +61,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
+        max_tokens: 16000,
+        response_format: { type: 'json_object' },
         messages: [
           {
             role: 'system',
@@ -285,6 +287,14 @@ AUTO-LINKING RULES:
 - Agent handoffs should connect to the next agent in the chain
 - Use dependencies field in config to validate connection logic
 
+OUTPUT FORMAT:
+- CRITICAL: Return ONLY valid, complete JSON - no markdown, no code blocks, no truncation
+- CRITICAL: Ensure all JSON strings are properly closed and terminated
+- CRITICAL: Keep responses under 12000 tokens to avoid truncation
+- If the workflow is complex, prioritize core nodes and essential connections
+- Use concise descriptions and explanations
+- Test that your JSON is valid before returning it
+
 GOAL: Generate autonomous, resilient, visual workflows that combine event-driven execution, state management, multi-agent orchestration, and defensive programming — accessible to everyone, scalable to enterprise.
 
 IMPORTANT: Always include this AI Transparency & Fair-Use Statement at the end of your response in the "explanation" field or as a separate "disclaimer" field:
@@ -312,24 +322,35 @@ IMPORTANT: Always include this AI Transparency & Fair-Use Statement at the end o
     let parsed;
     try {
       // Extract JSON from markdown code blocks if present
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || 
-                       content.match(/\{[\s\S]*\}/);
-      let jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
+      let jsonStr = content.trim();
       
-      // Clean up control characters that break JSON parsing
-      jsonStr = jsonStr
-        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Remove control characters
-        .replace(/\n/g, '\\n') // Escape newlines
-        .replace(/\r/g, '\\r') // Escape carriage returns
-        .replace(/\t/g, '\\t') // Escape tabs
-        .trim();
+      // Remove markdown code blocks if present
+      const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim();
+      }
+      
+      // If no code block, try to find JSON object
+      if (!jsonStr.startsWith('{') && !jsonStr.startsWith('[')) {
+        const jsonMatch = jsonStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1];
+        }
+      }
+      
+      // Check if the response looks truncated
+      if (!jsonStr.endsWith('}') && !jsonStr.endsWith(']')) {
+        console.warn('Response appears truncated, attempting to parse anyway');
+      }
       
       parsed = JSON.parse(jsonStr);
       console.log('Successfully parsed workflow response');
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('Content preview:', content.substring(0, 500));
-      throw new Error('AI returned invalid JSON format. Please try again.');
+      console.error('Content length:', content.length);
+      console.error('Content start:', content.substring(0, 200));
+      console.error('Content end:', content.substring(content.length - 200));
+      throw new Error('AI returned invalid JSON format. Response may be truncated. Please try with a shorter description.');
     }
 
     // Automatically inject guardrail nodes
