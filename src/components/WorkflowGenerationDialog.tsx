@@ -266,7 +266,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         </DialogHeader>
 
         <Tabs defaultValue="combined" className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <TabsList className="w-full justify-start px-6 py-2 border-b rounded-none shrink-0 bg-background">
+          <TabsList className="w-full justify-start px-6 py-2 border-b rounded-none shrink-0 bg-background overflow-x-auto">
             <TabsTrigger value="combined"><Package className="w-4 h-4 mr-2" />Multi-Source</TabsTrigger>
             <TabsTrigger value="text"><FileText className="w-4 h-4 mr-2" />Text</TabsTrigger>
             <TabsTrigger value="image"><ImageIcon className="w-4 h-4 mr-2" />Images</TabsTrigger>
