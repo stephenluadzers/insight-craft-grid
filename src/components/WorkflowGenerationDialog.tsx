@@ -67,9 +67,31 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         throw new Error('No data returned from generation');
       }
       
-      // The response contains nodes directly
-      if (data.nodes && Array.isArray(data.nodes)) {
-        console.log('Processing workflow with', data.nodes.length, 'nodes');
+      // Handle multiple workflows or single workflow - auto-apply when detected
+      if (data.workflows && Array.isArray(data.workflows)) {
+        if (data.workflows.length === 1) {
+          console.log('Auto-applying single workflow');
+          onWorkflowGenerated(data.workflows[0].nodes, {
+            guardrailExplanations: data.workflows[0].guardrailExplanations,
+            complianceStandards: data.workflows[0].complianceStandards,
+            riskScore: data.workflows[0].riskScore,
+            policyAnalysis: data.workflows[0].policyAnalysis
+          });
+          toast({ title: "Workflow Created!", description: data.workflows[0].name || "Workflow generated successfully" });
+          onOpenChange(false);
+        } else if (data.workflows.length > 1) {
+          console.warn('Multiple workflows returned, only applying first one');
+          onWorkflowGenerated(data.workflows[0].nodes, {
+            guardrailExplanations: data.workflows[0].guardrailExplanations,
+            complianceStandards: data.workflows[0].complianceStandards,
+            riskScore: data.workflows[0].riskScore,
+            policyAnalysis: data.workflows[0].policyAnalysis
+          });
+          toast({ title: "Workflow Created!", description: `Generated ${data.workflows.length} workflows, applied first one` });
+          onOpenChange(false);
+        }
+      } else if (data.nodes && Array.isArray(data.nodes)) {
+        console.log('Processing single workflow with', data.nodes.length, 'nodes');
         onWorkflowGenerated(data.nodes, { 
           guardrailExplanations: data.guardrailExplanations, 
           complianceStandards: data.complianceStandards, 
