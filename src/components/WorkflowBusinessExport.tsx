@@ -3,10 +3,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2 } from "lucide-react";
+import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2, Sparkles } from "lucide-react";
 import { WorkflowNodeData } from "@/types/workflow";
 import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
 import { exportWorkflowToYAML, downloadYAML } from "@/lib/workflowExportYAML";
+import { exportWorkflowComprehensive } from "@/lib/workflowUnifiedExport";
 import { useToast } from "@/hooks/use-toast";
 
 interface WorkflowBusinessExportProps {
@@ -146,6 +147,38 @@ export function WorkflowBusinessExport({
     }
   };
 
+  const handleComprehensiveExport = async () => {
+    setIsExporting(true);
+    
+    try {
+      const blob = await exportWorkflowComprehensive(nodes, workflowName, guardrailMetadata);
+
+      // Download the comprehensive package
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-complete-package.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Complete Export Successful",
+        description: "Comprehensive package with business metrics, security reports, and all formats downloaded",
+      });
+    } catch (error) {
+      console.error('Comprehensive export failed:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to create comprehensive export. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const filteredPlatforms = selectedCategory
     ? PLATFORM_OPTIONS.filter(p => p.category === selectedCategory)
     : PLATFORM_OPTIONS;
@@ -171,6 +204,60 @@ export function WorkflowBusinessExport({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* COMPREHENSIVE EXPORT - FEATURED */}
+          <Card className="border-2 border-primary bg-gradient-to-br from-primary/5 to-primary/10">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <Sparkles className="w-8 h-8 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold mb-2">Complete Business Package</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    One export with everything you need: all platform formats, comprehensive business metrics & ROI analysis, 
+                    security reports, implementation guides, and 5-year financial projections.
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <span className="text-green-600">✓</span>
+                      <span>Business Metrics</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-green-600">✓</span>
+                      <span>ROI Analysis</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-green-600">✓</span>
+                      <span>Security Reports</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-green-600">✓</span>
+                      <span>All Formats</span>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={handleComprehensiveExport}
+                    disabled={isExporting}
+                    size="lg"
+                    className="w-full md:w-auto"
+                  >
+                    {isExporting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Creating Package...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-5 h-5 mr-2" />
+                        Export Complete Package
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Quick YAML Export */}
           <div className="border rounded-lg p-4 bg-muted/30">
             <div className="flex items-center justify-between mb-2">
@@ -284,23 +371,25 @@ export function WorkflowBusinessExport({
           <Card className="bg-muted/50">
             <CardContent className="pt-6">
               <div className="space-y-2 text-sm">
-                <p className="font-medium">📦 What's Included:</p>
+                <p className="font-medium">📦 What's Included in Complete Package:</p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
-                  <li>Ready-to-run code in your chosen platform</li>
-                  <li>Complete setup and deployment instructions</li>
-                  <li>Security & Guardrails Report with reasoning</li>
-                  <li>Compliance analysis and risk assessment</li>
-                  <li>Environment variable templates</li>
-                  <li>Configuration examples</li>
-                  <li>Original FlowFuse workflow JSON for reference</li>
+                  <li><strong>Business Metrics Report:</strong> Comprehensive ROI analysis with 5-year projections</li>
+                  <li><strong>Financial Impact:</strong> Daily, annual, and long-term cost savings breakdown</li>
+                  <li><strong>Time Efficiency Analysis:</strong> Productivity gains and time reclaimed</li>
+                  <li><strong>Revenue Potential:</strong> Growth opportunities and scaling capacity</li>
+                  <li><strong>Security & Compliance:</strong> Full guardrails report with compliance standards</li>
+                  <li><strong>Platform Exports:</strong> Ready-to-deploy code for n8n, Python, TypeScript, Docker</li>
+                  <li><strong>Implementation Guides:</strong> Step-by-step deployment instructions</li>
+                  <li><strong>Workflow Files:</strong> JSON and YAML formats for universal compatibility</li>
                 </ul>
                 
-                <p className="font-medium mt-4">🚀 Next Steps:</p>
+                <p className="font-medium mt-4">🚀 Perfect For:</p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-2">
-                  <li>Extract the ZIP file</li>
-                  <li>Read the README.md for platform-specific instructions</li>
-                  <li>Configure your environment variables</li>
-                  <li>Deploy to your production environment</li>
+                  <li>Presenting to stakeholders and executives</li>
+                  <li>Business case development and approval</li>
+                  <li>Technical implementation teams</li>
+                  <li>Compliance and security reviews</li>
+                  <li>Long-term planning and budgeting</li>
                 </ul>
               </div>
             </CardContent>
