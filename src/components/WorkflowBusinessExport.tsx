@@ -153,11 +153,14 @@ export function WorkflowBusinessExport({
     try {
       const blob = await exportWorkflowComprehensive(nodes, workflowName, guardrailMetadata);
 
+      // Use smart filename if available, otherwise fallback to sanitized name
+      const smartFilename = (blob as any).smartFilename || `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-complete-package.zip`;
+
       // Download the comprehensive package
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-complete-package.zip`;
+      a.download = smartFilename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
