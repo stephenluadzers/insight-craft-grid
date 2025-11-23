@@ -315,10 +315,81 @@ function generateSecurityGuardrailReport(guardrailMetadata?: GuardrailMetadata):
   return md;
 }
 
+function generateWorkflowOriginReport(
+  workflowName: string,
+  originalInput?: string,
+  inputType?: 'text' | 'video' | 'image' | 'json' | 'github',
+  aiReasoning?: string
+): string {
+  let md = `# Workflow Creation & Optimization Report\n\n`;
+  md += `**Workflow:** ${workflowName}\n\n`;
+  md += `**Generated:** ${new Date().toLocaleString()}\n\n`;
+  
+  md += `## 📝 Original Input Source\n\n`;
+  
+  if (originalInput && inputType) {
+    switch (inputType) {
+      case 'text':
+        md += `**Type:** Text Prompt\n\n`;
+        md += `**Prompt:**\n\n`;
+        md += `\`\`\`\n${originalInput}\n\`\`\`\n\n`;
+        break;
+      case 'video':
+        md += `**Type:** Video Source\n\n`;
+        md += `**Link:** ${originalInput}\n\n`;
+        break;
+      case 'image':
+        md += `**Type:** Image Source\n\n`;
+        md += `**Source:** ${originalInput}\n\n`;
+        break;
+      case 'json':
+        md += `**Type:** JSON Import\n\n`;
+        md += `**Source:** ${originalInput}\n\n`;
+        break;
+      case 'github':
+        md += `**Type:** GitHub Repository\n\n`;
+        md += `**Repository:** ${originalInput}\n\n`;
+        break;
+    }
+  } else {
+    md += `*No original input source recorded*\n\n`;
+  }
+  
+  md += `## 🤖 AI Optimization Analysis\n\n`;
+  
+  if (aiReasoning) {
+    md += `### How This Workflow Was Optimized\n\n`;
+    md += `${aiReasoning}\n\n`;
+    
+    md += `### Optimization Principles Applied\n\n`;
+    md += `1. **Efficiency:** Streamlined node connections to reduce execution time\n`;
+    md += `2. **Reliability:** Added error handling and validation nodes\n`;
+    md += `3. **Security:** Implemented guardrails and compliance checks\n`;
+    md += `4. **Scalability:** Designed for handling increased load\n`;
+    md += `5. **Maintainability:** Clear structure for future modifications\n\n`;
+  } else {
+    md += `*No AI optimization reasoning recorded*\n\n`;
+  }
+  
+  md += `## 🔄 Workflow Evolution\n\n`;
+  md += `This document captures the original intent and the AI's transformation process, providing transparency into how the final workflow was constructed. Understanding this reasoning helps teams maintain and evolve the workflow over time.\n\n`;
+  
+  md += `## 💡 Recommendations for Future Iterations\n\n`;
+  md += `1. **Document Changes:** Keep track of manual modifications to understand deviation from AI recommendations\n`;
+  md += `2. **A/B Testing:** Consider testing variations to optimize performance\n`;
+  md += `3. **Feedback Loop:** Record real-world performance to improve future AI generations\n`;
+  md += `4. **Version Control:** Maintain this document with each workflow version\n\n`;
+  
+  return md;
+}
+
 export async function exportWorkflowComprehensive(
   nodes: WorkflowNodeData[],
   workflowName: string,
-  guardrailMetadata?: GuardrailMetadata
+  guardrailMetadata?: GuardrailMetadata,
+  originalInput?: string,
+  inputType?: 'text' | 'video' | 'image' | 'json' | 'github',
+  aiReasoning?: string
 ): Promise<Blob> {
   const zip = new JSZip();
   const roi = calculateComprehensiveROI(nodes);
@@ -333,6 +404,10 @@ export async function exportWorkflowComprehensive(
   // Security & compliance report
   const securityReport = generateSecurityGuardrailReport(guardrailMetadata);
   docsFolder.file("SECURITY_COMPLIANCE.md", securityReport);
+  
+  // Workflow origin and AI reasoning report
+  const originReport = generateWorkflowOriginReport(workflowName, originalInput, inputType, aiReasoning);
+  docsFolder.file("WORKFLOW_ORIGIN.md", originReport);
   
   // Workflow JSON
   const workflowJSON = generateWorkflowJSON(nodes, workflowName);
@@ -367,7 +442,8 @@ export async function exportWorkflowComprehensive(
     `- \`workflow.yaml\` - Human-readable workflow architecture\n\n` +
     `### Documentation\n` +
     `- \`documentation/BUSINESS_METRICS.md\` - Comprehensive ROI and business analysis\n` +
-    `- \`documentation/SECURITY_COMPLIANCE.md\` - Security guardrails and compliance report\n\n` +
+    `- \`documentation/SECURITY_COMPLIANCE.md\` - Security guardrails and compliance report\n` +
+    `- \`documentation/WORKFLOW_ORIGIN.md\` - Original input and AI optimization reasoning\n\n` +
     `### Platform Exports\n` +
     `- \`platforms/n8n/\` - n8n workflow automation export\n` +
     `- \`platforms/python/\` - Python implementation\n` +
