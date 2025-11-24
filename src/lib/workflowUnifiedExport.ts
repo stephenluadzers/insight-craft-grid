@@ -392,8 +392,9 @@ export async function exportWorkflowComprehensive(
   inputType?: 'text' | 'video' | 'image' | 'json' | 'github',
   aiReasoning?: string
 ): Promise<Blob> {
-  // Generate smart filename if not provided
-  const smartName = workflowName || generateWorkflowName(nodes);
+  // Generate smart filename incorporating workflow title and content
+  // If workflowName is provided, use it as context for smarter naming
+  const smartName = generateWorkflowName(nodes, workflowName);
   
   const zip = new JSZip();
   const roi = calculateComprehensiveROI(nodes);
