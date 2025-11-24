@@ -2,14 +2,19 @@ import { WorkflowNodeData } from "@/types/workflow";
 
 /**
  * Generates a meaningful filename based on workflow node types and titles
+ * @param nodes - The workflow nodes
+ * @param workflowTitle - Optional explicit workflow title to incorporate
  */
-export const generateWorkflowName = (nodes: WorkflowNodeData[]): string => {
+export const generateWorkflowName = (nodes: WorkflowNodeData[], workflowTitle?: string): string => {
   if (nodes.length === 0) {
     return "empty-workflow";
   }
 
   // Extract all titles and descriptions for analysis
   const allText = nodes.map(n => `${n.title} ${n.description || ''}`).join(' ').toLowerCase();
+  
+  // If explicit workflow title provided, extract keywords from it
+  const titleKeywords = workflowTitle ? extractKeyWords(workflowTitle) : [];
   
   // Detect workflow category/purpose
   const category = detectWorkflowCategory(allText, nodes);
@@ -22,6 +27,11 @@ export const generateWorkflowName = (nodes: WorkflowNodeData[]): string => {
   
   // Build intelligent name
   let nameParts: string[] = [];
+  
+  // Add workflow title keywords first if provided (most important)
+  if (titleKeywords.length > 0) {
+    nameParts.push(...titleKeywords.slice(0, 2)); // Use first 2 keywords from title
+  }
   
   // Add category if detected
   if (category) {
