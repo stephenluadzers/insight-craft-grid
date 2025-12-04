@@ -1,4 +1,4 @@
-import { GripVertical, Zap, Mail, Database, FileText, Image, Clock, Shield } from "lucide-react";
+import { GripVertical, Zap, Mail, Database, FileText, Image, Clock, Shield, Bot, Brain, Target, Play, Eye, MessageSquare, Plug, Wand2, CheckCircle, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NodeType, WorkflowNodeData } from "@/types/workflow";
 
@@ -85,6 +85,57 @@ const nodeTypeConfig: Record<
     icon: Shield,
     gradient: "bg-gradient-to-br from-orange-500 to-red-600",
     border: "border-orange-500/50",
+  },
+  // AI Agent Types
+  ai_orchestrator: {
+    icon: Bot,
+    gradient: "bg-gradient-to-br from-emerald-500 to-teal-600",
+    border: "border-emerald-500/50",
+  },
+  ai_reasoner: {
+    icon: Brain,
+    gradient: "bg-gradient-to-br from-purple-500 to-indigo-600",
+    border: "border-purple-500/50",
+  },
+  ai_planner: {
+    icon: Target,
+    gradient: "bg-gradient-to-br from-blue-500 to-cyan-600",
+    border: "border-blue-500/50",
+  },
+  ai_executor: {
+    icon: Play,
+    gradient: "bg-gradient-to-br from-green-500 to-emerald-600",
+    border: "border-green-500/50",
+  },
+  ai_monitor: {
+    icon: Eye,
+    gradient: "bg-gradient-to-br from-amber-500 to-orange-600",
+    border: "border-amber-500/50",
+  },
+  ai_communicator: {
+    icon: MessageSquare,
+    gradient: "bg-gradient-to-br from-pink-500 to-rose-600",
+    border: "border-pink-500/50",
+  },
+  ai_integrator: {
+    icon: Plug,
+    gradient: "bg-gradient-to-br from-violet-500 to-purple-600",
+    border: "border-violet-500/50",
+  },
+  ai_transformer: {
+    icon: Wand2,
+    gradient: "bg-gradient-to-br from-fuchsia-500 to-pink-600",
+    border: "border-fuchsia-500/50",
+  },
+  ai_validator: {
+    icon: CheckCircle,
+    gradient: "bg-gradient-to-br from-lime-500 to-green-600",
+    border: "border-lime-500/50",
+  },
+  ai_learner: {
+    icon: GraduationCap,
+    gradient: "bg-gradient-to-br from-sky-500 to-blue-600",
+    border: "border-sky-500/50",
   },
 };
 
