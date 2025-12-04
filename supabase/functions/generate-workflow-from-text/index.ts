@@ -70,12 +70,98 @@ serve(async (req) => {
 
 ${GUARDRAIL_SYSTEM_PROMPT}
 
-CUSTOMER DATA EXTRACTION:
-- ALWAYS extract any customer/contextual information from the description (names, emails, IDs, preferences, order details, etc.)
-- Store extracted data in a "context" object at the workflow level
-- Inject relevant context data into node configurations where applicable
-- Use {{context.fieldName}} syntax in node configs to reference context data (e.g., "email": "{{context.customerEmail}}")
-- This allows data to flow automatically through the workflow during execution
+PERSONAL & PROFESSIONAL DATA EXTRACTION (CRITICAL):
+You MUST automatically detect and extract ALL personal/professional information from the user's description and place it in the correct workflow locations.
+
+EXTRACT THESE DATA TYPES:
+1. PERSONAL INFORMATION:
+   - Names (firstName, lastName, fullName, displayName)
+   - Email addresses (personalEmail, workEmail)
+   - Phone numbers (phone, mobile, workPhone)
+   - Social handles (@username, LinkedIn, Twitter)
+   - Addresses (street, city, state, zip, country)
+   - Birthdate, age, timezone, language preference
+
+2. PROFESSIONAL INFORMATION:
+   - Company/Organization name
+   - Job title, role, department
+   - Industry, sector
+   - Employee ID, membership ID
+   - Manager name, team name
+   - Work location, office address
+
+3. BUSINESS CONTEXT:
+   - Customer ID, account number, order ID
+   - Product/service names mentioned
+   - Pricing, budget, quotes
+   - Deadlines, dates, schedules
+   - Project names, campaign names
+   - Contract terms, subscription tier
+
+4. CREDENTIALS & PREFERENCES:
+   - API keys or service references (mark as {{secrets.keyName}})
+   - Notification preferences
+   - Communication channel preferences
+   - Priority levels, urgency indicators
+
+STORAGE STRUCTURE - Use this "context" object format:
+{
+  "context": {
+    "personal": {
+      "firstName": "extracted value",
+      "lastName": "extracted value",
+      "email": "extracted@email.com",
+      "phone": "+1234567890"
+    },
+    "professional": {
+      "company": "Company Name",
+      "title": "Job Title",
+      "department": "Department"
+    },
+    "business": {
+      "customerId": "CUS-123",
+      "orderId": "ORD-456",
+      "projectName": "Project Alpha"
+    },
+    "preferences": {
+      "notifyVia": "email",
+      "timezone": "America/New_York"
+    }
+  }
+}
+
+AUTO-PLACEMENT RULES:
+- Email nodes: Automatically use {{context.personal.email}} for recipient
+- Notification nodes: Use {{context.personal.firstName}} in greetings
+- CRM nodes: Map to {{context.professional.company}}, {{context.business.customerId}}
+- Calendar nodes: Use {{context.preferences.timezone}}
+- Form/data nodes: Pre-fill with all relevant context fields
+- Report nodes: Include {{context.professional.company}} and {{context.business.projectName}}
+- AI agent nodes: Pass full context for personalized responses
+
+EXAMPLE - If user says "Send a weekly report to John Smith at john@company.com about our Q4 sales":
+{
+  "context": {
+    "personal": { "firstName": "John", "lastName": "Smith", "email": "john@company.com" },
+    "business": { "reportType": "sales", "period": "Q4", "schedule": "weekly" }
+  },
+  "nodes": [
+    {
+      "type": "trigger",
+      "title": "Weekly Schedule",
+      "config": { "schedule": "0 9 * * 1", "timezone": "{{context.preferences.timezone}}" }
+    },
+    {
+      "type": "action",
+      "title": "Send Email",
+      "config": {
+        "to": "{{context.personal.email}}",
+        "subject": "{{context.business.period}} {{context.business.reportType}} Report",
+        "greeting": "Hi {{context.personal.firstName}},"
+      }
+    }
+  ]
+}
 
 MULTI-WORKFLOW DETECTION:
 - If the input describes MULTIPLE distinct workflows, you MUST separate them
