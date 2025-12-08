@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Bell, Shield, Loader2, Key, History, Activity, Building2, TrendingUp, AlertTriangle, ShieldCheck } from "lucide-react";
+import { User, Bell, Shield, Loader2, Key, History, Activity, Building2, TrendingUp, AlertTriangle, ShieldCheck, Container, FileText, Brain } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CredentialsManager } from "@/components/CredentialsManager";
 import { ExecutionHistoryPanel } from "@/components/ExecutionHistoryPanel";
@@ -21,6 +21,10 @@ import { DeadLetterQueuePanel } from "@/components/DeadLetterQueuePanel";
 import { CircuitBreakerStatus } from "@/components/CircuitBreakerStatus";
 import { ErrorAggregationDashboard } from "@/components/ErrorAggregationDashboard";
 import { SecurityMonitoringDashboard } from "@/components/SecurityMonitoringDashboard";
+import { SSOConfigurationPanel } from "@/components/SSOConfigurationPanel";
+import { MigrationReportDashboard } from "@/components/MigrationReportDashboard";
+import { TaskRunnerConfiguration } from "@/components/TaskRunnerConfiguration";
+import { RAGAgentNodes } from "@/components/RAGAgentNodes";
 
 export default function Settings(): JSX.Element {
   const [loading, setLoading] = useState(true);
