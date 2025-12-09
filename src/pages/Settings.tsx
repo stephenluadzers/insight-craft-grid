@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Bell, Shield, Loader2, Key, History, Activity, Building2, TrendingUp, AlertTriangle, ShieldCheck, Container, FileText, Brain } from "lucide-react";
+import { User, Bell, Shield, Loader2, Key, History, Activity, Building2, TrendingUp, AlertTriangle, ShieldCheck, Container, FileText, Brain, Cpu, Network, Sparkles, GitBranch, Zap } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CredentialsManager } from "@/components/CredentialsManager";
 import { ExecutionHistoryPanel } from "@/components/ExecutionHistoryPanel";
@@ -25,6 +25,8 @@ import { SSOConfigurationPanel } from "@/components/SSOConfigurationPanel";
 import { MigrationReportDashboard } from "@/components/MigrationReportDashboard";
 import { TaskRunnerConfiguration } from "@/components/TaskRunnerConfiguration";
 import { RAGAgentNodes } from "@/components/RAGAgentNodes";
+import { CrossWorkflowIntelligence } from "@/components/CrossWorkflowIntelligence";
+import { RecommendationsEngine } from "@/components/RecommendationsEngine";
 
 export default function Settings(): JSX.Element {
   const [loading, setLoading] = useState(true);
@@ -134,7 +136,7 @@ export default function Settings(): JSX.Element {
               </div>
 
               <Tabs defaultValue="profile" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 gap-1 h-auto p-1">
+                <TabsList className="flex flex-wrap gap-1 h-auto p-1">
                   <TabsTrigger value="profile" className="flex items-center justify-center gap-2">
                     <User className="w-4 h-4" />
                     <span className="hidden md:inline">Profile</span>
@@ -167,13 +169,37 @@ export default function Settings(): JSX.Element {
                     <ShieldCheck className="w-4 h-4" />
                     <span className="hidden md:inline">Security</span>
                   </TabsTrigger>
+                  <TabsTrigger value="sso" className="flex items-center justify-center gap-2">
+                    <Key className="w-4 h-4" />
+                    <span className="hidden md:inline">SSO</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="task-runners" className="flex items-center justify-center gap-2">
+                    <Container className="w-4 h-4" />
+                    <span className="hidden md:inline">Runners</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="ai-nodes" className="flex items-center justify-center gap-2">
+                    <Brain className="w-4 h-4" />
+                    <span className="hidden md:inline">AI Nodes</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="intelligence" className="flex items-center justify-center gap-2">
+                    <Network className="w-4 h-4" />
+                    <span className="hidden md:inline">Intelligence</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="recommendations" className="flex items-center justify-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="hidden md:inline">AI Recs</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="migration" className="flex items-center justify-center gap-2">
+                    <GitBranch className="w-4 h-4" />
+                    <span className="hidden md:inline">Migration</span>
+                  </TabsTrigger>
                   <TabsTrigger value="enterprise" className="flex items-center justify-center gap-2">
                     <Building2 className="w-4 h-4" />
                     <span className="hidden md:inline">Enterprise</span>
                   </TabsTrigger>
                   <TabsTrigger value="security" className="flex items-center justify-center gap-2">
                     <Shield className="w-4 h-4" />
-                    <span className="hidden md:inline">Settings</span>
+                    <span className="hidden md:inline">Account</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -370,6 +396,78 @@ export default function Settings(): JSX.Element {
                       </CardHeader>
                       <CardContent>
                         <p className="text-muted-foreground">No workspace found. Please create a workspace first.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="sso">
+                  {workspaceId ? (
+                    <SSOConfigurationPanel workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>SSO Configuration</CardTitle>
+                        <CardDescription>Configure enterprise Single Sign-On</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="task-runners">
+                  <TaskRunnerConfiguration />
+                </TabsContent>
+
+                <TabsContent value="ai-nodes">
+                  <RAGAgentNodes />
+                </TabsContent>
+
+                <TabsContent value="intelligence">
+                  {workspaceId ? (
+                    <CrossWorkflowIntelligence workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Cross-Workflow Intelligence</CardTitle>
+                        <CardDescription>AI-powered pattern analysis across workflows</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="recommendations">
+                  {workspaceId ? (
+                    <RecommendationsEngine workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>AI Recommendations</CardTitle>
+                        <CardDescription>Personalized optimization suggestions</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="migration">
+                  {workspaceId ? (
+                    <MigrationReportDashboard workspaceId={workspaceId} />
+                  ) : (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Migration Reports</CardTitle>
+                        <CardDescription>Workflow compatibility analysis</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-muted-foreground">No workspace found.</p>
                       </CardContent>
                     </Card>
                   )}
