@@ -1,4 +1,5 @@
 import { detectComplianceRequirements, selectGuardrailsForCompliance, calculateWorkflowRiskScore, GuardrailExplanation } from './guardrail-registry.ts';
+import { injectRoleContracts, generateRoleContractExplanation, type RoleAssignment, type RoleViolation } from './role-contracts.ts';
 
 export interface WorkflowNode {
   id: string;
@@ -16,6 +17,9 @@ export interface GuardrailInjectionResult {
   complianceStandards: string[];
   guardrailsAdded: number;
   riskScore: number;
+  roleAssignments?: RoleAssignment[];
+  roleViolations?: RoleViolation[];
+  roleContractExplanation?: string;
 }
 
 export function injectGuardrailNodes(nodes: WorkflowNode[]): GuardrailInjectionResult {
@@ -107,12 +111,25 @@ export function injectGuardrailNodes(nodes: WorkflowNode[]): GuardrailInjectionR
   const appliedGuardrails = selectedGuardrails.map(sg => sg.guardrail);
   const riskScore = calculateWorkflowRiskScore(appliedGuardrails, requiredStandards);
 
+  // Inject role contracts for all nodes (including guardrails)
+  const allNodes = [...modifiedNodes, ...guardrails];
+  const roleResult = injectRoleContracts(allNodes);
+  const roleExplanation = generateRoleContractExplanation(roleResult.assignments);
+
+  console.log('Assigned roles to', roleResult.assignments.length, 'nodes');
+  if (roleResult.violations.length > 0) {
+    console.warn('Role violations detected:', roleResult.violations.length);
+  }
+
   return {
-    nodes: [...modifiedNodes, ...guardrails],
+    nodes: roleResult.nodes,
     explanations,
     complianceStandards: requiredStandards,
     guardrailsAdded: guardrails.length,
-    riskScore
+    riskScore,
+    roleAssignments: roleResult.assignments,
+    roleViolations: roleResult.violations,
+    roleContractExplanation: roleExplanation
   };
 }
 
@@ -144,4 +161,10 @@ PLACEMENT RULES:
 - Compliance: When handling personal/payment data
 
 ALWAYS include at least 2-3 guardrail nodes in every workflow for production readiness.
+
+ROLE CONTRACT ENFORCEMENT:
+All workflow nodes are automatically assigned roles (Analyzer, Executor, Auditor, Notifier, Orchestrator, Validator, Transformer, Guardian) with strict permission boundaries to prevent privilege creep and ensure enterprise/government security compliance.
 `;
+
+export { injectRoleContracts, generateRoleContractExplanation } from './role-contracts.ts';
+export type { RoleAssignment, RoleViolation } from './role-contracts.ts';

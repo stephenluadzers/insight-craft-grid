@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { injectGuardrailNodes, GUARDRAIL_SYSTEM_PROMPT } from "../_shared/guardrails.ts";
+import { ROLE_CONTRACT_SYSTEM_PROMPT } from "../_shared/role-contracts.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,6 +72,8 @@ serve(async (req) => {
             content: `You are a workflow optimization expert. Analyze workflows and provide focused improvements.
 
 ${GUARDRAIL_SYSTEM_PROMPT}
+
+${ROLE_CONTRACT_SYSTEM_PROMPT}
 
 Return ONLY valid JSON with this exact structure (no markdown, no code blocks):
 {
@@ -168,7 +171,7 @@ Keep nodes array complete but descriptions brief.`
         throw new Error('Missing required fields in response');
       }
 
-      // Automatically inject guardrail nodes if missing
+      // Automatically inject guardrail nodes and role contracts if missing
       if (optimizationData.optimizedWorkflow.nodes) {
         const existingGuardrails = optimizationData.optimizedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length;
         if (existingGuardrails === 0) {
@@ -177,7 +180,10 @@ Keep nodes array complete but descriptions brief.`
           optimizationData.guardrailExplanations = injectionResult.explanations;
           optimizationData.complianceStandards = injectionResult.complianceStandards;
           optimizationData.guardrailsAdded = injectionResult.guardrailsAdded;
-          console.log('Guardrail nodes auto-injected during optimization');
+          optimizationData.roleAssignments = injectionResult.roleAssignments;
+          optimizationData.roleViolations = injectionResult.roleViolations;
+          optimizationData.roleContractExplanation = injectionResult.roleContractExplanation;
+          console.log('Guardrail nodes and role contracts auto-injected during optimization');
         }
       }
     } catch (parseError) {

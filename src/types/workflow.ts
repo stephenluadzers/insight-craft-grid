@@ -38,6 +38,38 @@ export interface AgentGoal {
   priority: number;
 }
 
+export type AgentRole = 
+  | 'analyzer'
+  | 'executor'
+  | 'auditor'
+  | 'notifier'
+  | 'orchestrator'
+  | 'validator'
+  | 'transformer'
+  | 'guardian';
+
+export interface RoleContract {
+  role: AgentRole;
+  permissions: {
+    canReadData: boolean;
+    canWriteData: boolean;
+    canExecuteExternal: boolean;
+    canModifyWorkflow: boolean;
+    canAccessPII: boolean;
+    canApproveActions: boolean;
+    canBlockActions: boolean;
+    canSendNotifications: boolean;
+    canCallAI: boolean;
+    canAccessSecrets: boolean;
+    maxRiskLevel: 'low' | 'medium' | 'high' | 'critical';
+    requiresApprovalFrom: AgentRole[];
+    canDelegateTo: AgentRole[];
+  };
+  constraints: string[];
+  auditRequirements: string[];
+  escalationPath: AgentRole[];
+}
+
 export interface AgentConfig {
   enabled: boolean;
   agent_type: "assistant" | "tool_user" | "reasoner" | "planner" | "executor" | "monitor";
@@ -63,6 +95,10 @@ export interface AgentConfig {
     handoff_conditions: string[];
     context_to_pass: "full" | "summary" | "relevant_only";
   };
+  // Role contract integration
+  role?: AgentRole;
+  roleContract?: RoleContract;
+  roleEnforced?: boolean;
 }
 
 export interface WorkflowNodeData {

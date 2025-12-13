@@ -30,6 +30,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { injectGuardrailNodes, GUARDRAIL_SYSTEM_PROMPT } from "../_shared/guardrails.ts";
+import { ROLE_CONTRACT_SYSTEM_PROMPT } from "../_shared/role-contracts.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -69,6 +70,8 @@ serve(async (req) => {
             content: `You are FlowFuse's AI Workflow Architect — combining the best of OpenDevin, LangGraph, and Autogen Studio with GPT-Omni-style multi-pass memory extraction.
 
 ${GUARDRAIL_SYSTEM_PROMPT}
+
+${ROLE_CONTRACT_SYSTEM_PROMPT}
 
 === MULTI-PASS CONTEXT EXTRACTION (GPT-Omni Memory Style) ===
 
@@ -395,7 +398,7 @@ AI TRANSPARENCY NOTICE: This workflow is a transformative interpretation generat
       throw new Error('AI returned invalid JSON format. Response may be truncated. Please try with a shorter description.');
     }
 
-    // Automatically inject guardrail nodes
+    // Automatically inject guardrail nodes and role contracts
     if (parsed.workflows && Array.isArray(parsed.workflows)) {
       // Multiple workflows detected
       for (const workflow of parsed.workflows) {
@@ -406,6 +409,9 @@ AI TRANSPARENCY NOTICE: This workflow is a transformative interpretation generat
           workflow.complianceStandards = injectionResult.complianceStandards;
           workflow.guardrailsAdded = injectionResult.guardrailsAdded;
           workflow.riskScore = injectionResult.riskScore;
+          workflow.roleAssignments = injectionResult.roleAssignments;
+          workflow.roleViolations = injectionResult.roleViolations;
+          workflow.roleContractExplanation = injectionResult.roleContractExplanation;
         }
       }
       console.log('Multiple workflows detected:', parsed.workflows.length);
@@ -417,8 +423,15 @@ AI TRANSPARENCY NOTICE: This workflow is a transformative interpretation generat
       parsed.complianceStandards = injectionResult.complianceStandards;
       parsed.guardrailsAdded = injectionResult.guardrailsAdded;
       parsed.riskScore = injectionResult.riskScore;
+      parsed.roleAssignments = injectionResult.roleAssignments;
+      parsed.roleViolations = injectionResult.roleViolations;
+      parsed.roleContractExplanation = injectionResult.roleContractExplanation;
       console.log('Guardrail nodes injected:', injectionResult.guardrailsAdded);
       console.log('Compliance standards detected:', injectionResult.complianceStandards);
+      console.log('Role assignments:', injectionResult.roleAssignments?.length || 0);
+      if (injectionResult.roleViolations?.length) {
+        console.warn('Role violations blocked:', injectionResult.roleViolations.length);
+      }
     }
 
     console.log('Generated workflow:', parsed);
