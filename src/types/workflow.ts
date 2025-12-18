@@ -23,7 +23,56 @@ export type NodeType =
   | "ai_integrator"
   | "ai_transformer"
   | "ai_validator"
-  | "ai_learner";
+  | "ai_learner"
+  // Media generation types (Easy-Peasy.AI inspired)
+  | "text_generation"
+  | "text_to_image"
+  | "image_to_image"
+  | "image_to_video"
+  | "text_to_video"
+  | "upscale_image"
+  | "style_transfer"
+  | "audio_synthesis"
+  | "transcription";
+
+// Node category for Easy-Peasy.AI style categorization
+export type NodeCategory = "INPUT" | "PROCESS" | "OUTPUT";
+
+// Get node category based on type
+export const getNodeCategory = (type: NodeType): NodeCategory => {
+  const inputTypes: NodeType[] = ["trigger", "data", "storage", "connector", "transcription"];
+  const outputTypes: NodeType[] = ["action", "agent_handoff", "text_to_image", "image_to_video", "text_to_video", "upscale_image", "audio_synthesis"];
+  
+  if (inputTypes.includes(type)) return "INPUT";
+  if (outputTypes.includes(type)) return "OUTPUT";
+  return "PROCESS";
+};
+
+// Shared style configuration for workflow consistency
+export interface SharedStyleConfig {
+  id: string;
+  name: string;
+  values: Record<string, any>;
+  appliedToNodes: string[];
+}
+
+// Execution timing for real-time progress
+export interface NodeExecutionTiming {
+  nodeId: string;
+  startedAt: number;
+  estimatedDurationMs: number;
+  actualDurationMs?: number;
+  status: "pending" | "running" | "completed" | "failed";
+}
+
+export interface WorkflowExecutionProgress {
+  workflowId: string;
+  startedAt: number;
+  totalEstimatedMs: number;
+  currentElapsedMs: number;
+  nodeTimings: NodeExecutionTiming[];
+  currentNodeId?: string;
+}
 
 export interface AgentTool {
   name: string;

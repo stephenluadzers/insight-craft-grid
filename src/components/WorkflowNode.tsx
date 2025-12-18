@@ -1,6 +1,8 @@
-import { GripVertical, Zap, Mail, Database, FileText, Image, Clock, Shield, Bot, Brain, Target, Play, Eye, MessageSquare, Plug, Wand2, CheckCircle, GraduationCap } from "lucide-react";
+import { GripVertical, Zap, Mail, Database, FileText, Image, Clock, Shield, Bot, Brain, Target, Play, Eye, MessageSquare, Plug, Wand2, CheckCircle, GraduationCap, Type, Video, ImagePlus, Paintbrush, Volume2, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NodeCategoryBadge } from "./NodeCategoryBadge";
 import type { NodeType, WorkflowNodeData } from "@/types/workflow";
+import { getNodeCategory } from "@/types/workflow";
 
 // Re-export for backward compatibility
 export type { NodeType, WorkflowNodeData };
@@ -10,6 +12,7 @@ interface WorkflowNodeProps {
   isSelected?: boolean;
   onSelect?: () => void;
   isDragging?: boolean;
+  showCategory?: boolean;
 }
 
 const nodeTypeConfig: Record<
@@ -137,6 +140,52 @@ const nodeTypeConfig: Record<
     gradient: "bg-gradient-to-br from-sky-500 to-blue-600",
     border: "border-sky-500/50",
   },
+  // Media generation types (Easy-Peasy.AI inspired)
+  text_generation: {
+    icon: Type,
+    gradient: "bg-gradient-to-br from-cyan-500 to-blue-600",
+    border: "border-cyan-500/50",
+  },
+  text_to_image: {
+    icon: ImagePlus,
+    gradient: "bg-gradient-to-br from-pink-500 to-purple-600",
+    border: "border-pink-500/50",
+  },
+  image_to_image: {
+    icon: Paintbrush,
+    gradient: "bg-gradient-to-br from-orange-500 to-pink-600",
+    border: "border-orange-500/50",
+  },
+  image_to_video: {
+    icon: Video,
+    gradient: "bg-gradient-to-br from-red-500 to-orange-600",
+    border: "border-red-500/50",
+  },
+  text_to_video: {
+    icon: Video,
+    gradient: "bg-gradient-to-br from-violet-500 to-fuchsia-600",
+    border: "border-violet-500/50",
+  },
+  upscale_image: {
+    icon: ImagePlus,
+    gradient: "bg-gradient-to-br from-teal-500 to-cyan-600",
+    border: "border-teal-500/50",
+  },
+  style_transfer: {
+    icon: Paintbrush,
+    gradient: "bg-gradient-to-br from-yellow-500 to-orange-600",
+    border: "border-yellow-500/50",
+  },
+  audio_synthesis: {
+    icon: Volume2,
+    gradient: "bg-gradient-to-br from-indigo-500 to-purple-600",
+    border: "border-indigo-500/50",
+  },
+  transcription: {
+    icon: Mic,
+    gradient: "bg-gradient-to-br from-green-500 to-teal-600",
+    border: "border-green-500/50",
+  },
 };
 
 export const WorkflowNode = ({
@@ -144,11 +193,13 @@ export const WorkflowNode = ({
   isSelected = false,
   onSelect,
   isDragging = false,
+  showCategory = true,
 }: WorkflowNodeProps) => {
   // Fallback to 'action' type if invalid type is provided
   const nodeType = data.type in nodeTypeConfig ? data.type : 'action';
   const config = nodeTypeConfig[nodeType];
   const Icon = config.icon;
+  const category = getNodeCategory(nodeType);
 
   return (
     <div
@@ -173,6 +224,13 @@ export const WorkflowNode = ({
           <GripVertical className="w-4 h-4 text-muted-foreground" />
         </div>
       </div>
+
+      {/* Category Badge (Easy-Peasy.AI style) */}
+      {showCategory && (
+        <div className="absolute -top-6 left-2">
+          <NodeCategoryBadge category={category} />
+        </div>
+      )}
 
       {/* Node Header */}
       <div className={cn("px-4 py-3 rounded-t-lg", config.gradient)}>
