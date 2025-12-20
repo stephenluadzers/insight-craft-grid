@@ -60,6 +60,121 @@ serve(async (req) => {
 
     console.log('Starting AI request, description length:', description.length);
 
+    const systemPrompt = `You are an AI Workflow Architect.
+
+Goal: Convert the user's description into a workflow graph for a visual editor.
+
+Output requirements:
+- Keep the output COMPACT and strictly structured.
+- Prefer fewer nodes: target 8–20 nodes, hard cap 25 nodes.
+- Node config must be minimal (only essential fields). Avoid large embedded templates.
+- Do NOT include large memory blobs unless the user explicitly requests them.
+- If the user describes multiple distinct workflows, return them under "workflows".
+
+Schema expectations (high level):
+- Either:
+  A) { nodes: [...], connections: [...] }
+  B) { workflows: [{ name, nodes, connections, context? }...] }
+- Optional: context, explanation.
+
+${existingWorkflow ? "If an existingWorkflow is provided, preserve its core intent and reuse node ids where reasonable while improving it." : ""}`;
+
+    const userPrompt = existingWorkflow
+      ? `User description:\n${description}\n\nExisting workflow (JSON):\n${JSON.stringify(existingWorkflow)}`
+      : `User description:\n${description}`;
+
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'generate_workflow',
+          description: 'Generate a workflow graph from a text description.',
+          parameters: {
+            type: 'object',
+            properties: {
+              context: { type: 'object', additionalProperties: true },
+              workflows: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    context: { type: 'object', additionalProperties: true },
+                    nodes: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'string' },
+                          type: { type: 'string' },
+                          title: { type: 'string' },
+                          description: { type: 'string' },
+                          group: { type: 'string' },
+                          priority: { type: 'number' },
+                          x: { type: 'number' },
+                          y: { type: 'number' },
+                          config: { type: 'object', additionalProperties: true },
+                        },
+                        required: ['id', 'type', 'title', 'x', 'y'],
+                        additionalProperties: false,
+                      },
+                    },
+                    connections: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          from: { type: 'string' },
+                          to: { type: 'string' },
+                        },
+                        required: ['from', 'to'],
+                        additionalProperties: false,
+                      },
+                    },
+                  },
+                  required: ['name', 'nodes', 'connections'],
+                  additionalProperties: false,
+                },
+              },
+              nodes: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    type: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    group: { type: 'string' },
+                    priority: { type: 'number' },
+                    x: { type: 'number' },
+                    y: { type: 'number' },
+                    config: { type: 'object', additionalProperties: true },
+                  },
+                  required: ['id', 'type', 'title', 'x', 'y'],
+                  additionalProperties: false,
+                },
+              },
+              connections: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    from: { type: 'string' },
+                    to: { type: 'string' },
+                  },
+                  required: ['from', 'to'],
+                  additionalProperties: false,
+                },
+              },
+              explanation: { type: 'string' },
+            },
+            additionalProperties: false,
+          },
+        },
+      },
+    ];
+
     let response;
     try {
       response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -71,295 +186,14 @@ serve(async (req) => {
         signal: controller.signal,
         body: JSON.stringify({
           model: 'google/gemini-2.5-flash',
-          max_tokens: 16000,
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content: `You are FlowFuse's AI Workflow Architect — combining the best of OpenDevin, LangGraph, and Autogen Studio with GPT-Omni-style multi-pass memory extraction.
-
-${GUARDRAIL_SYSTEM_PROMPT}
-
-${ROLE_CONTRACT_SYSTEM_PROMPT}
-
-=== MULTI-PASS CONTEXT EXTRACTION (GPT-Omni Memory Style) ===
-
-PASS 1 - ENTITY EXTRACTION:
-Extract ALL named entities from the user's description:
-- PEOPLE: names, roles, titles (e.g., "John Smith", "Sales Manager")
-- ORGANIZATIONS: companies, teams, departments
-- LOCATIONS: addresses, cities, regions, timezones
-- PRODUCTS: services, items, SKUs mentioned
-- SYSTEMS: tools, platforms, APIs referenced (e.g., "Slack", "Salesforce")
-- IDENTIFIERS: IDs, account numbers, codes
-
-PASS 2 - INTENT CLASSIFICATION:
-Determine the primary and secondary intents:
-- PRIMARY_INTENT: The main goal (e.g., "automate_email", "generate_report", "sync_data")
-- SECONDARY_INTENTS: Supporting goals
-- ACTION_VERBS: Key actions (create, send, notify, update, delete, transform)
-- TRIGGER_TYPE: What initiates this (scheduled, event-driven, manual, webhook)
-
-PASS 3 - CONSTRAINT EXTRACTION:
-Identify all limitations and requirements:
-- TIME_CONSTRAINTS: deadlines, schedules, SLAs, frequencies
-- RESOURCE_CONSTRAINTS: budgets, quotas, rate limits
-- COMPLIANCE_CONSTRAINTS: GDPR, HIPAA, PCI-DSS requirements
-- TECHNICAL_CONSTRAINTS: platform limitations, API restrictions
-- BUSINESS_RULES: conditions, thresholds, approval requirements
-
-PASS 4 - GOAL DECOMPOSITION:
-Break down into measurable objectives:
-- OUTCOME_GOALS: What success looks like
-- PROCESS_GOALS: Steps that must happen
-- QUALITY_GOALS: Accuracy, reliability requirements
-- PERFORMANCE_GOALS: Speed, throughput targets
-
-PASS 5 - DEPENDENCY MAPPING:
-Identify relationships and sequences:
-- DATA_DEPENDENCIES: What data is needed from where
-- SYSTEM_DEPENDENCIES: External services required
-- SEQUENCE_DEPENDENCIES: Order of operations
-- CONDITIONAL_DEPENDENCIES: If-then relationships
-
-=== CONTEXT STRUCTURE (context.json) ===
-
-{
-  "context": {
-    "entities": {
-      "people": [{ "name": "...", "role": "...", "email": "...", "phone": "..." }],
-      "organizations": [{ "name": "...", "type": "...", "industry": "..." }],
-      "locations": [{ "name": "...", "timezone": "...", "type": "..." }],
-      "products": [{ "name": "...", "sku": "...", "category": "..." }],
-      "systems": [{ "name": "...", "type": "...", "integration_type": "..." }],
-      "identifiers": [{ "type": "...", "value": "...", "entity_ref": "..." }]
-    },
-    "intent": {
-      "primary": "...",
-      "secondary": ["..."],
-      "action_verbs": ["..."],
-      "trigger_type": "scheduled|event|manual|webhook"
-    },
-    "constraints": {
-      "time": [{ "type": "deadline|schedule|sla", "value": "...", "frequency": "..." }],
-      "resources": [{ "type": "budget|quota|rate_limit", "value": "...", "unit": "..." }],
-      "compliance": ["GDPR", "HIPAA", "PCI-DSS", "SOC2"],
-      "business_rules": [{ "condition": "...", "action": "...", "priority": "..." }]
-    },
-    "goals": {
-      "outcome": [{ "description": "...", "success_metric": "...", "priority": 1-10 }],
-      "process": [{ "step": "...", "required": true|false }],
-      "quality": [{ "metric": "...", "threshold": "..." }],
-      "performance": [{ "metric": "...", "target": "...", "unit": "..." }]
-    },
-    "dependencies": {
-      "data": [{ "source": "...", "field": "...", "required": true|false }],
-      "systems": [{ "name": "...", "required": true|false, "fallback": "..." }],
-      "sequence": [{ "before": "...", "after": "...", "reason": "..." }],
-      "conditional": [{ "if": "...", "then": "...", "else": "..." }]
-    }
-  }
-}
-
-=== MEMORY-BASED WORKFLOWS ===
-
-Every workflow MUST include memory structures:
-
-{
-  "short_term_memory": {
-    "session_id": "{{generated_uuid}}",
-    "created_at": "{{timestamp}}",
-    "expires_at": "{{timestamp + 24h}}",
-    "current_step": 0,
-    "step_outputs": {},
-    "variables": {},
-    "errors": [],
-    "retries": {},
-    "checkpoints": []
-  },
-  "long_term_memory": {
-    "workflow_id": "{{workflow_uuid}}",
-    "version": 1,
-    "first_run": "{{timestamp}}",
-    "last_run": null,
-    "total_runs": 0,
-    "success_rate": 0,
-    "learned_patterns": [],
-    "entity_cache": {},
-    "preference_history": [],
-    "optimization_suggestions": [],
-    "cross_workflow_refs": []
-  },
-  "memory_config": {
-    "persist_short_term": true,
-    "short_term_ttl_hours": 24,
-    "long_term_enabled": true,
-    "sync_to_database": true,
-    "encryption_required": false,
-    "share_across_workflows": false
-  }
-}
-
-Memory flows between steps:
-- Each node reads from short_term_memory.step_outputs[previous_node_id]
-- Each node writes to short_term_memory.step_outputs[current_node_id]
-- long_term_memory.learned_patterns captures successful execution patterns
-- Memory enables resumability, debugging, and cross-workflow intelligence
-
-=== AI AGENT COMPATIBILITY LAYER ===
-
-Every workflow node can accept AI agent configurations:
-
-{
-  "agent_config": {
-    "enabled": true,
-    "agent_type": "assistant|tool_user|reasoner|planner|executor|monitor",
-    "model": "gpt-4|gpt-3.5-turbo|claude-3|gemini-pro|local",
-    "system_message": "You are a specialized agent for...",
-    "user_prompt_template": "Given {{context.field}}, perform...",
-    "tools": [
-      { "name": "search", "description": "...", "parameters": {} },
-      { "name": "calculate", "description": "...", "parameters": {} }
-    ],
-    "goals": [
-      { "id": "goal_1", "description": "...", "success_criteria": "...", "priority": 1 }
-    ],
-    "constraints": {
-      "max_tokens": 4096,
-      "temperature": 0.7,
-      "max_iterations": 10,
-      "timeout_seconds": 60
-    },
-    "memory_access": {
-      "read_short_term": true,
-      "write_short_term": true,
-      "read_long_term": true,
-      "write_long_term": false
-    },
-    "handoff_config": {
-      "can_handoff_to": ["agent_id_1", "agent_id_2"],
-      "handoff_conditions": ["uncertainty > 0.7", "requires_approval"],
-      "context_to_pass": ["full", "summary", "relevant_only"]
-    }
-  }
-}
-
-AI AGENT NODE TYPES:
-1. "ai_orchestrator" - Master agent that coordinates other agents
-2. "ai_reasoner" - Analyzes data and makes decisions
-3. "ai_planner" - Creates action plans from goals
-4. "ai_executor" - Carries out specific tasks
-5. "ai_monitor" - Watches for events and triggers actions
-6. "ai_communicator" - Handles human interactions (chat, email)
-7. "ai_integrator" - Connects to external APIs intelligently
-8. "ai_transformer" - Processes and transforms data
-9. "ai_validator" - Checks outputs against criteria
-10. "ai_learner" - Improves based on feedback
-
-AGENT USE CASES:
-- Chatbot builders: Use ai_communicator + ai_reasoner
-- Sales automation: Use ai_planner + ai_executor + ai_monitor
-- Customer support: Use ai_communicator + ai_integrator + ai_learner
-- Engineering agents: Use ai_planner + ai_executor + ai_validator
-- Business automation: Use ai_orchestrator + multiple specialized agents
-
-=== PERSONAL & PROFESSIONAL DATA EXTRACTION ===
-
-EXTRACT THESE DATA TYPES:
-1. PERSONAL INFORMATION:
-   - Names (firstName, lastName, fullName, displayName)
-   - Email addresses (personalEmail, workEmail)
-   - Phone numbers (phone, mobile, workPhone)
-   - Social handles (@username, LinkedIn, Twitter)
-   - Addresses (street, city, state, zip, country)
-   - Birthdate, age, timezone, language preference
-
-2. PROFESSIONAL INFORMATION:
-   - Company/Organization name
-   - Job title, role, department
-   - Industry, sector
-   - Employee ID, membership ID
-   - Manager name, team name
-   - Work location, office address
-
-3. BUSINESS CONTEXT:
-   - Customer ID, account number, order ID
-   - Product/service names mentioned
-   - Pricing, budget, quotes
-   - Deadlines, dates, schedules
-   - Project names, campaign names
-   - Contract terms, subscription tier
-
-AUTO-PLACEMENT: Use {{context.entities.people[0].email}} syntax in node configs.
-
-=== MULTI-WORKFLOW DETECTION ===
-
-If the input describes MULTIPLE distinct workflows:
-- Separate them into independent, usable workflows
-- Return array under "workflows" key
-- Each has its own nodes, connections, context, memory
-- Include contextTags, phase, estimatedComplexity
-
-${existingWorkflow ? `
-EXISTING WORKFLOW TO IMPROVE:
-${JSON.stringify(existingWorkflow, null, 2)}
-
-Preserve core functionality, enhance with requested features.
-` : ''}
-
-=== OUTPUT FORMAT (CRITICAL: Valid JSON only) ===
-
-{
-  "context": { /* Full multi-pass extraction */ },
-  "short_term_memory": { /* Session state */ },
-  "long_term_memory": { /* Persistent learning */ },
-  "memory_config": { /* Memory settings */ },
-  "nodes": [
-    {
-      "id": "unique_id",
-      "type": "trigger|action|condition|ai_orchestrator|ai_reasoner|ai_planner|ai_executor|ai_monitor|ai_communicator|ai_integrator|ai_transformer|ai_validator|ai_learner|guardrail",
-      "title": "...",
-      "description": "...",
-      "group": "Core|AI Agents|Optional Connectors|System Services",
-      "priority": 0.1-1.0,
-      "color": "#60A5FA|#10B981|#A78BFA|#F472B6",
-      "x": 100,
-      "y": 100,
-      "config": {
-        "connector": "...",
-        "optional": false,
-        "context_refs": ["{{context.entities.people[0].email}}"],
-        "memory_refs": ["{{short_term_memory.step_outputs.prev_node}}"]
-      },
-      "agent_config": { /* AI agent settings if applicable */ }
-    }
-  ],
-  "connections": [{ "from": "...", "to": "..." }],
-  "execution_strategy": {
-    "event_driven": true,
-    "checkpointing": true,
-    "resumable": true,
-    "memory_enabled": true
-  },
-  "explanation": "Architecture overview with context extraction, memory, and agents explained"
-}
-
-BEHAVIORAL RULES:
-- ALWAYS perform multi-pass context extraction
-- ALWAYS include memory structures
-- Include AI agent configs for intelligent nodes
-- Use {{context.path}} and {{memory.path}} syntax
-- Design for failure: assume all APIs can fail
-- Make workflows resumable with memory checkpoints
-- Enable cross-workflow intelligence via long_term_memory
-
-AI TRANSPARENCY NOTICE: This workflow is a transformative interpretation generated by Remora Flow (Remora Development) for educational and productivity purposes. No copyrighted content was stored or redistributed. This analysis complies with U.S. Copyright Law (17 U.S.C. §107 - Fair Use), YouTube Developer Policies (Section 5.B), and GDPR (Article 5.1.c). All intellectual property rights remain with original creators. Users must ensure compliance with local laws and platform policies. © 2025 Remora Development | Contact: legal@remoradev.ai"`
-          },
-          {
-            role: 'user',
-            content: description
-          }
-        ]
+          max_tokens: 8192,
+          temperature: 0.2,
+          tools,
+          tool_choice: { type: 'function', function: { name: 'generate_workflow' } },
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
         }),
       });
     } catch (fetchError: any) {
@@ -407,41 +241,32 @@ AI TRANSPARENCY NOTICE: This workflow is a transformative interpretation generat
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
-    
-    // Parse the JSON response
-    let parsed;
+
+    // Prefer tool-calling output (more reliable than free-form JSON in message.content)
+    let parsed: any;
     try {
-      // Extract JSON from markdown code blocks if present
-      let jsonStr = content.trim();
-      
-      // Remove markdown code blocks if present
-      const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (codeBlockMatch) {
-        jsonStr = codeBlockMatch[1].trim();
-      }
-      
-      // If no code block, try to find JSON object
-      if (!jsonStr.startsWith('{') && !jsonStr.startsWith('[')) {
-        const jsonMatch = jsonStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-        if (jsonMatch) {
-          jsonStr = jsonMatch[1];
+      const toolArgs = data?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+      if (typeof toolArgs === 'string' && toolArgs.trim().length > 0) {
+        parsed = JSON.parse(toolArgs);
+        console.log('Parsed workflow from tool call');
+      } else {
+        const content = data?.choices?.[0]?.message?.content ?? '';
+        let jsonStr = String(content).trim();
+
+        const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
+
+        if (!jsonStr.startsWith('{') && !jsonStr.startsWith('[')) {
+          const jsonMatch = jsonStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+          if (jsonMatch) jsonStr = jsonMatch[1];
         }
+
+        parsed = JSON.parse(jsonStr);
+        console.log('Parsed workflow from message.content fallback');
       }
-      
-      // Check if the response looks truncated
-      if (!jsonStr.endsWith('}') && !jsonStr.endsWith(']')) {
-        console.warn('Response appears truncated, attempting to parse anyway');
-      }
-      
-      parsed = JSON.parse(jsonStr);
-      console.log('Successfully parsed workflow response');
     } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('Content length:', content.length);
-      console.error('Content start:', content.substring(0, 200));
-      console.error('Content end:', content.substring(content.length - 200));
-      throw new Error('AI returned invalid JSON format. Response may be truncated. Please try with a shorter description.');
+      console.error('Failed to parse AI response:', parseError);
+      throw new Error('AI returned an unreadable response. Please try again with a shorter prompt or fewer requirements.');
     }
 
     // Automatically inject guardrail nodes and role contracts
