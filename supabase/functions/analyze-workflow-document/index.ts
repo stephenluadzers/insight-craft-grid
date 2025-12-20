@@ -50,24 +50,70 @@ Extract all relevant data fields that could be used in workflow automation.`;
       ? `Analyze this document and enhance the existing workflow with insights from it.\n\nDocument: ${documentName}\nContent:\n${documentContent}\n\nExisting Workflow: ${JSON.stringify(existingWorkflow)}`
       : `Analyze this document and extract workflow structures and relevant business context.\n\nDocument: ${documentName}\nContent:\n${documentContent}`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-      }),
-    });
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+    console.log('Starting AI analysis, content length:', documentContent?.length);
+
+    let response;
+    try {
+      response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+        }),
+      });
+    } catch (fetchError: any) {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        console.error('Request timed out after 2 minutes');
+        return new Response(
+          JSON.stringify({ error: 'Request timed out. Try a smaller document or split into sections.' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 504
+          }
+        );
+      }
+      throw fetchError;
+    }
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI API error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please wait a moment and try again.' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 429
+          }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add credits in Settings → Workspace → Usage.' }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 402
+          }
+        );
+      }
+      
       throw new Error(`AI API error: ${response.status}`);
     }
 
