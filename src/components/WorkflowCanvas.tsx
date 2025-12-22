@@ -12,6 +12,7 @@ import { CollaboratorCursors } from "./CollaboratorCursors";
 import { NodeLockIndicator } from "./NodeLockIndicator";
 import { GuardrailVisualization } from "./GuardrailVisualization";
 import { WorkflowMetricsOverlay } from "./WorkflowMetricsOverlay";
+import { CanvasImageUpload, CanvasImage } from "./CanvasImageUpload";
 import { cn } from "@/lib/utils";
 import { Trash2, Settings } from "lucide-react";
 import { Button } from "./ui/button";
@@ -92,6 +93,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const [riskScore, setRiskScore] = useState<number | undefined>(undefined);
   const [showGuardrailViz, setShowGuardrailViz] = useState(false);
   const [showMetricsOverlay, setShowMetricsOverlay] = useState(true);
+  const [canvasImages, setCanvasImages] = useState<CanvasImage[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -801,6 +803,13 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
             inset: 0,
           }}
         >
+          {/* Canvas Images */}
+          <CanvasImageUpload
+            images={canvasImages}
+            onImagesChange={setCanvasImages}
+            panOffset={panOffset}
+          />
+          
           {/* Collaboration Cursors */}
           <CollaboratorCursors workflowId={currentWorkflowId} panOffset={panOffset} />
           
