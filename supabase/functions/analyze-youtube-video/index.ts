@@ -111,17 +111,19 @@ serve(async (req) => {
   }
 
   try {
-    const { url } = await req.json();
+    const body = await req.json();
+    // Accept both 'url' and 'videoUrl' for flexibility
+    const url = body.url || body.videoUrl;
 
     if (!url) {
-      throw new Error('YouTube URL is required');
+      throw new Error('YouTube URL is required (pass as "url" or "videoUrl")');
     }
 
     console.log('Processing YouTube URL:', url);
     const videoId = extractVideoId(url);
     
     if (!videoId) {
-      throw new Error('Invalid YouTube URL');
+      throw new Error('Invalid YouTube URL - could not extract video ID');
     }
 
     console.log('Extracted video ID:', videoId);
@@ -139,27 +141,55 @@ serve(async (req) => {
       throw new Error('Could not extract any data from the video');
     }
 
-    // Construct a comprehensive description for workflow generation
-    const videoDescription = `
-YouTube Video Analysis:
-Title: ${metadata?.title || 'Unknown'}
-Author: ${metadata?.author_name || 'Unknown'}
+    // Create a structured workflow-oriented analysis
+    const videoTitle = metadata?.title || 'Unknown Video';
+    const videoAuthor = metadata?.author_name || 'Unknown';
+    
+    // Extract key steps/concepts from transcript for workflow generation
+    const transcriptSummary = transcript 
+      ? transcript.slice(0, 6000) 
+      : 'No transcript available';
 
-${transcript ? `Video Content/Transcript:\n${transcript.slice(0, 4000)}${transcript.length > 4000 ? '...' : ''}` : 'No transcript available'}
+    // Build a workflow-optimized description
+    const workflowDescription = `
+YOUTUBE VIDEO WORKFLOW EXTRACTION
+=================================
+Video: "${videoTitle}" by ${videoAuthor}
+Video ID: ${videoId}
 
-${metadata?.description || ''}
+CONTENT ANALYSIS:
+${transcriptSummary}
+
+WORKFLOW GENERATION INSTRUCTIONS:
+Based on the above video content, create a workflow that captures the key steps, processes, or concepts discussed.
+- Each major topic or step should become a workflow node
+- Connect nodes in logical sequence based on the content flow
+- Use appropriate node types (trigger, action, condition, output)
+- Include relevant details in node descriptions
+- If the video is a tutorial, create nodes for each step
+- If the video discusses a process, create nodes for each phase
+- If the video is informational, create nodes for key concepts that connect logically
     `.trim();
 
     return new Response(
       JSON.stringify({
         videoId,
-        title: metadata?.title,
-        author: metadata?.author_name,
+        title: videoTitle,
+        author: videoAuthor,
         thumbnail: metadata?.thumbnail_url,
         transcript: transcript || null,
-        description: videoDescription,
+        description: workflowDescription,
         transcriptLength: transcript.length,
-        hasTranscript: !!transcript
+        hasTranscript: !!transcript,
+        // Include structured insights for the combine function
+        insights: `Analyzed "${videoTitle}" - ${transcript.length > 0 ? 'transcript extracted' : 'metadata only'}`,
+        context: {
+          videoTitle,
+          videoAuthor,
+          videoId,
+          hasTranscript: !!transcript,
+          contentType: 'youtube_video'
+        }
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
