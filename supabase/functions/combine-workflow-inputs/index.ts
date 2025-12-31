@@ -118,6 +118,8 @@ serve(async (req) => {
 
     // Process multiple video URLs if provided (new multi-source support)
     if (videoUrls && videoUrls.length > 0) {
+      console.log('Processing video URLs:', videoUrls.length);
+      
       for (const url of videoUrls) {
         if (!url || !url.trim()) continue;
         
@@ -125,13 +127,24 @@ serve(async (req) => {
           let videoData, videoError;
           const urlLower = url.toLowerCase();
           
+          console.log('Analyzing URL:', url);
+          
           // Determine the platform and call appropriate function
           if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+            console.log('Detected YouTube URL, calling analyze-youtube-video');
             const result = await supabaseClient.functions.invoke('analyze-youtube-video', {
-              body: { videoUrl: url, existingWorkflow }
+              body: { url } // Use 'url' key which the function expects
             });
             videoData = result.data;
             videoError = result.error;
+            
+            console.log('YouTube analysis result:', { hasData: !!videoData, error: videoError });
+            
+            // If we got a description, use it directly for workflow generation
+            if (videoData?.description) {
+              combinedDescription += `\n\n${videoData.description}`;
+              console.log('Added YouTube description to combined context, length:', videoData.description.length);
+            }
           } else if (urlLower.includes('tiktok.com')) {
             const result = await supabaseClient.functions.invoke('analyze-tiktok-video', {
               body: { videoUrl: url, existingWorkflow }
@@ -157,13 +170,15 @@ serve(async (req) => {
               allWorkflowData.push(videoData);
             }
             
-            const platform = urlLower.includes('youtube') ? 'YouTube' :
-                           urlLower.includes('tiktok') ? 'TikTok' :
-                           urlLower.includes('snapchat') ? 'Snapchat' :
-                           urlLower.includes('instagram') ? 'Instagram' :
-                           urlLower.includes('vimeo') ? 'Vimeo' : 'Video';
-            
-            combinedDescription += `\n${platform} Analysis (${url.substring(0, 50)}...): ${videoData.insights || videoData.explanation || ''}`;
+            // Only add insights if we haven't already added the full description (for YouTube)
+            if (!urlLower.includes('youtube.com') && !urlLower.includes('youtu.be')) {
+              const platform = urlLower.includes('tiktok') ? 'TikTok' :
+                             urlLower.includes('snapchat') ? 'Snapchat' :
+                             urlLower.includes('instagram') ? 'Instagram' :
+                             urlLower.includes('vimeo') ? 'Vimeo' : 'Video';
+              
+              combinedDescription += `\n${platform} Analysis (${url.substring(0, 50)}...): ${videoData.insights || videoData.explanation || ''}`;
+            }
           }
         } catch (error) {
           console.error(`Video analysis failed for ${url}:`, error);
