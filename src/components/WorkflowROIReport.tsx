@@ -10,10 +10,12 @@ import {
   Download,
   Sparkles,
   BarChart3,
+  Scan,
 } from 'lucide-react';
 import { WorkflowNodeData } from '@/types/workflow';
 import { generateWorkflowDownloadPackage } from '@/lib/workflowDownload';
 import { toast } from 'sonner';
+import { WorkflowScanPanel } from './WorkflowScanPanel';
 
 interface ROIData {
   timeSavings: {
@@ -193,11 +195,15 @@ export const WorkflowROIReport = ({ nodes, workflowName }: WorkflowROIReportProp
       </Card>
 
       <Tabs defaultValue="financial" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="financial">Financial Impact</TabsTrigger>
           <TabsTrigger value="time">Time Savings</TabsTrigger>
           <TabsTrigger value="revenue">Revenue Potential</TabsTrigger>
           <TabsTrigger value="projection">5-Year Projection</TabsTrigger>
+          <TabsTrigger value="scan" className="flex items-center gap-1">
+            <Scan className="h-3 w-3" />
+            Scan Analysis
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="financial" className="space-y-4">
@@ -425,6 +431,18 @@ export const WorkflowROIReport = ({ nodes, workflowName }: WorkflowROIReportProp
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="scan" className="space-y-4">
+          <WorkflowScanPanel 
+            nodes={nodes} 
+            workflowName={workflowName}
+            baseROI={{
+              annualSavings: roi.costSavings.annualSavings,
+              roiPercent: roi.breakEven.roiAfterOneYear,
+              breakEvenDays: roi.breakEven.daysToBreakEven,
+            }}
+          />
         </TabsContent>
       </Tabs>
     </div>
