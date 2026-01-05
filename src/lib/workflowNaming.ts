@@ -207,7 +207,7 @@ function formatCase(str: string, format: NamingContext['format'] = 'kebab'): str
 }
 
 /**
- * Extracts meaningful keywords from text
+ * Extracts meaningful keywords from text - never returns generic/unknown values
  */
 function extractKeywords(text: string, maxWords: number = 3): string[] {
   const stopWords = new Set([
@@ -216,15 +216,27 @@ function extractKeywords(text: string, maxWords: number = 3): string[] {
     'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should',
     'could', 'may', 'might', 'must', 'can', 'new', 'get', 'set', 'add',
     'when', 'then', 'if', 'else', 'this', 'that', 'these', 'those', 'my',
-    'workflow', 'node', 'step', 'action', 'trigger', 'data', 'process'
+    'workflow', 'node', 'step', 'action', 'trigger', 'data', 'process',
+    // Prevent generic/unknown names
+    'unknown', 'untitled', 'undefined', 'null', 'empty', 'default', 'none',
+    'test', 'example', 'sample', 'demo', 'temp', 'tmp', 'placeholder',
+    'name', 'title', 'label', 'value', 'item', 'thing', 'stuff', 'other',
+    'your', 'our', 'their', 'its', 'here', 'there', 'just', 'only', 'some'
   ]);
   
-  return text
+  const words = text
     .toLowerCase()
     .replace(/[^\w\s-]/g, '')
     .split(/\s+/)
     .filter(word => word.length > 2 && !stopWords.has(word))
-    .slice(0, maxWords);
+    .filter(word => !/^(unknown|untitled|undefined|null)/i.test(word));
+  
+  // Prioritize longer, more descriptive words
+  const sortedWords = words.sort((a, b) => b.length - a.length);
+  
+  // Return unique words only
+  const unique = [...new Set(sortedWords)];
+  return unique.slice(0, maxWords);
 }
 
 /**
@@ -306,12 +318,45 @@ export function generateSmartWorkflowName(
     nameParts.push('guarded');
   }
   
-  // Fallback if nothing detected
+  // Smart fallback - always derive from actual content
   if (nameParts.length === 0) {
-    const triggerNode = nodes.find(n => n.type === 'trigger');
-    const keywords = extractKeywords(triggerNode?.title || nodes[0].title, 2);
-    nameParts.push(...(keywords.length > 0 ? keywords : ['custom']));
-    nameParts.push('workflow');
+    // Try multiple sources to find meaningful content
+    const allNodeTitles = nodes.map(n => n.title).join(' ');
+    const allDescriptions = nodes.map(n => n.description || '').join(' ');
+    const combinedText = `${allNodeTitles} ${allDescriptions}`;
+    
+    // Extract the most meaningful keywords from all content
+    const contentKeywords = extractKeywords(combinedText, 3);
+    
+    if (contentKeywords.length > 0) {
+      nameParts.push(...contentKeywords);
+    } else {
+      // Derive from node types as last resort
+      const nodeTypeCounts = nodes.reduce((acc, n) => {
+        acc[n.type] = (acc[n.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const dominantType = Object.entries(nodeTypeCounts)
+        .sort((a, b) => b[1] - a[1])[0]?.[0];
+      
+      const typeDescriptors: Record<string, string> = {
+        'ai': 'ai-process',
+        'action': 'action-flow',
+        'condition': 'logic-flow',
+        'trigger': 'event-handler',
+        'data': 'data-pipeline',
+        'guardrail': 'guarded-flow',
+        'integration': 'integration-flow',
+      };
+      
+      nameParts.push(typeDescriptors[dominantType] || 'automation');
+      
+      // Add node count context for clarity
+      if (nodes.length > 1) {
+        nameParts.push(`${nodes.length}-step`);
+      }
+    }
   }
   
   // Build base name
