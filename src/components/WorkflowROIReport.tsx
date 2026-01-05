@@ -103,11 +103,11 @@ export const WorkflowROIReport = ({ nodes, workflowName }: WorkflowROIReportProp
 
   const handleDownloadReport = async () => {
     try {
-      const blob = await generateWorkflowDownloadPackage(nodes, workflowName);
+      const { blob, fileName } = await generateWorkflowDownloadPackage(nodes, workflowName);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${workflowName.replace(/\s+/g, '-')}-complete-package.zip`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
