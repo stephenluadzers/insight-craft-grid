@@ -11,7 +11,7 @@ import {
   GuardrailMetadata,
   exportWorkflowForBusiness 
 } from "./workflowExport";
-import { generateWorkflowName } from "./workflowUtils";
+import { generateSmartWorkflowName } from "./workflowNaming";
 
 interface ROIMetrics {
   timeSavings: {
@@ -394,7 +394,7 @@ export async function exportWorkflowComprehensive(
 ): Promise<Blob> {
   // Generate smart filename incorporating workflow title and content
   // If workflowName is provided, use it as context for smarter naming
-  const smartName = generateWorkflowName(nodes, workflowName);
+  const smartName = generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true });
   
   const zip = new JSZip();
   const roi = calculateComprehensiveROI(nodes);
