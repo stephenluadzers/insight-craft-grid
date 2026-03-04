@@ -53,6 +53,36 @@ export default function Auth() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast({
+        title: "Check your email",
+        description: "We've sent you a password reset link.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Could not send reset email.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -226,6 +256,15 @@ export default function Auth() {
                     required
                   />
                   {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                </div>
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot your password?
+                  </button>
                 </div>
               </CardContent>
               <CardFooter>

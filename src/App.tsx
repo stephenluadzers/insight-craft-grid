@@ -28,6 +28,7 @@ import Privacy from "./pages/Privacy";
 import WhiteLabel from "./pages/WhiteLabel";
 import Marketplace from "./pages/Marketplace";
 import TransactionUsage from "./pages/TransactionUsage";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
               <Route path="/webhooks" element={<ProtectedRoute><Webhooks /></ProtectedRoute>} />
