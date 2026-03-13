@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface PipelineResult {
   name: string;
+  version?: string;
   description: string;
   workflow: { nodes: any[]; connections: any[] };
   suggestions: any[];
