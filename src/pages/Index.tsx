@@ -64,6 +64,10 @@ const Index = (): JSX.Element => {
             {currentView === 'sandbox' && workflow && <WorkflowSandbox workflowId="demo-workflow" nodes={workflow?.nodes || []} />}
             {currentView === 'business-intelligence' && <WorkflowBIDashboard workflowId="demo-workflow" workspaceId="demo-workspace" />}
             {currentView === 'analytics' && <WorkflowAnalyticsDashboard workflowId="demo-workflow" timeRange="7d" />}
+            {currentView === 'pipeline' && <AIWorkflowPipeline onWorkflowGenerated={(nodes) => {
+              setCurrentView('canvas');
+              setTimeout(() => canvasRef.current?.loadWorkflow?.(nodes), 100);
+            }} />}
             {currentView === 'cost' && <WorkflowCostEstimator nodes={[]} executionsPerMonth={1000} />}
           </div>
 
