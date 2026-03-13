@@ -16,6 +16,7 @@ import { WorkflowList } from "@/components/WorkflowList";
 import { WorkflowSandbox } from "@/components/WorkflowSandbox";
 import { WorkflowBIDashboard } from "@/components/WorkflowBIDashboard";
 import { LegalFooter } from "@/components/LegalFooter";
+import AIWorkflowPipeline from "@/components/AIWorkflowPipeline";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
@@ -63,6 +64,10 @@ const Index = (): JSX.Element => {
             {currentView === 'sandbox' && workflow && <WorkflowSandbox workflowId="demo-workflow" nodes={workflow?.nodes || []} />}
             {currentView === 'business-intelligence' && <WorkflowBIDashboard workflowId="demo-workflow" workspaceId="demo-workspace" />}
             {currentView === 'analytics' && <WorkflowAnalyticsDashboard workflowId="demo-workflow" timeRange="7d" />}
+            {currentView === 'pipeline' && <AIWorkflowPipeline onWorkflowGenerated={(nodes) => {
+              setCurrentView('canvas');
+              setTimeout(() => canvasRef.current?.loadWorkflow?.(nodes), 100);
+            }} />}
             {currentView === 'cost' && <WorkflowCostEstimator nodes={[]} executionsPerMonth={1000} />}
           </div>
 
