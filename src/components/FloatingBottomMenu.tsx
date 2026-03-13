@@ -81,6 +81,7 @@ export function FloatingBottomMenu({
     { id: 'debug', label: 'Debug', icon: Bug, description: 'Step-through debugger' },
     { id: 'test', label: 'Test', icon: TestTube, description: 'Automated testing' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Performance insights' },
+    { id: 'pipeline', label: 'AI Pipeline', icon: Play, description: 'Create → Optimize → Export → Sell' },
     { id: 'cost', label: 'Cost', icon: DollarSign, description: 'Cost estimation' },
   ];
 
