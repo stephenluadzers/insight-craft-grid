@@ -16,6 +16,7 @@ import { WorkflowList } from "@/components/WorkflowList";
 import { WorkflowSandbox } from "@/components/WorkflowSandbox";
 import { WorkflowBIDashboard } from "@/components/WorkflowBIDashboard";
 import { LegalFooter } from "@/components/LegalFooter";
+import AIWorkflowPipeline from "@/components/AIWorkflowPipeline";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
