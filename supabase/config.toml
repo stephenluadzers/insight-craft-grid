@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.webhook-delivery]
 verify_jwt = false
+
+[functions.ai-workflow-pipeline]
+verify_jwt = false
