@@ -41,6 +41,7 @@ export default function APIKeys() {
   const [keyName, setKeyName] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("");
   const [expiresInDays, setExpiresInDays] = useState("");
+  const [expirationPreset, setExpirationPreset] = useState("never");
 
   useEffect(() => {
     loadData();
@@ -94,13 +95,28 @@ export default function APIKeys() {
       return;
     }
 
+    if (expirationPreset === "custom" && (!expiresInDays || parseInt(expiresInDays) <= 0)) {
+      toast({
+        title: "Invalid expiration",
+        description: "Enter valid number of days or choose Never",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      const expiresInValue = expirationPreset === "never"
+        ? undefined
+        : expirationPreset === "custom"
+          ? parseInt(expiresInDays)
+          : parseInt(expirationPreset);
+
       const { data, error } = await supabase.functions.invoke('api-keys', {
         method: 'POST',
         body: {
           name: keyName,
           workspace_id: selectedWorkspace,
-          expires_in_days: expiresInDays ? parseInt(expiresInDays) : undefined
+          expires_in_days: expiresInValue
         }
       });
 
@@ -109,6 +125,7 @@ export default function APIKeys() {
       setNewKeyData(data);
       setKeyName("");
       setExpiresInDays("");
+      setExpirationPreset("never");
       loadData();
 
       toast({
@@ -253,7 +270,7 @@ export default function APIKeys() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select workspace" />
                     </SelectTrigger>
-                    <SelectContent position="popper" className="z-[9999] max-h-60 overflow-y-auto">
+                    <SelectContent position="item-aligned" className="z-[9999] max-h-60 overflow-y-auto">
                       {workspaces.map(ws => (
                         <SelectItem key={ws.id} value={ws.id}>
                           {ws.name}
@@ -264,14 +281,31 @@ export default function APIKeys() {
                 </div>
 
                 <div>
-                  <Label htmlFor="expires">Expires In (Days)</Label>
-                  <Input
-                    id="expires"
-                    type="number"
-                    placeholder="Never (leave empty)"
-                    value={expiresInDays}
-                    onChange={(e) => setExpiresInDays(e.target.value)}
-                  />
+                  <Label htmlFor="expires">Expiration</Label>
+                  <Select value={expirationPreset} onValueChange={setExpirationPreset}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select expiration" />
+                    </SelectTrigger>
+                    <SelectContent position="item-aligned" className="z-[9999] max-h-60 overflow-y-auto">
+                      <SelectItem value="never">Never expires</SelectItem>
+                      <SelectItem value="30">30 days</SelectItem>
+                      <SelectItem value="90">90 days</SelectItem>
+                      <SelectItem value="365">1 year</SelectItem>
+                      <SelectItem value="custom">Custom days</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {expirationPreset === "custom" && (
+                    <Input
+                      id="expires"
+                      type="number"
+                      min={1}
+                      className="mt-2"
+                      placeholder="Enter number of days"
+                      value={expiresInDays}
+                      onChange={(e) => setExpiresInDays(e.target.value)}
+                    />
+                  )}
                 </div>
 
                 <DialogFooter>
