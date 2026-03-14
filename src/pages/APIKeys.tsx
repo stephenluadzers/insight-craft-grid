@@ -94,7 +94,6 @@ export default function APIKeys() {
         method: 'POST',
         body: {
           name: keyName,
-          workspace_id: selectedWorkspace,
           expires_in_days: expiresInValue
         }
       });
