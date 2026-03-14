@@ -148,10 +148,11 @@ serve(async (req) => {
         });
       }
 
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('api_keys')
         .update({ is_active: false })
-        .eq('id', keyId);
+        .eq('id', keyId)
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
