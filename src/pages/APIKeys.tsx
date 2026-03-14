@@ -253,7 +253,7 @@ export default function APIKeys() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select workspace" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent position="popper" className="z-[9999] max-h-60 overflow-y-auto">
                       {workspaces.map(ws => (
                         <SelectItem key={ws.id} value={ws.id}>
                           {ws.name}
