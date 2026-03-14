@@ -36,11 +36,17 @@ serve(async (req) => {
       );
     }
 
-    // Validate agent key against API keys table
+    // Validate agent key against API keys table (keys are stored hashed)
+    const encoder = new TextEncoder();
+    const encodedKey = encoder.encode(agentKey);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", encodedKey);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const keyHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+
     const { data: apiKey, error: keyError } = await supabase
       .from("api_keys")
       .select("id, user_id, workspace_id, scopes, is_active")
-      .eq("key_hash", agentKey)
+      .eq("key_hash", keyHash)
       .eq("is_active", true)
       .single();
 
