@@ -46,29 +46,42 @@ serve(async (req) => {
 
     // POST - Create new API key
     if (req.method === 'POST') {
-      const { name, scopes = [], expires_in_days, workspace_id } = await req.json();
+      const { name, scopes = [], expires_in_days } = await req.json();
 
-      if (!name || !workspace_id) {
-        return new Response(JSON.stringify({ error: 'Name and workspace_id required' }), {
+      if (!name?.trim()) {
+        return new Response(JSON.stringify({ error: 'Name is required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Check if user is admin/owner of workspace
-      const { data: membership } = await supabase
-        .from('workspace_members')
-        .select('role')
-        .eq('workspace_id', workspace_id)
-        .eq('user_id', user.id)
+      // Auto-create dedicated workspace for each API key
+      const slugBase = name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 32) || 'api-key-workspace';
+      const uniqueSuffix = crypto.randomUUID().slice(0, 8);
+      const workspaceSlug = `${slugBase}-${uniqueSuffix}`;
+
+      const { data: workspace, error: workspaceError } = await supabase
+        .from('workspaces')
+        .insert({
+          name: `${name.trim()} Workspace`,
+          slug: workspaceSlug,
+          owner_id: user.id,
+        })
+        .select('id')
         .single();
 
-      if (!membership || !['owner', 'admin'].includes(membership.role)) {
-        return new Response(JSON.stringify({ error: 'Insufficient permissions' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+      if (workspaceError || !workspace) {
+        throw new Error(workspaceError?.message || 'Failed to create workspace for API key');
       }
+
+      const workspace_id = workspace.id;
 
       // Generate API key
       const { data: keyData } = await supabase.rpc('generate_api_key');
@@ -83,8 +96,10 @@ serve(async (req) => {
       const key_prefix = apiKey.substring(0, 12) + '...';
 
       // Calculate expiration
-      const expires_at = expires_in_days 
-        ? new Date(Date.now() + expires_in_days * 24 * 60 * 60 * 1000).toISOString()
+      const parsedExpiresDays = Number(expires_in_days);
+      const hasExpiration = Number.isFinite(parsedExpiresDays) && parsedExpiresDays > 0;
+      const expires_at = hasExpiration
+        ? new Date(Date.now() + parsedExpiresDays * 24 * 60 * 60 * 1000).toISOString()
         : null;
 
       // Store key
