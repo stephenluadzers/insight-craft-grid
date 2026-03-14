@@ -281,14 +281,31 @@ export default function APIKeys() {
                 </div>
 
                 <div>
-                  <Label htmlFor="expires">Expires In (Days)</Label>
-                  <Input
-                    id="expires"
-                    type="number"
-                    placeholder="Never (leave empty)"
-                    value={expiresInDays}
-                    onChange={(e) => setExpiresInDays(e.target.value)}
-                  />
+                  <Label htmlFor="expires">Expiration</Label>
+                  <Select value={expirationPreset} onValueChange={setExpirationPreset}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select expiration" />
+                    </SelectTrigger>
+                    <SelectContent position="item-aligned" className="z-[9999] max-h-60 overflow-y-auto">
+                      <SelectItem value="never">Never expires</SelectItem>
+                      <SelectItem value="30">30 days</SelectItem>
+                      <SelectItem value="90">90 days</SelectItem>
+                      <SelectItem value="365">1 year</SelectItem>
+                      <SelectItem value="custom">Custom days</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {expirationPreset === "custom" && (
+                    <Input
+                      id="expires"
+                      type="number"
+                      min={1}
+                      className="mt-2"
+                      placeholder="Enter number of days"
+                      value={expiresInDays}
+                      onChange={(e) => setExpiresInDays(e.target.value)}
+                    />
+                  )}
                 </div>
 
                 <DialogFooter>
