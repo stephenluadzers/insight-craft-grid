@@ -95,13 +95,28 @@ export default function APIKeys() {
       return;
     }
 
+    if (expirationPreset === "custom" && (!expiresInDays || parseInt(expiresInDays) <= 0)) {
+      toast({
+        title: "Invalid expiration",
+        description: "Enter valid number of days or choose Never",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
+      const expiresInValue = expirationPreset === "never"
+        ? undefined
+        : expirationPreset === "custom"
+          ? parseInt(expiresInDays)
+          : parseInt(expirationPreset);
+
       const { data, error } = await supabase.functions.invoke('api-keys', {
         method: 'POST',
         body: {
           name: keyName,
           workspace_id: selectedWorkspace,
-          expires_in_days: expiresInDays ? parseInt(expiresInDays) : undefined
+          expires_in_days: expiresInValue
         }
       });
 
