@@ -91,17 +91,16 @@ serve(async (req) => {
 
       const workspace_id = workspace.id;
 
-      // Generate API key
-      const { data: keyData } = await supabase.rpc('generate_api_key');
-      const apiKey = keyData as string;
+      // Generate API key without DB dependency
+      const apiKey = `wfapi_${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
 
       // Hash the key for storage
       const encoder = new TextEncoder();
-      const data = encoder.encode(apiKey);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const encodedKey = encoder.encode(apiKey);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', encodedKey);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       const key_hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      const key_prefix = apiKey.substring(0, 12) + '...';
+      const key_prefix = `${apiKey.slice(0, 12)}...`;
 
       // Calculate expiration
       const parsedExpiresDays = Number(expires_in_days);
