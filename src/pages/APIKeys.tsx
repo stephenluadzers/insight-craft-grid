@@ -125,6 +125,7 @@ export default function APIKeys() {
       setNewKeyData(data);
       setKeyName("");
       setExpiresInDays("");
+      setExpirationPreset("never");
       loadData();
 
       toast({
