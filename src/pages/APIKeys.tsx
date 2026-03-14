@@ -242,21 +242,9 @@ export default function APIKeys() {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="workspace">Workspace</Label>
-                  <Select value={selectedWorkspace} onValueChange={setSelectedWorkspace}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select workspace" />
-                    </SelectTrigger>
-                    <SelectContent position="item-aligned" className="z-[9999] max-h-60 overflow-y-auto">
-                      {workspaces.map(ws => (
-                        <SelectItem key={ws.id} value={ws.id}>
-                          {ws.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  A dedicated workspace will be created automatically for this API key.
+                </p>
 
                 <div>
                   <Label htmlFor="expires">Expiration</Label>
