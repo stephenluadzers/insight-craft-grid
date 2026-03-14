@@ -111,7 +111,7 @@ serve(async (req) => {
         : null;
 
       // Store key
-      const { data: newKey, error } = await supabase
+      const { data: newKey, error } = await supabaseAdmin
         .from('api_keys')
         .insert({
           workspace_id,
