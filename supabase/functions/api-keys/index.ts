@@ -12,6 +12,7 @@ serve(async (req) => {
   }
 
   try {
+    // User-context client for auth + user-scoped queries
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -20,6 +21,12 @@ serve(async (req) => {
           headers: { Authorization: req.headers.get('Authorization')! },
         },
       }
+    );
+
+    // Service-role client for admin operations (workspace + key creation)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -32,9 +39,10 @@ serve(async (req) => {
 
     // GET - List API keys
     if (req.method === 'GET') {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('api_keys')
         .select('id, name, key_prefix, scopes, last_used_at, expires_at, created_at, is_active, workspace_id')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -67,7 +75,7 @@ serve(async (req) => {
       const uniqueSuffix = crypto.randomUUID().slice(0, 8);
       const workspaceSlug = `${slugBase}-${uniqueSuffix}`;
 
-      const { data: workspace, error: workspaceError } = await supabase
+      const { data: workspace, error: workspaceError } = await supabaseAdmin
         .from('workspaces')
         .insert({
           name: `${name.trim()} Workspace`,
