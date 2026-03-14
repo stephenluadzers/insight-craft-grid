@@ -91,13 +91,8 @@ serve(async (req) => {
 
       const workspace_id = workspace.id;
 
-      // Generate API key
-      const { data: keyData, error: keyGenError } = await supabaseAdmin.rpc('generate_api_key');
-      if (keyGenError) throw keyGenError;
-
-      const apiKey = typeof keyData === 'string' && keyData.length > 0
-        ? keyData
-        : `wfapi_${crypto.randomUUID().replace(/-/g, '')}`;
+      // Generate API key without DB dependency
+      const apiKey = `wfapi_${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
 
       // Hash the key for storage
       const encoder = new TextEncoder();
