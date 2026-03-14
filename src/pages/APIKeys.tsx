@@ -29,7 +29,6 @@ interface APIKey {
 
 export default function APIKeys() {
   const [apiKeys, setApiKeys] = useState<APIKey[]>([]);
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newKeyData, setNewKeyData] = useState<{ api_key: string } | null>(null);
@@ -39,7 +38,6 @@ export default function APIKeys() {
 
   // Form state
   const [keyName, setKeyName] = useState("");
-  const [selectedWorkspace, setSelectedWorkspace] = useState("");
   const [expiresInDays, setExpiresInDays] = useState("");
   const [expirationPreset, setExpirationPreset] = useState("never");
 
@@ -49,25 +47,6 @@ export default function APIKeys() {
 
   const loadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Load workspaces
-      const { data: workspaceData } = await supabase
-        .from('workspace_members')
-        .select('workspace_id, workspaces(id, name)')
-        .eq('user_id', user.id)
-        .in('role', ['owner', 'admin']);
-
-      if (workspaceData) {
-        const ws = workspaceData.map(w => w.workspaces).filter(Boolean);
-        setWorkspaces(ws);
-        if (ws.length > 0 && !selectedWorkspace) {
-          setSelectedWorkspace(ws[0].id);
-        }
-      }
-
-      // Load API keys
       const { data, error } = await supabase.functions.invoke('api-keys', {
         method: 'GET'
       });
@@ -86,10 +65,10 @@ export default function APIKeys() {
   };
 
   const createAPIKey = async () => {
-    if (!keyName || !selectedWorkspace) {
+    if (!keyName.trim()) {
       toast({
         title: "Missing fields",
-        description: "Name and workspace are required",
+        description: "Name is required",
         variant: "destructive"
       });
       return;
