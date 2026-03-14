@@ -96,8 +96,10 @@ serve(async (req) => {
       const key_prefix = apiKey.substring(0, 12) + '...';
 
       // Calculate expiration
-      const expires_at = expires_in_days 
-        ? new Date(Date.now() + expires_in_days * 24 * 60 * 60 * 1000).toISOString()
+      const parsedExpiresDays = Number(expires_in_days);
+      const hasExpiration = Number.isFinite(parsedExpiresDays) && parsedExpiresDays > 0;
+      const expires_at = hasExpiration
+        ? new Date(Date.now() + parsedExpiresDays * 24 * 60 * 60 * 1000).toISOString()
         : null;
 
       // Store key
