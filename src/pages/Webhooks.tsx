@@ -10,6 +10,7 @@ import { Loader2, Plus, Copy, Trash2, Webhook, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CreateWebhookDialog } from "@/components/CreateWebhookDialog";
 import { WebhookDetails } from "@/components/WebhookDetails";
+import { AgentWebhookPanel } from "@/components/AgentWebhookPanel";
 import {
   AlertDialog,
   AlertDialogAction,
