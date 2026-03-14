@@ -41,6 +41,7 @@ export default function APIKeys() {
   const [keyName, setKeyName] = useState("");
   const [selectedWorkspace, setSelectedWorkspace] = useState("");
   const [expiresInDays, setExpiresInDays] = useState("");
+  const [expirationPreset, setExpirationPreset] = useState("never");
 
   useEffect(() => {
     loadData();
