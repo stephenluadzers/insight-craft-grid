@@ -713,7 +713,21 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     );
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: React.MouseEvent) => {
+    // Detect click vs drag: if mouse barely moved, open config
+    if (draggedNodeId && dragStartPos.current) {
+      const dx = Math.abs(e.clientX - dragStartPos.current.x);
+      const dy = Math.abs(e.clientY - dragStartPos.current.y);
+      if (dx < 5 && dy < 5) {
+        // This was a click, not a drag — open config immediately
+        const node = nodes.find(n => n.id === draggedNodeId);
+        if (node) {
+          setConfiguredNode(node);
+          setShowNodeConfig(true);
+        }
+      }
+    }
+    dragStartPos.current = null;
     setIsDragging(false);
     setDraggedNodeId(null);
     setIsPanning(false);
