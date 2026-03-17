@@ -170,25 +170,56 @@ Your task:
 1. Identify all workflow nodes (triggers, actions, conditions, data operations, AI steps) across ALL provided images
 2. Detect connections and flow between nodes, even across different images
 3. Extract node properties (titles, descriptions, types)
-4. Infer logical relationships and dependencies
-5. If multiple images are provided, intelligently combine them into a single cohesive workflow
-6. Position nodes logically to show the combined flow
-7. Generate a complete, executable workflow JSON
+4. **CRITICAL: Extract ALL configuration details visible in the image** including:
+   - Authentication settings (OAuth, API keys, bearer tokens, basic auth, etc.)
+   - API endpoints, URLs, webhook URLs
+   - HTTP methods (GET, POST, PUT, DELETE)
+   - Request headers and parameters
+   - Database queries, table names, column mappings
+   - Email recipients, subjects, templates
+   - Scheduling/cron expressions
+   - Filter conditions, field mappings
+   - Any key-value pairs, dropdowns, form fields visible in configuration panels
+5. Infer logical relationships and dependencies
+6. If multiple images are provided, intelligently combine them into a single cohesive workflow
+7. Position nodes logically to show the combined flow
+8. Generate a complete, executable workflow JSON with full configuration
 
 Return ONLY valid JSON in this exact format:
 {
   "nodes": [
     {
       "id": "unique_id",
-      "type": "trigger|action|condition|data|ai",
+      "type": "trigger|action|condition|data|ai|connector",
       "title": "Node Title",
       "description": "Detailed description of what this node does",
       "x": 100,
-      "y": 100
+      "y": 100,
+      "config": {
+        "// Include ALL configuration extracted from the image here",
+        "// Examples:",
+        "url": "https://api.example.com/endpoint",
+        "method": "POST",
+        "headers": { "Authorization": "Bearer {{context.api_key}}", "Content-Type": "application/json" },
+        "body": { "field": "value" },
+        "auth_type": "oauth2|api_key|bearer|basic",
+        "auth_config": { "client_id": "...", "scope": "..." },
+        "schedule": "0 9 * * MON-FRI",
+        "filter": { "field": "status", "operator": "equals", "value": "active" }
+      }
     }
   ],
-  "insights": "AI analysis of the workflow - what it does, how the images were combined, potential improvements, missing steps"
+  "insights": "AI analysis of the workflow including what configurations were extracted from the image"
 }
+
+CONFIGURATION EXTRACTION RULES:
+- If you see a configuration panel, settings form, or property inspector in the image, extract EVERY visible field into the node's "config" object
+- Use "{{context.field}}" placeholders for sensitive values like API keys, tokens, passwords, secrets
+- Preserve exact field names, URLs, and values as shown in the image
+- If authentication is configured (OAuth, API key, etc.), include full auth_type and auth_config
+- If you see dropdown selections, capture the selected value
+- If you see toggle switches, capture their on/off state as booleans
+- Map visual form fields to structured JSON keys intelligently
 
 OUTPUT FORMAT:
 - CRITICAL: Return ONLY valid, complete JSON - no markdown, no code blocks, no truncation
