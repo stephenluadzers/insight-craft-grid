@@ -19,6 +19,8 @@ import { LegalFooter } from "@/components/LegalFooter";
 import AIWorkflowPipeline from "@/components/AIWorkflowPipeline";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ExecutionStream } from "@/components/ExecutionStream";
+import { OnboardingOverlay } from "@/components/OnboardingOverlay";
+import { LiveMetricsPanel } from "@/components/LiveMetricsPanel";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
@@ -27,6 +29,7 @@ const Index = (): JSX.Element => {
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   const canvasRef = useRef<any>(null);
 
   const handleAIWorkflowGenerated = (workflow: any) => {
@@ -43,6 +46,7 @@ const Index = (): JSX.Element => {
         <AppSidebar />
         <CommandPalette onNavigate={setCurrentView} />
         <ExecutionStream executionId={executionId} onClose={() => setExecutionId(null)} />
+        <OnboardingOverlay onComplete={() => setShowOnboarding(false)} onNavigate={setCurrentView} />
         
         <div className="flex-1 flex flex-col">
           <div className="flex-1 p-6 pb-20 overflow-auto">
@@ -74,6 +78,22 @@ const Index = (): JSX.Element => {
               setTimeout(() => canvasRef.current?.loadWorkflow?.(nodes), 100);
             }} />}
             {currentView === 'cost' && <WorkflowCostEstimator nodes={[]} executionsPerMonth={1000} />}
+            {currentView === 'metrics' && (
+              <LiveMetricsPanel
+                totalExecutions={1247}
+                successRate={96.3}
+                avgDurationMs={2340}
+                activeWorkflows={12}
+                sparklineData={[45, 62, 38, 71, 55, 89, 67]}
+                recentActivity={[
+                  { type: "success", label: "Email Campaign Workflow completed", time: "2m ago" },
+                  { type: "success", label: "Data Sync Pipeline finished", time: "5m ago" },
+                  { type: "error", label: "API Integration timed out", time: "12m ago" },
+                  { type: "success", label: "AI Analysis Workflow completed", time: "18m ago" },
+                  { type: "success", label: "Report Generation finished", time: "25m ago" },
+                ]}
+              />
+            )}
           </div>
 
           <FloatingBottomMenu 
@@ -86,9 +106,6 @@ const Index = (): JSX.Element => {
             onSave={() => canvasRef.current?.handleSave?.()}
             isOptimizing={isOptimizing}
             onOptimize={async () => {
-              console.log('🔘 AI Optimize button clicked from Index');
-              console.log('📦 Current workflow:', workflow);
-              console.log('📍 Canvas ref:', canvasRef.current);
               await canvasRef.current?.handleOptimize?.();
             }}
             onDownload={() => canvasRef.current?.handleDownload?.()}
