@@ -270,9 +270,9 @@ export const NodeConfigDialog = ({ node, open, onOpenChange, onSave }: NodeConfi
                     </div>
                     <div className="flex items-center gap-1">
                       {cred.status === 'validating' && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                      {cred.status === 'valid' && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                      {cred.status === 'valid' && <CheckCircle2 className="w-4 h-4 text-primary" />}
                       {cred.status === 'invalid' && <XCircle className="w-4 h-4 text-destructive" />}
-                      {cred.status === 'unknown' && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                      {cred.status === 'unknown' && <AlertTriangle className="w-4 h-4 text-accent-foreground" />}
                     </div>
                   </div>
                   {cred.message && (
