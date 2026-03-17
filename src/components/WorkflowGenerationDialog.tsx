@@ -224,13 +224,25 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       // Auto-apply workflow when detected
       if (data.nodes && Array.isArray(data.nodes)) {
         console.log('Processing workflow with', data.nodes.length, 'nodes from images');
+        
+        // Count nodes that have extracted configs
+        const configuredNodes = data.nodes.filter((n: any) => n.config && Object.keys(n.config).length > 0);
+        
         onWorkflowGenerated(data.nodes, {
           guardrailExplanations: data.guardrailExplanations,
           complianceStandards: data.complianceStandards,
           riskScore: data.riskScore,
           policyAnalysis: data.policyAnalysis
         });
-        toast({ title: "Workflow Created!", description: `Created from ${selectedImages.length} images` });
+        toast({ title: "Workflow Created!", description: `Created from ${selectedImages.length} image(s)` });
+        if (configuredNodes.length > 0) {
+          setTimeout(() => {
+            toast({ 
+              title: "Configurations Auto-Loaded", 
+              description: `${configuredNodes.length} node(s) have pre-filled configs from the image. Click any node to review.` 
+            });
+          }, 1000);
+        }
         onOpenChange(false);
       } else {
         console.error('Invalid response structure:', data);
