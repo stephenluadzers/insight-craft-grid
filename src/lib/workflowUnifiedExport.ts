@@ -12,6 +12,12 @@ import {
   exportWorkflowForBusiness 
 } from "./workflowExport";
 import { generateSmartWorkflowName } from "./workflowNaming";
+import { 
+  extractCredentials, 
+  generateEnvTemplate, 
+  generateCredentialsJSON, 
+  generateCredentialGuide 
+} from "./workflowCredentialManifest";
 
 interface ROIMetrics {
   timeSavings: {
