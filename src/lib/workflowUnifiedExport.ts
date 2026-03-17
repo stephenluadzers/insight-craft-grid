@@ -434,9 +434,18 @@ export async function exportWorkflowComprehensive(
   const originReport = generateWorkflowOriginReport(smartName, originalInput, inputType, aiReasoning);
   docsFolder.file("WORKFLOW_ORIGIN.md", originReport);
   
-  // Workflow JSON
+  // Workflow JSON (now includes embedded credential manifest)
   const workflowJSON = generateWorkflowJSON(nodes, smartName);
   zip.file(`${smartName}.json`, workflowJSON);
+  
+  // Credential manifest — portable key mapping for any platform
+  const credManifest = extractCredentials(nodes, smartName);
+  if (credManifest.credentials.length > 0) {
+    const credFolder = zip.folder("credentials")!;
+    credFolder.file("credentials.json", generateCredentialsJSON(credManifest));
+    credFolder.file(".env.template", generateEnvTemplate(credManifest));
+    credFolder.file("CREDENTIAL_SETUP.md", generateCredentialGuide(credManifest));
+  }
   
   // YAML export
   const yamlContent = exportWorkflowToYAML(nodes, smartName);
