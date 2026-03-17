@@ -114,36 +114,24 @@ export default function Auth() {
     }
     setIsLoading(true);
     try {
-      const rateLimitCheck = await supabase.functions.invoke('check-rate-limit', {
-        body: { email: validation.data.email },
-      });
-      if (rateLimitCheck.error || !rateLimitCheck.data?.allowed) {
-        const data = rateLimitCheck.data || {};
-        toast({
-          title: data.locked ? "Account Locked" : "Rate Limit",
-          description: data.message || "Too many attempts. Please try again later.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
+      // Sign in directly — don't block on rate limit edge function
       const { error } = await supabase.auth.signInWithPassword({
         email: validation.data.email,
         password: validation.data.password,
       });
-      await supabase.functions.invoke('record-login-attempt', {
+
+      // Fire-and-forget: record the attempt (don't await)
+      supabase.functions.invoke('record-login-attempt', {
         body: { email: validation.data.email, success: !error },
-      });
+      }).catch(() => {});
+
       if (error) {
-        const attemptsRemaining = rateLimitCheck.data?.attemptsRemaining - 1 || 0;
         toast({
           title: "Authentication Failed",
-          description: attemptsRemaining > 0
-            ? `Invalid credentials. ${attemptsRemaining} attempt(s) remaining.`
-            : "Invalid credentials.",
+          description: "Invalid email or password. Please try again.",
           variant: "destructive",
         });
-        throw new Error("Invalid email or password");
+        return;
       }
       toast({ title: "Welcome back!", description: "You have successfully signed in." });
     } catch {
