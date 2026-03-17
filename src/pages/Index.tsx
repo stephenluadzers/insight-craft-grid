@@ -17,6 +17,8 @@ import { WorkflowSandbox } from "@/components/WorkflowSandbox";
 import { WorkflowBIDashboard } from "@/components/WorkflowBIDashboard";
 import { LegalFooter } from "@/components/LegalFooter";
 import AIWorkflowPipeline from "@/components/AIWorkflowPipeline";
+import { CommandPalette } from "@/components/CommandPalette";
+import { ExecutionStream } from "@/components/ExecutionStream";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
@@ -24,6 +26,7 @@ const Index = (): JSX.Element => {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [executionId, setExecutionId] = useState<string | null>(null);
   const canvasRef = useRef<any>(null);
 
   const handleAIWorkflowGenerated = (workflow: any) => {
@@ -38,6 +41,8 @@ const Index = (): JSX.Element => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
+        <CommandPalette onNavigate={setCurrentView} />
+        <ExecutionStream executionId={executionId} onClose={() => setExecutionId(null)} />
         
         <div className="flex-1 flex flex-col">
           <div className="flex-1 p-6 pb-20 overflow-auto">
