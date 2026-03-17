@@ -217,6 +217,8 @@ function generateBusinessMetricsReport(roi: ROIMetrics, nodes: WorkflowNodeData[
 }
 
 function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): string {
+  const credentialManifest = extractCredentials(nodes, workflowName);
+  
   return JSON.stringify({
     name: workflowName,
     version: "1.0.0",
@@ -240,7 +242,19 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): 
       hasAI: nodes.some(n => n.type === 'ai'),
       hasIntegrations: nodes.some(n => n.type === 'action'),
       complexity: nodes.length > 10 ? 'high' : nodes.length > 5 ? 'medium' : 'low'
-    }
+    },
+    // Portable credential manifest — auto-wires keys into any platform
+    credentials: credentialManifest.credentials.map(c => ({
+      id: c.id,
+      service: c.serviceName,
+      envVar: c.envVar,
+      nodeId: c.nodeId,
+      nodeTitle: c.nodeTitle,
+      configField: c.configField,
+      keyFormat: c.maskedValue,
+      getKeyAt: c.helpUrl,
+    })),
+    credentialPlatformSetup: credentialManifest.platformSetup,
   }, null, 2);
 }
 
