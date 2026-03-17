@@ -195,7 +195,6 @@ export const WorkflowNode = ({
   isDragging = false,
   showCategory = true,
 }: WorkflowNodeProps) => {
-  // Fallback to 'action' type if invalid type is provided
   const nodeType = data.type in nodeTypeConfig ? data.type : 'action';
   const config = nodeTypeConfig[nodeType];
   const Icon = config.icon;
@@ -206,10 +205,10 @@ export const WorkflowNode = ({
       data-node-id={data.id}
       onClick={onSelect}
       className={cn(
-        "absolute w-64 rounded-lg border-2 bg-card backdrop-blur-sm transition-all duration-300 cursor-move group",
-        "hover:shadow-glow hover:scale-105",
+        "absolute w-64 rounded-xl border glass transition-all duration-300 cursor-move group",
+        "hover:shadow-glow hover:scale-[1.03] hover:border-primary/30",
         config.border,
-        isSelected && "ring-2 ring-primary shadow-glow-lg scale-105 z-10",
+        isSelected && "ring-2 ring-primary shadow-glow-lg scale-[1.03] z-10 border-primary/40",
         isDragging && "opacity-60 cursor-grabbing scale-95"
       )}
       style={{
@@ -220,12 +219,12 @@ export const WorkflowNode = ({
     >
       {/* Drag Handle */}
       <div className="absolute -left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200">
-        <div className="p-1 rounded bg-background/90 shadow-sm border">
+        <div className="p-1 rounded-lg glass border border-border/50 shadow-sm">
           <GripVertical className="w-4 h-4 text-muted-foreground" />
         </div>
       </div>
 
-      {/* Category Badge (Easy-Peasy.AI style) */}
+      {/* Category Badge */}
       {showCategory && (
         <div className="absolute -top-6 left-2">
           <NodeCategoryBadge category={category} />
@@ -233,13 +232,16 @@ export const WorkflowNode = ({
       )}
 
       {/* Node Header */}
-      <div className={cn("px-4 py-3 rounded-t-lg", config.gradient)}>
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-md bg-background/20 backdrop-blur">
-            <Icon className="w-4 h-4 text-white" />
+      <div className={cn("px-4 py-3 rounded-t-xl relative overflow-hidden", config.gradient)}>
+        {/* Subtle shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" 
+             style={{ transform: 'skewX(-20deg)' }} />
+        <div className="flex items-center gap-2 relative z-10">
+          <div className="p-1.5 rounded-lg bg-background/20 backdrop-blur-sm">
+            <Icon className="w-4 h-4 text-primary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm text-white truncate">
+            <h3 className="font-semibold text-sm text-primary-foreground truncate">
               {data.title}
             </h3>
           </div>
@@ -248,16 +250,20 @@ export const WorkflowNode = ({
 
       {/* Node Body */}
       {data.description && (
-        <div className="px-4 py-3 border-t border-border/50">
+        <div className="px-4 py-3 border-t border-border/30">
           <p className="text-xs text-muted-foreground line-clamp-2">
             {data.description}
           </p>
         </div>
       )}
 
-      {/* Connection Points with pulse animation */}
-      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background transition-all duration-200 group-hover:scale-110 group-hover:shadow-glow" />
-      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background transition-all duration-200 group-hover:scale-110 group-hover:shadow-glow" />
+      {/* Connection Points with pulse */}
+      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background shadow-glow transition-all duration-200 group-hover:scale-125">
+        <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20 group-hover:opacity-40" />
+      </div>
+      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background shadow-glow transition-all duration-200 group-hover:scale-125">
+        <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20 group-hover:opacity-40" />
+      </div>
     </div>
   );
 };
