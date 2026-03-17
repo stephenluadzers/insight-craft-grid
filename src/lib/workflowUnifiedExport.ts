@@ -18,6 +18,7 @@ import {
   generateCredentialsJSON, 
   generateCredentialGuide 
 } from "./workflowCredentialManifest";
+import { addGovernmentComplianceDocs } from "./workflowGovCompliance";
 
 interface ROIMetrics {
   timeSavings: {
