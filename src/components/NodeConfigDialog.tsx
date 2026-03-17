@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -28,6 +28,16 @@ export const NodeConfigDialog = ({ node, open, onOpenChange, onSave }: NodeConfi
   const [config, setConfig] = useState(JSON.stringify(node?.config || {}, null, 2));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  // Sync state when node prop changes (e.g. clicking a different node)
+  useEffect(() => {
+    if (node) {
+      setTitle(node.title || "");
+      setDescription(node.description || "");
+      setConfig(JSON.stringify(node.config || {}, null, 2));
+      setErrors({});
+    }
+  }, [node]);
   
   // Check if config contains context placeholders
   const hasContextPlaceholders = config.includes('{{context.');
