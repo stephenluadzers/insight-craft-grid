@@ -41,6 +41,8 @@ const Index = (): JSX.Element => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
+        <CommandPalette onNavigate={setCurrentView} />
+        <ExecutionStream executionId={executionId} onClose={() => setExecutionId(null)} />
         
         <div className="flex-1 flex flex-col">
           <div className="flex-1 p-6 pb-20 overflow-auto">
