@@ -598,11 +598,14 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     });
   };
 
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+
   const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
     const node = nodes.find((n) => n.id === nodeId);
     if (!node) return;
 
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
     setIsDragging(true);
     setDraggedNodeId(nodeId);
     setSelectedNodeId(nodeId);
