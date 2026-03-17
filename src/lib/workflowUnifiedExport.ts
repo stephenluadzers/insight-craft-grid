@@ -448,6 +448,9 @@ export async function exportWorkflowComprehensive(
     credFolder.file("CREDENTIAL_SETUP.md", generateCredentialGuide(credManifest));
   }
   
+  // Government compliance documentation (ATO, SSP, PIA, NIST, etc.)
+  addGovernmentComplianceDocs(zip, nodes, smartName);
+  
   // YAML export
   const yamlContent = exportWorkflowToYAML(nodes, smartName);
   zip.file(`${smartName}.yaml`, yamlContent);
