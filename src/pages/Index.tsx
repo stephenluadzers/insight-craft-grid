@@ -26,6 +26,7 @@ const Index = (): JSX.Element => {
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [executionId, setExecutionId] = useState<string | null>(null);
   const canvasRef = useRef<any>(null);
 
   const handleAIWorkflowGenerated = (workflow: any) => {
