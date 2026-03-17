@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_memory: {
+        Row: {
+          access_count: number | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          memory_key: string
+          memory_type: string
+          memory_value: Json
+          relevance_score: number | null
+          updated_at: string
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          access_count?: number | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          memory_key: string
+          memory_type?: string
+          memory_value?: Json
+          relevance_score?: number | null
+          updated_at?: string
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          access_count?: number | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          memory_key?: string
+          memory_type?: string
+          memory_value?: Json
+          relevance_score?: number | null
+          updated_at?: string
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_memory_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_memory_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           created_at: string
