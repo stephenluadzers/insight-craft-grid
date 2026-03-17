@@ -18,6 +18,7 @@ import {
   generateCredentialsJSON, 
   generateCredentialGuide 
 } from "./workflowCredentialManifest";
+import { addGovernmentComplianceDocs } from "./workflowGovCompliance";
 
 interface ROIMetrics {
   timeSavings: {
@@ -447,6 +448,9 @@ export async function exportWorkflowComprehensive(
     credFolder.file("CREDENTIAL_SETUP.md", generateCredentialGuide(credManifest));
   }
   
+  // Government compliance documentation (ATO, SSP, PIA, NIST, etc.)
+  addGovernmentComplianceDocs(zip, nodes, smartName);
+  
   // YAML export
   const yamlContent = exportWorkflowToYAML(nodes, smartName);
   zip.file(`${smartName}.yaml`, yamlContent);
@@ -484,6 +488,13 @@ export async function exportWorkflowComprehensive(
     `- \`documentation/BUSINESS_METRICS.md\` - Comprehensive ROI and business analysis\n` +
     `- \`documentation/SECURITY_COMPLIANCE.md\` - Security guardrails and compliance report\n` +
     `- \`documentation/WORKFLOW_ORIGIN.md\` - Original input and AI optimization reasoning\n\n` +
+    `### 🏛️ Government Compliance (ATO Package)\n` +
+    `- \`government/SYSTEM_SECURITY_PLAN.md\` - SSP excerpt with NIST SP 800-53 controls\n` +
+    `- \`government/PRIVACY_IMPACT_ASSESSMENT.md\` - PIA for Privacy Act compliance\n` +
+    `- \`government/CHANGE_REQUEST.md\` - Pre-filled CR form for Change Advisory Board\n` +
+    `- \`government/NIST_CONTROL_MAPPING.md\` - Full NIST 800-53r5 control matrix\n` +
+    `- \`government/ATO_CHECKLIST.md\` - ATO package completeness checklist\n` +
+    `- \`government/RECORDS_MANAGEMENT.md\` - NARA GRS retention schedules\n\n` +
     `### Platform Exports\n` +
     `- \`platforms/n8n/\` - n8n workflow automation export\n` +
     `- \`platforms/python/\` - Python implementation\n` +
