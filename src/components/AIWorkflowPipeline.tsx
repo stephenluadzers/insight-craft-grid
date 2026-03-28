@@ -79,8 +79,13 @@ export default function AIWorkflowPipeline({ onWorkflowGenerated }: { onWorkflow
     const a = document.createElement("a");
     a.href = url;
     a.download = `${result.name.replace(/\s+/g, "-").toLowerCase()}-v${result.version || "1.0"}.json`;
+    a.style.display = "none";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    requestAnimationFrame(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
   };
 
   return (
