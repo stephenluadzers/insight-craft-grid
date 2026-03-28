@@ -79,13 +79,15 @@ export default function AIWorkflowPipeline({ onWorkflowGenerated }: { onWorkflow
     const a = document.createElement("a");
     a.href = url;
     a.download = `${result.name.replace(/\s+/g, "-").toLowerCase()}-v${result.version || "1.0"}.json`;
+    a.target = "_blank";
+    a.rel = "noopener";
     a.style.display = "none";
     document.body.appendChild(a);
     a.click();
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    });
+    }, 1000);
   };
 
   return (
