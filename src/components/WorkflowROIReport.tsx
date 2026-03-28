@@ -108,10 +108,13 @@ export const WorkflowROIReport = ({ nodes, workflowName }: WorkflowROIReportProp
       const a = document.createElement('a');
       a.href = url;
       a.download = fileName;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      requestAnimationFrame(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
       toast.success('Enterprise package downloaded');
     } catch (error) {
       toast.error('Failed to download package');
