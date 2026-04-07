@@ -110,6 +110,25 @@ export function WorkflowBusinessExport({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+
+    window.setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+      URL.revokeObjectURL(url);
+    }, 1000);
+  };
+
   const handleExport = async (platform: ExportPlatform) => {
     setIsExporting(true);
     
@@ -121,15 +140,7 @@ export function WorkflowBusinessExport({
         guardrailMetadata,
       });
 
-      // Download the ZIP file
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${platform}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${platform}.zip`);
 
       toast({
         title: "Export Successful",
@@ -156,15 +167,7 @@ export function WorkflowBusinessExport({
       // Use smart filename if available, otherwise fallback to sanitized name
       const smartFilename = (blob as any).smartFilename || `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-complete-package.zip`;
 
-      // Download the comprehensive package
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = smartFilename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, smartFilename);
 
       toast({
         title: "Complete Export Successful",
