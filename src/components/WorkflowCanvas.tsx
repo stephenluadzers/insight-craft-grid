@@ -293,6 +293,16 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         
         if (profile?.default_workspace_id) {
           setWorkspaceId(profile.default_workspace_id);
+        } else {
+          // Fallback: pick the first workspace the user owns
+          const { data: workspaces } = await supabase
+            .from('workspaces')
+            .select('id')
+            .limit(1)
+            .single();
+          if (workspaces?.id) {
+            setWorkspaceId(workspaces.id);
+          }
         }
       }
     };
