@@ -95,6 +95,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const [showGuardrailViz, setShowGuardrailViz] = useState(false);
   const [showMetricsOverlay, setShowMetricsOverlay] = useState(true);
   const [canvasImages, setCanvasImages] = useState<CanvasImage[]>([]);
+  const [showAPIImport, setShowAPIImport] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
