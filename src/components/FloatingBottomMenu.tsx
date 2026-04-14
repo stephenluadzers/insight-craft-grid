@@ -5,7 +5,7 @@ import {
   Sparkles, Store, Users, Zap, Code2, Bug, TestTube, 
   BarChart3, DollarSign, Menu, X, Layout, Mail, Database, 
   FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download, Github, Upload,
-  Layers, FolderOpen, TestTube2, TrendingUp, Play
+  Layers, FolderOpen, TestTube2, TrendingUp, Play, Globe
 } from "lucide-react";
 import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,7 @@ interface FloatingBottomMenuProps {
   onOptimize?: () => void;
   onDownload?: () => void;
   onGitHubImport?: (nodes: any[], name: string) => void;
+  onOpenAPIImport?: () => void;
 }
 
 const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = [
@@ -46,7 +47,8 @@ export function FloatingBottomMenu({
   isOptimizing = false,
   onOptimize,
   onDownload,
-  onGitHubImport
+  onGitHubImport,
+  onOpenAPIImport
 }: FloatingBottomMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
