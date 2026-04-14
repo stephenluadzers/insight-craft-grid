@@ -1,4 +1,4 @@
-import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library, Shield } from "lucide-react";
+import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library, Shield, Globe } from "lucide-react";
 import { Button } from "./ui/button";
 import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,7 @@ const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = 
   { type: "guardrail", icon: Shield, label: "Guardrail" },
 ];
 
-export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGenerator, onSave }: FloatingToolbarProps): JSX.Element => {
+export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGenerator, onSave, onOpenAPIImport }: FloatingToolbarProps): JSX.Element => {
   const [isDark, setIsDark] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const { toast } = useToast();
@@ -104,6 +104,22 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
 
         {/* Integration Library */}
         <IntegrationLibrary onAddNode={onAddNode} />
+
+        {/* API Import */}
+        {onOpenAPIImport && (
+          <>
+            <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
+            <Button
+              onClick={onOpenAPIImport}
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2 rounded-xl hover:bg-primary hover:text-primary-foreground"
+            >
+              <Globe className="w-4 h-4" />
+              <span className="text-xs font-medium hidden sm:inline">Import API</span>
+            </Button>
+          </>
+        )}
 
         {/* Divider */}
         <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
