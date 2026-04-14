@@ -158,6 +158,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     workflow: { nodes },
     handleWorkflowOptimized,
     handleOpenAIGenerator: () => setShowTextGeneration(true),
+    handleOpenAPIImport: () => setShowAPIImport(true),
     handleSave: saveWorkflow,
     handleGitHubImport,
     isOptimizing,
@@ -944,7 +945,12 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         }}
       />
 
-      <WorkflowValidationDialog
+      <APIImportDialog
+        open={showAPIImport}
+        onOpenChange={setShowAPIImport}
+        onWorkflowGenerated={handleWorkflowGenerated}
+      />
+
         open={showValidationDialog}
         onOpenChange={setShowValidationDialog}
         validation={validationResult}
