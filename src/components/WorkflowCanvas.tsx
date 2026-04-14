@@ -13,6 +13,7 @@ import { NodeLockIndicator } from "./NodeLockIndicator";
 import { GuardrailVisualization } from "./GuardrailVisualization";
 import { WorkflowMetricsOverlay } from "./WorkflowMetricsOverlay";
 import { CanvasImageUpload, CanvasImage } from "./CanvasImageUpload";
+import { APIImportDialog } from "./APIImportDialog";
 import { cn } from "@/lib/utils";
 import { Trash2, Settings } from "lucide-react";
 import { Button } from "./ui/button";
