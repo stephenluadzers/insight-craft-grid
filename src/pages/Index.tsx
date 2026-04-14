@@ -110,6 +110,7 @@ const Index = (): JSX.Element => {
             }}
             onDownload={() => canvasRef.current?.handleDownload?.()}
             onGitHubImport={(nodes, name) => canvasRef.current?.handleGitHubImport?.(nodes, name)}
+            onOpenAPIImport={() => canvasRef.current?.handleOpenAPIImport?.()}
           />
           
           <LegalFooter />
