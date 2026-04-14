@@ -226,6 +226,19 @@ export function FloatingBottomMenu({
                 </Button>
               </div>
 
+              {/* API Import */}
+              {onOpenAPIImport && (
+                <Button
+                  onClick={onOpenAPIImport}
+                  size="sm"
+                  variant="outline"
+                  className="h-9 rounded-lg shadow-sm hover:bg-primary hover:text-primary-foreground active:scale-95 transition-all"
+                >
+                  <Globe className="w-4 h-4 mr-1.5" />
+                  <span className="text-xs font-medium">Import API</span>
+                </Button>
+              )}
+
               <div className="w-px h-6 bg-border flex-shrink-0 mx-1" />
 
               {/* Integration Library */}
