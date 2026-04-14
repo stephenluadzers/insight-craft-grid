@@ -13,6 +13,7 @@ import { NodeLockIndicator } from "./NodeLockIndicator";
 import { GuardrailVisualization } from "./GuardrailVisualization";
 import { WorkflowMetricsOverlay } from "./WorkflowMetricsOverlay";
 import { CanvasImageUpload, CanvasImage } from "./CanvasImageUpload";
+import { APIImportDialog } from "./APIImportDialog";
 import { cn } from "@/lib/utils";
 import { Trash2, Settings } from "lucide-react";
 import { Button } from "./ui/button";
@@ -94,6 +95,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const [showGuardrailViz, setShowGuardrailViz] = useState(false);
   const [showMetricsOverlay, setShowMetricsOverlay] = useState(true);
   const [canvasImages, setCanvasImages] = useState<CanvasImage[]>([]);
+  const [showAPIImport, setShowAPIImport] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -156,6 +158,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     workflow: { nodes },
     handleWorkflowOptimized,
     handleOpenAIGenerator: () => setShowTextGeneration(true),
+    handleOpenAPIImport: () => setShowAPIImport(true),
     handleSave: saveWorkflow,
     handleGitHubImport,
     isOptimizing,
@@ -940,6 +943,12 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           complianceStandards,
           riskScore,
         }}
+      />
+
+      <APIImportDialog
+        open={showAPIImport}
+        onOpenChange={setShowAPIImport}
+        onWorkflowGenerated={handleWorkflowGenerated}
       />
 
       <WorkflowValidationDialog
