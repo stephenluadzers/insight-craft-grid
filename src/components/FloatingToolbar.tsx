@@ -13,6 +13,7 @@ interface FloatingToolbarProps {
   onOptimized: (nodes: any[]) => void;
   onOpenAIGenerator: () => void;
   onSave: () => void;
+  onOpenAPIImport?: () => void;
 }
 
 const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = [
