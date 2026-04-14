@@ -951,6 +951,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         onWorkflowGenerated={handleWorkflowGenerated}
       />
 
+      <WorkflowValidationDialog
         open={showValidationDialog}
         onOpenChange={setShowValidationDialog}
         validation={validationResult}
