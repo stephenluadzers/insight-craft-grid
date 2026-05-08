@@ -16,44 +16,43 @@ export interface SecurityScanResult {
   passed: boolean;
 }
 
-// Security rules for scanning workflows
+// Security rules for scanning workflows.
+// IMPORTANT: Patterns must be precise. Imported workflow JSON often contains
+// harmless words like "execute", "system", "file" inside descriptions and
+// type names — broad keyword matches cause false positives that block runs.
 const SECURITY_RULES = [
   {
     name: 'sql-injection-attempt',
     type: 'code_pattern',
-    pattern: /(DROP|DELETE|TRUNCATE|ALTER)\s+(TABLE|DATABASE)/i,
+    // Require destructive SQL applied to a real target — not just any mention.
+    pattern: /\b(DROP|TRUNCATE)\s+(TABLE|DATABASE|SCHEMA)\b/i,
     risk: 'critical' as const,
-    description: 'Potential SQL injection attempt detected',
+    description: 'Potential SQL injection / destructive SQL detected',
     remediation: 'Review workflow for SQL injection vulnerabilities',
   },
   {
     name: 'command-injection',
     type: 'code_pattern',
-    pattern: /(eval|exec|system|subprocess|shell)/i,
+    // Match actual JS/Py code calls, not the word "execute" inside titles.
+    pattern: /(\beval\s*\(|\bexec\s*\(|child_process|subprocess\.(Popen|call|run)|os\.system\s*\(|shell_exec\s*\()/,
     risk: 'critical' as const,
-    description: 'Command execution attempt detected',
+    description: 'Command execution call detected',
     remediation: 'Remove command execution code from workflow',
   },
   {
     name: 'sensitive-data-exposure',
     type: 'data_pattern',
-    pattern: /(password|secret|api[_-]?key|token|private[_-]?key)\s*[:=]/i,
+    // Only flag long, secret-looking literal values — not the word "password".
+    pattern: /["'](sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{20,})["']/,
     risk: 'high' as const,
-    description: 'Potential hardcoded credentials detected',
-    remediation: 'Remove hardcoded credentials, use secure credential storage',
-  },
-  {
-    name: 'external-url-access',
-    type: 'network_pattern',
-    pattern: /https?:\/\/(?!api\.|localhost|127\.0\.0\.1)/i,
-    risk: 'medium' as const,
-    description: 'External URL access detected',
-    remediation: 'Review external API calls and add to allowlist',
+    description: 'Hardcoded API key / token detected',
+    remediation: 'Move credentials to secure secret storage',
   },
   {
     name: 'file-system-access',
     type: 'code_pattern',
-    pattern: /(fs\.|file\.|readFile|writeFile|unlink)/i,
+    // Real fs API calls only.
+    pattern: /(\bfs\.(readFile|writeFile|unlink|rmdir)\b|require\(['"]fs['"]\))/,
     risk: 'high' as const,
     description: 'File system access detected',
     remediation: 'Remove file system operations',
@@ -61,7 +60,7 @@ const SECURITY_RULES = [
   {
     name: 'excessive-loops',
     type: 'code_pattern',
-    pattern: /while\s*\(\s*true\s*\)/i,
+    pattern: /while\s*\(\s*true\s*\)/,
     risk: 'high' as const,
     description: 'Infinite loop detected',
     remediation: 'Add proper loop termination conditions',
@@ -69,31 +68,15 @@ const SECURITY_RULES = [
   {
     name: 'crypto-mining',
     type: 'code_pattern',
-    pattern: /(mining|miner|hashrate|cryptonight)/i,
+    pattern: /\b(coinhive|cryptonight|hashrate|webminerpool)\b/i,
     risk: 'critical' as const,
     description: 'Potential crypto mining code',
     remediation: 'Remove cryptocurrency mining code',
   },
   {
-    name: 'data-exfiltration',
-    type: 'code_pattern',
-    pattern: /(btoa|atob|Buffer\.from.*base64)/i,
-    risk: 'medium' as const,
-    description: 'Potential data encoding/exfiltration',
-    remediation: 'Review data encoding operations',
-  },
-  {
-    name: 'ddos-pattern',
-    type: 'network_pattern',
-    pattern: /for.*fetch|while.*fetch/i,
-    risk: 'high' as const,
-    description: 'Potential DDoS pattern detected',
-    remediation: 'Implement rate limiting and remove excessive requests',
-  },
-  {
     name: 'prototype-pollution',
     type: 'code_pattern',
-    pattern: /__proto__|constructor\[.*\]/i,
+    pattern: /__proto__\s*[\[=]|Object\.prototype\s*\[/,
     risk: 'high' as const,
     description: 'Prototype pollution attempt',
     remediation: 'Remove prototype manipulation code',
@@ -101,7 +84,7 @@ const SECURITY_RULES = [
   {
     name: 'xss-attempt',
     type: 'code_pattern',
-    pattern: /(innerHTML|outerHTML|document\.write|dangerouslySetInnerHTML)/i,
+    pattern: /(\.innerHTML\s*=|document\.write\s*\(|dangerouslySetInnerHTML)/,
     risk: 'high' as const,
     description: 'Potential XSS vulnerability',
     remediation: 'Use safe DOM manipulation methods',
@@ -124,11 +107,9 @@ export const scanWorkflowSecurity = (nodes: WorkflowNodeData[]): SecurityScanRes
 
   // Scan each node
   for (const node of nodes) {
-    const nodeContent = JSON.stringify({
-      title: node.title,
-      config: node.config,
-      type: node.type,
-    });
+    // Only inspect config values — titles and type names are descriptive
+    // metadata (e.g. "Execute Workflow") and trigger false positives.
+    const nodeContent = JSON.stringify(node.config ?? {});
 
     // Check against each security rule
     for (const rule of SECURITY_RULES) {

@@ -462,10 +462,17 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     const startX = Math.max(100, (viewportWidth - 280) / 2); // Center nodes (280px node width + padding)
     const startY = 120; // Below status bar
     
+    // If imported coords are missing OR look out-of-viewport (negative or far away),
+    // re-layout in a clean vertical stack so the user actually sees the nodes.
+    const coordsLookValid = generatedNodes.every(
+      (n) =>
+        typeof n.x === 'number' && typeof n.y === 'number' &&
+        n.x >= 0 && n.x < 4000 && n.y >= 0 && n.y < 8000
+    );
     const positionedNodes = generatedNodes.map((node, idx) => ({
       ...node,
-      x: node.x || startX,
-      y: node.y || (startY + idx * 200), // 200px spacing between nodes
+      x: coordsLookValid ? node.x : startX,
+      y: coordsLookValid ? node.y : startY + idx * 200,
     }));
     
     console.log('Setting positioned nodes:', positionedNodes);
