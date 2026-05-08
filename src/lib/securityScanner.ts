@@ -107,11 +107,9 @@ export const scanWorkflowSecurity = (nodes: WorkflowNodeData[]): SecurityScanRes
 
   // Scan each node
   for (const node of nodes) {
-    const nodeContent = JSON.stringify({
-      title: node.title,
-      config: node.config,
-      type: node.type,
-    });
+    // Only inspect config values — titles and type names are descriptive
+    // metadata (e.g. "Execute Workflow") and trigger false positives.
+    const nodeContent = JSON.stringify(node.config ?? {});
 
     // Check against each security rule
     for (const rule of SECURITY_RULES) {
