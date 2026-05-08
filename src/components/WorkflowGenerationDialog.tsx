@@ -277,22 +277,17 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       const posX = Array.isArray(n?.position) ? n.position[0] : n?.x ?? n?.position?.x;
       const posY = Array.isArray(n?.position) ? n.position[1] : n?.y ?? n?.position?.y;
       const rawType = (n?.type ?? n?.kind ?? 'action').toString().toLowerCase();
-      const mappedType = VALID_TYPES.has(rawType)
-        ? rawType
-        : rawType.includes('trigger') ? 'trigger'
-        : rawType.includes('webhook') ? 'webhook'
-        : rawType.includes('condition') || rawType.includes('if') ? 'condition'
-        : rawType.includes('delay') || rawType.includes('wait') ? 'delay'
-        : rawType.includes('agent') || rawType.includes('ai') || rawType.includes('llm') ? 'ai_agent'
-        : 'action';
+      const isKnown = VALID_TYPES.has(rawType);
       return {
         id: n?.id ?? `imported-${i}-${Date.now()}`,
-        type: mappedType,
+        type: isKnown ? rawType : '__unknown__',
+        rawType,
         title: n?.title ?? n?.name ?? n?.label ?? `Step ${i + 1}`,
         description: n?.description ?? n?.notes ?? '',
         x: typeof posX === 'number' ? posX : undefined,
         y: typeof posY === 'number' ? posY : undefined,
         config: n?.config ?? n?.parameters ?? n?.params ?? {},
+        _original: n, // preserved so AI enrichment has full context
       };
     });
   };
@@ -305,14 +300,77 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      const nodes = normalizeImportedNodes(data);
-      console.log('📥 JSON import: parsed', nodes.length, 'nodes from file', file.name);
-      if (nodes.length === 0) {
+      const parsed = normalizeImportedNodes(data);
+      console.log('📥 JSON import: parsed', parsed.length, 'nodes from file', file.name);
+      if (parsed.length === 0) {
         throw new Error('No nodes found. Expected a JSON file with a "nodes" array or an array of steps.');
       }
-      onWorkflowGenerated(nodes, data?.metadata);
+
+      const unknowns = parsed.filter((n) => n.type === '__unknown__');
+      let enrichedById: Record<string, any> = {};
+
+      if (unknowns.length > 0) {
+        toast({ title: "Enriching Unknown Nodes", description: `AI is generating definitions for ${unknowns.length} node(s)…` });
+        try {
+          const { data: enrichResp, error: enrichErr } = await supabase.functions.invoke('enrich-imported-nodes', {
+            body: {
+              unknownNodes: unknowns.map((n) => ({
+                id: n.id,
+                rawType: n.rawType,
+                title: n.title,
+                description: n.description,
+                config: n.config,
+                _original: n._original,
+              })),
+            },
+          });
+          if (enrichErr) throw enrichErr;
+          for (const e of (enrichResp?.enriched || [])) {
+            if (e?.id) enrichedById[e.id] = e;
+          }
+        } catch (err: any) {
+          console.warn('Node enrichment failed, falling back to "action":', err);
+        }
+      }
+
+      const finalNodes = parsed.map((n) => {
+        if (n.type !== '__unknown__') {
+          // strip helpers before returning
+          const { rawType, _original, ...clean } = n;
+          return clean;
+        }
+        const enriched = enrichedById[n.id];
+        if (enriched) {
+          return {
+            id: n.id,
+            type: enriched.type,
+            title: enriched.title || n.title,
+            description: enriched.description || n.description,
+            x: n.x,
+            y: n.y,
+            config: { ...(n.config || {}), ...(enriched.config || {}) },
+          };
+        }
+        // Fallback if AI was unavailable
+        return {
+          id: n.id,
+          type: 'integration',
+          title: n.title,
+          description: n.description || `Imported "${n.rawType}" node`,
+          x: n.x,
+          y: n.y,
+          config: { ...n.config, originalType: n.rawType },
+        };
+      });
+
+      onWorkflowGenerated(finalNodes, data?.metadata);
       onOpenChange(false);
-      toast({ title: "Workflow Imported", description: `Loaded ${nodes.length} nodes` });
+      toast({
+        title: "Workflow Imported",
+        description: unknowns.length > 0
+          ? `Loaded ${finalNodes.length} nodes (${unknowns.length} auto-generated)`
+          : `Loaded ${finalNodes.length} nodes`,
+      });
     } catch (error: any) {
       console.error('JSON import failed:', error);
       toast({ title: "Import Failed", description: error.message, variant: "destructive" });
