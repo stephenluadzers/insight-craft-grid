@@ -256,9 +256,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     }
   };
 
-  const handleJSONImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const importJSONFile = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      toast({ title: "Import Failed", description: "Please drop a .json file", variant: "destructive" });
+      return;
+    }
     try {
       const text = await file.text();
       const data = JSON.parse(text);
@@ -269,6 +271,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     } catch (error: any) {
       toast({ title: "Import Failed", description: error.message, variant: "destructive" });
     }
+  };
+
+  const handleJSONImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await importJSONFile(file);
   };
 
   const exportCombined = async () => {
