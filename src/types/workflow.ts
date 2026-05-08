@@ -41,8 +41,19 @@ export type NodeCategory = "INPUT" | "PROCESS" | "OUTPUT";
 // Get node category based on type
 export const getNodeCategory = (type: NodeType): NodeCategory => {
   const inputTypes: NodeType[] = ["trigger", "data", "storage", "connector", "transcription"];
-  const outputTypes: NodeType[] = ["action", "agent_handoff", "text_to_image", "image_to_video", "text_to_video", "upscale_image", "audio_synthesis"];
-  
+  // Only nodes whose primary purpose is producing a final artifact / handing
+  // off to a user-facing destination are "OUTPUT". Generic actions are PROCESS.
+  const outputTypes: NodeType[] = [
+    "agent_handoff",
+    "text_to_image",
+    "image_to_image",
+    "image_to_video",
+    "text_to_video",
+    "upscale_image",
+    "style_transfer",
+    "audio_synthesis",
+  ];
+
   if (inputTypes.includes(type)) return "INPUT";
   if (outputTypes.includes(type)) return "OUTPUT";
   return "PROCESS";
