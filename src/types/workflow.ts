@@ -40,7 +40,7 @@ export type NodeCategory = "INPUT" | "PROCESS" | "OUTPUT";
 
 // Get node category based on type
 export const getNodeCategory = (type: NodeType): NodeCategory => {
-  const inputTypes: NodeType[] = ["trigger", "webhook", "data", "storage", "connector", "transcription"];
+  const inputTypes: NodeType[] = ["trigger", "data", "storage", "connector", "transcription"];
   // Only nodes whose primary purpose is producing a final artifact / handing
   // off to a user-facing destination are "OUTPUT". Generic actions are PROCESS.
   const outputTypes: NodeType[] = [
