@@ -33,6 +33,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [videoUrlsText, setVideoUrlsText] = useState("");
   const [githubRepoUrlsText, setGithubRepoUrlsText] = useState("");
   const [ideProjects, setIdeProjects] = useState<File[]>([]);
+  const [isDraggingJSON, setIsDraggingJSON] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -256,9 +257,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     }
   };
 
-  const handleJSONImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const importJSONFile = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      toast({ title: "Import Failed", description: "Please drop a .json file", variant: "destructive" });
+      return;
+    }
     try {
       const text = await file.text();
       const data = JSON.parse(text);
@@ -269,6 +272,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     } catch (error: any) {
       toast({ title: "Import Failed", description: error.message, variant: "destructive" });
     }
+  };
+
+  const handleJSONImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await importJSONFile(file);
   };
 
   const exportCombined = async () => {
@@ -398,13 +406,29 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
               <TabsContent value="import" className="mt-0 space-y-6">
                 <div className="bg-orange-500/5 border-2 border-dashed rounded-xl p-6">
                   <h3 className="text-xl font-bold mb-2">Import Workflow</h3>
-                  <p className="text-muted-foreground">Load a JSON workflow file</p>
+                  <p className="text-muted-foreground">Drag &amp; drop or browse for a JSON workflow file</p>
                 </div>
-                <div className="border rounded-lg p-6 bg-card">
+                <div
+                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; setIsDraggingJSON(true); }}
+                  onDragEnter={(e) => { e.preventDefault(); setIsDraggingJSON(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsDraggingJSON(false); }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    setIsDraggingJSON(false);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) await importJSONFile(file);
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-10 bg-card text-center cursor-pointer transition-colors ${
+                    isDraggingJSON ? 'border-primary bg-primary/10' : 'hover:border-primary/50 hover:bg-accent/30'
+                  }`}
+                >
                   <input ref={fileInputRef} type="file" accept=".json" onChange={handleJSONImport} className="hidden" />
-                  <Button onClick={() => fileInputRef.current?.click()} variant="outline" size="lg" className="w-full">
-                    <Upload className="w-5 h-5 mr-2" />Select JSON File
-                  </Button>
+                  <Upload className={`w-10 h-10 mx-auto mb-3 ${isDraggingJSON ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <p className="font-medium mb-1">
+                    {isDraggingJSON ? 'Drop your JSON file here' : 'Drop your JSON file here, or click to browse'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Accepts .json workflow files</p>
                 </div>
               </TabsContent>
 
