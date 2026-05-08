@@ -689,6 +689,48 @@ export type Database = {
         }
         Relationships: []
       }
+      learned_node_types: {
+        Row: {
+          config_template: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          mapped_type: string
+          raw_type: string
+          source: string
+          title: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          config_template?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          mapped_type: string
+          raw_type: string
+          source?: string
+          title: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          config_template?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          mapped_type?: string
+          raw_type?: string
+          source?: string
+          title?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
       marketplace_purchases: {
         Row: {
           buyer_id: string
