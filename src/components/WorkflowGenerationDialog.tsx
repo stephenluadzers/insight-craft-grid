@@ -257,6 +257,46 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     }
   };
 
+  const normalizeImportedNodes = (data: any): any[] => {
+    // Pull nodes array out of the most common shapes.
+    let raw: any[] | null = null;
+    if (Array.isArray(data)) raw = data;
+    else if (Array.isArray(data?.nodes)) raw = data.nodes;
+    else if (Array.isArray(data?.workflow?.nodes)) raw = data.workflow.nodes;
+    else if (Array.isArray(data?.steps)) raw = data.steps;
+    if (!raw) return [];
+
+    const VALID_TYPES = new Set([
+      'trigger', 'action', 'condition', 'delay', 'webhook',
+      'transform', 'loop', 'parallel', 'error_handler',
+      'guardrail', 'ai_agent', 'integration',
+    ]);
+
+    return raw.map((n: any, i: number) => {
+      // Support n8n-style position arrays.
+      const posX = Array.isArray(n?.position) ? n.position[0] : n?.x ?? n?.position?.x;
+      const posY = Array.isArray(n?.position) ? n.position[1] : n?.y ?? n?.position?.y;
+      const rawType = (n?.type ?? n?.kind ?? 'action').toString().toLowerCase();
+      const mappedType = VALID_TYPES.has(rawType)
+        ? rawType
+        : rawType.includes('trigger') ? 'trigger'
+        : rawType.includes('webhook') ? 'webhook'
+        : rawType.includes('condition') || rawType.includes('if') ? 'condition'
+        : rawType.includes('delay') || rawType.includes('wait') ? 'delay'
+        : rawType.includes('agent') || rawType.includes('ai') || rawType.includes('llm') ? 'ai_agent'
+        : 'action';
+      return {
+        id: n?.id ?? `imported-${i}-${Date.now()}`,
+        type: mappedType,
+        title: n?.title ?? n?.name ?? n?.label ?? `Step ${i + 1}`,
+        description: n?.description ?? n?.notes ?? '',
+        x: typeof posX === 'number' ? posX : undefined,
+        y: typeof posY === 'number' ? posY : undefined,
+        config: n?.config ?? n?.parameters ?? n?.params ?? {},
+      };
+    });
+  };
+
   const importJSONFile = async (file: File) => {
     if (!file.name.toLowerCase().endsWith('.json')) {
       toast({ title: "Import Failed", description: "Please drop a .json file", variant: "destructive" });
@@ -265,11 +305,16 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     try {
       const text = await file.text();
       const data = JSON.parse(text);
-      if (!data.nodes) throw new Error('Invalid workflow file');
-      onWorkflowGenerated(data.nodes, data.metadata);
+      const nodes = normalizeImportedNodes(data);
+      console.log('📥 JSON import: parsed', nodes.length, 'nodes from file', file.name);
+      if (nodes.length === 0) {
+        throw new Error('No nodes found. Expected a JSON file with a "nodes" array or an array of steps.');
+      }
+      onWorkflowGenerated(nodes, data?.metadata);
       onOpenChange(false);
-      toast({ title: "Workflow Imported", description: `Loaded ${data.nodes.length} nodes` });
+      toast({ title: "Workflow Imported", description: `Loaded ${nodes.length} nodes` });
     } catch (error: any) {
+      console.error('JSON import failed:', error);
       toast({ title: "Import Failed", description: error.message, variant: "destructive" });
     }
   };
