@@ -608,7 +608,7 @@ export async function exportWorkflowComprehensive(
     `4. **Deploy:** Follow platform-specific README instructions\n\n` +
     `## 📊 Workflow Statistics\n\n` +
     `- **Nodes:** ${nodes.length}\n` +
-    `- **Has AI:** ${nodes.some(n => n.type === 'ai') ? 'Yes' : 'No'}\n` +
+    `- **Has AI:** ${aiCount > 0 ? `Yes (${aiCount} AI / agent node${aiCount === 1 ? '' : 's'})` : 'No'}\n` +
     `- **Has Integrations:** ${nodes.some(n => n.type === 'action') ? 'Yes' : 'No'}\n` +
     `- **Complexity:** ${nodes.length > 10 ? 'High' : nodes.length > 5 ? 'Medium' : 'Low'}\n\n` +
     `## 📈 Expected Business Impact\n\n` +
