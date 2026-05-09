@@ -385,13 +385,18 @@ function generateSecurityGuardrailReport(
   }
 
   
-  if (guardrailMetadata?.complianceStandards && guardrailMetadata.complianceStandards.length > 0) {
+  const effectiveStandards = inferComplianceStandards(nodes, guardrailMetadata);
+  if (effectiveStandards.length > 0) {
     md += `## Compliance Standards\n\n`;
-    md += `This workflow has been analyzed for compliance with:\n\n`;
-    guardrailMetadata.complianceStandards.forEach(standard => {
+    md += `This workflow has been analyzed for alignment with:\n\n`;
+    effectiveStandards.forEach(standard => {
       md += `- ✅ ${standard}\n`;
     });
     md += `\n`;
+    if (!guardrailMetadata?.complianceStandards?.length) {
+      md += `> **Note:** Standards above are inferred from workflow shape and Remora Flow's baseline controls. ` +
+            `Run the Guardrail Analysis pass to attach explicit, audited compliance metadata.\n\n`;
+    }
   }
 
   if (guardrailMetadata?.policyAnalysis) {
