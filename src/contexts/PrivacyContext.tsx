@@ -114,14 +114,16 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
     // Store in database if user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && hasConsent('essential')) {
-      await (supabase as any).from('user_consent').upsert({
-        user_id: user.id,
-        consent_data: updated,
-        updated_at: new Date().toISOString(),
-      });
-    }
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => {
+        if (!user) return null;
+        return (supabase as any).from('user_consent').upsert({
+          user_id: user.id,
+          consent_data: updated,
+          updated_at: new Date().toISOString(),
+        });
+      })
+      .catch((error) => console.warn('Consent sync skipped:', error));
   };
 
   const setAgeVerified = (verified: boolean) => {
