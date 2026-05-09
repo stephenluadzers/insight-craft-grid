@@ -1,9 +1,20 @@
 type DownloadWindow = Window & typeof globalThis;
+type WritableFileHandle = {
+  createWritable: () => Promise<{ write: (data: Blob) => Promise<void>; close: () => Promise<void> }>;
+};
+type FilePickerWindow = Window & {
+  showSaveFilePicker?: (options?: {
+    suggestedName?: string;
+    types?: Array<{ description: string; accept: Record<string, string[]> }>;
+    excludeAcceptAllOption?: boolean;
+  }) => Promise<WritableFileHandle>;
+};
 
 export interface DownloadTarget {
   readonly id: string;
   readonly filename: string;
   readonly window: DownloadWindow | null;
+  readonly nativeSave: Promise<WritableFileHandle | null> | null;
   readonly closed: boolean;
   close: () => void;
 }
@@ -42,10 +53,13 @@ export function openDownloadWindow(filename = "export"): DownloadTarget {
     targetWindow = null;
   }
 
+  const nativeSave = beginNativeSave(safeFilename);
+
   return {
     id,
     filename: safeFilename,
     window: targetWindow,
+    nativeSave,
     get closed() {
       return !targetWindow || targetWindow.closed;
     },
