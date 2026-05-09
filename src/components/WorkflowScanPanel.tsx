@@ -22,6 +22,7 @@ import {
 import { WorkflowNodeData } from '@/types/workflow';
 import { scanWorkflow, calculateScanImpactOnROI, generateScanReport, ScanResult, ScanFinding } from '@/lib/workflowScanFramework';
 import { toast } from 'sonner';
+import { downloadBlob, openDownloadWindow } from '@/lib/downloadFile';
 
 interface WorkflowScanPanelProps {
   nodes: WorkflowNodeData[];
@@ -84,16 +85,10 @@ export function WorkflowScanPanel({ nodes, workflowName, baseROI }: WorkflowScan
     if (!scanResult) return;
     
     const report = generateScanReport(scanResult);
+    const filename = `${workflowName}-scan-report.md`;
     const blob = new Blob([report], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${workflowName}-scan-report.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success('Report downloaded');
+    downloadBlob(blob, filename, openDownloadWindow(filename));
+    toast.success('Report ready');
   };
 
   const getScoreColor = (score: number) => {
