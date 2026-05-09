@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { usePrivacy } from '@/contexts/PrivacyContext';
 import { DataDeletionDialog } from '@/components/DataDeletionDialog';
 import { useToast } from '@/hooks/use-toast';
+import { downloadBlob, openDownloadWindow } from '@/lib/downloadFile';
 import {
   Shield,
   Download,
@@ -40,23 +41,19 @@ export default function Privacy() {
   };
 
   const handleExport = async () => {
+    const filename = `flowfuse-data-export-${new Date().toISOString()}.json`;
+    const popup = openDownloadWindow(filename);
     setIsExporting(true);
     try {
       const blob = await exportUserData();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `flowfuse-data-export-${new Date().toISOString()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, filename, popup);
 
       toast({
-        title: 'Export Complete',
-        description: 'Your data has been exported successfully.',
+        title: 'Export Ready',
+        description: 'A download tab opened with your data export.',
       });
     } catch (error) {
+      if (popup && !popup.closed) popup.close();
       toast({
         title: 'Export Failed',
         description: error instanceof Error ? error.message : 'An error occurred during export',
