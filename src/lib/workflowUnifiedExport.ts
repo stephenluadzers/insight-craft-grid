@@ -567,7 +567,7 @@ export async function exportWorkflowComprehensive(
 
   const smartName = !isGenericName(workflowName)
     ? normalizeWorkflowSlug(workflowName!)!
-    : generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true });
+    : normalizeWorkflowSlug(generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true })) || 'workflow';
   
   const zip = new JSZip();
   const roi = calculateComprehensiveROI(nodes);
