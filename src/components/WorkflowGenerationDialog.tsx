@@ -255,6 +255,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             aiReasoning: data.insights || data.explanation,
             aiModel: data.model || 'google/gemini-2.5-flash',
             sourceSummary: `${selectedImages.length} user-provided image(s) analyzed by AI vision`,
+            sourceImages: selectedImages.map((file, index) => ({
+              name: file.name.replace(/[^a-zA-Z0-9._-]/g, '-'),
+              mimeType: file.type || 'image/png',
+              sizeBytes: file.size,
+              dataUrl: imageDataArray[index],
+            })),
           })
         });
         toast({ title: "Workflow Created!", description: `Created from ${selectedImages.length} image(s)` });
