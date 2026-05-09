@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2, Sparkles } from "lucide-react";
-import { WorkflowNodeData } from "@/types/workflow";
+import { WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
 import { exportWorkflowToYAML } from "@/lib/workflowExportYAML";
 import { exportWorkflowComprehensive } from "@/lib/workflowUnifiedExport";
@@ -16,6 +16,7 @@ interface WorkflowBusinessExportProps {
   onOpenChange: (open: boolean) => void;
   nodes: WorkflowNodeData[];
   workflowName: string;
+  originMetadata?: WorkflowOriginMetadata;
   guardrailMetadata?: {
     explanations?: any[];
     complianceStandards?: string[];
@@ -105,6 +106,7 @@ export function WorkflowBusinessExport({
   onOpenChange, 
   nodes, 
   workflowName,
+  originMetadata,
   guardrailMetadata
 }: WorkflowBusinessExportProps) {
   const [isExporting, setIsExporting] = useState(false);
@@ -151,7 +153,7 @@ export function WorkflowBusinessExport({
     setIsExporting(true);
     
     try {
-      const blob = await withExportTimeout(exportWorkflowComprehensive(nodes, workflowName, guardrailMetadata), "Complete package export");
+      const blob = await withExportTimeout(exportWorkflowComprehensive(nodes, workflowName, guardrailMetadata, undefined, undefined, undefined, originMetadata), "Complete package export");
 
       // Use smart filename if available, otherwise fallback to sanitized name
       const smartFilename = (blob as any).smartFilename || `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-complete-package.zip`;
