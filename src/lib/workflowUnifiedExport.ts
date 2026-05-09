@@ -80,6 +80,7 @@ function isGenericName(name?: string): boolean {
 function inferComplianceStandards(
   nodes: WorkflowNodeData[],
   guardrailMetadata?: GuardrailMetadata,
+  originMetadata?: WorkflowOriginMetadata,
 ): string[] {
   const standards = new Set<string>(
     guardrailMetadata?.complianceStandards ?? []
@@ -105,7 +106,7 @@ function inferComplianceStandards(
     standards.add('NIST SP 800-53');
     standards.add('FedRAMP (Moderate aligned)');
   }
-  if (hasAINodes(nodes)) {
+  if (hasAIInWorkflow(nodes, originMetadata)) {
     standards.add('EU AI Act (transparency)');
     standards.add('NIST AI RMF');
   }
@@ -310,7 +311,7 @@ function generateBusinessMetricsReport(roi: ROIMetrics, nodes: WorkflowNodeData[
   return md;
 }
 
-function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): string {
+function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string, originMetadata?: WorkflowOriginMetadata): string {
   const credentialManifest = extractCredentials(nodes, workflowName);
   
   return JSON.stringify({
@@ -333,8 +334,9 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): 
     })),
     metadata: {
       nodeCount: nodes.length,
-      hasAI: hasAINodes(nodes),
+      hasAI: hasAIInWorkflow(nodes, originMetadata),
       aiNodeCount: countAINodes(nodes),
+      aiAssistedGeneration: originMetadata?.aiGenerated === true || !!originMetadata?.aiReasoning,
       hasIntegrations: nodes.some(n => n.type === 'action'),
       complexity: nodes.length > 10 ? 'high' : nodes.length > 5 ? 'medium' : 'low'
     },
