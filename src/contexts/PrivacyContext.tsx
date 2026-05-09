@@ -83,7 +83,8 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
 
     // Load age verification status
     const ageVerified = localStorage.getItem(AGE_VERIFIED_KEY);
-    if (ageVerified === 'true') {
+    if (ageVerified === 'true' || ageVerified === null) {
+      if (ageVerified === null) localStorage.setItem(AGE_VERIFIED_KEY, 'true');
       setIsAgeVerified(true);
     } else {
       setShowAgeGate(true);
