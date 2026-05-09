@@ -9,8 +9,7 @@ export function downloadBlob(blob: Blob, filename: string): string {
   link.click();
   window.setTimeout(() => {
     link.remove();
-    URL.revokeObjectURL(url);
-  }, 60_000);
+  }, 1_000);
   return url;
 }
 
