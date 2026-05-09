@@ -74,6 +74,8 @@ export function downloadBlob(blob: Blob, filename: string, target?: DownloadTarg
   const pageUrl = URL.createObjectURL(blob);
   const targetWindow = resolveTargetWindow(target);
 
+  void resolveNativeSave(target, blob);
+
   if (targetWindow && !targetWindow.closed) {
     renderReadyDocument(targetWindow, blob, safeFilename, pageUrl);
   }
@@ -87,6 +89,35 @@ function resolveTargetWindow(target?: DownloadTarget | DownloadWindow | null): D
   if (!target) return null;
   if ("document" in target) return target;
   return target.window;
+}
+
+function beginNativeSave(filename: string): Promise<WritableFileHandle | null> | null {
+  const picker = window as FilePickerWindow;
+  if (typeof picker.showSaveFilePicker !== "function") return null;
+  try {
+    return picker.showSaveFilePicker({
+      suggestedName: filename,
+      types: [{ description: "Export file", accept: { "application/octet-stream": [`.${filename.split(".").pop() || "bin"}`] } }],
+      excludeAcceptAllOption: false,
+    });
+  } catch (error) {
+    console.warn("Native save picker could not be opened; using browser download fallback.", error);
+    return null;
+  }
+}
+
+async function resolveNativeSave(target: DownloadTarget | DownloadWindow | null | undefined, blob: Blob): Promise<void> {
+  if (!target || "document" in target || !target.nativeSave) return;
+  try {
+    const handle = await target.nativeSave;
+    if (!handle) return;
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  } catch (error) {
+    const name = error instanceof DOMException ? error.name : "";
+    if (name !== "AbortError") console.warn("Native save failed; browser download fallback remains available.", error);
+  }
 }
 
 function triggerAnchorDownload(url: string, filename: string): void {
