@@ -9,7 +9,8 @@ import { exportWorkflowToYAML } from "./workflowExportYAML";
 import { 
   ExportPlatform, 
   GuardrailMetadata,
-  exportWorkflowForBusiness 
+  exportWorkflowForBusiness,
+  generateN8NWorkflow,
 } from "./workflowExport";
 import { generateSmartWorkflowName } from "./workflowNaming";
 import { 
