@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Package, X, Github, FolderOpen } from "lucide-react";
-import { WorkflowNodeData } from "@/types/workflow";
+import { WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import { z } from "zod";
 import { generateWorkflowName } from "@/lib/workflowUtils";
 import { WorkflowBusinessExport } from "./WorkflowBusinessExport";
@@ -18,7 +18,7 @@ const workflowIdeaSchema = z.string().trim().min(10, "Description must be at lea
 interface WorkflowGenerationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number; policyAnalysis?: any }) => void;
+  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number; policyAnalysis?: any; workflowName?: string; originMetadata?: WorkflowOriginMetadata }) => void;
   nodes: WorkflowNodeData[];
   workflowName: string;
   guardrailMetadata?: {
