@@ -671,9 +671,11 @@ export async function exportWorkflowComprehensive(
     `${roi.revenuePotential.scalingCapacity}\n\n` +
     `${roi.revenuePotential.customerSatisfaction}\n\n` +
     `## 🔒 Security & Compliance\n\n` +
-    (guardrailMetadata?.complianceStandards ? 
-      `Compliant with: ${guardrailMetadata.complianceStandards.join(', ')}\n\n` : 
-      `Review security report for detailed compliance analysis.\n\n`) +
+    (() => {
+      const std = inferComplianceStandards(nodes, guardrailMetadata);
+      return `Compliant with: ${std.join(', ')}\n\n` +
+        `See \`documentation/SECURITY_COMPLIANCE.md\` for the full control mapping and risk profile.\n\n`;
+    })() +
     `## 🆘 Support\n\n` +
     `- Documentation: [FlowFuse Docs](https://flowfuse.ai/docs)\n` +
     `- Community: [FlowFuse Community](https://community.flowfuse.ai)\n` +
