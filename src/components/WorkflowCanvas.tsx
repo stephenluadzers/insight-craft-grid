@@ -455,6 +455,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       });
       return;
     }
+    const currentNameIsGeneric = /^(untitled workflow|untitled|workflow|new workflow)$/i.test(currentWorkflowName.trim());
     
     // Position nodes in visible area, accounting for toolbar at bottom
     // Center horizontally in viewport, start from top with spacing
@@ -478,7 +479,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     console.log('Setting positioned nodes:', positionedNodes);
     setNodes(positionedNodes);
     setSelectedNodeId(null);
-    if (metadata?.workflowName) setCurrentWorkflowName(metadata.workflowName);
+    if (metadata?.workflowName && currentNameIsGeneric) setCurrentWorkflowName(metadata.workflowName);
     if (metadata?.originMetadata) setWorkflowOriginMetadata(metadata.originMetadata);
     
     // Store guardrail metadata
