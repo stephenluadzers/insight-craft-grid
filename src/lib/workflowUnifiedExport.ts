@@ -43,6 +43,44 @@ function hasAINodes(nodes: WorkflowNodeData[]): boolean {
   return countAINodes(nodes) > 0;
 }
 
+// Infer compliance standards from workflow shape when explicit metadata is missing.
+// Always returns at least the baseline standards every Remora Flow export aligns with.
+function inferComplianceStandards(
+  nodes: WorkflowNodeData[],
+  guardrailMetadata?: GuardrailMetadata,
+): string[] {
+  const standards = new Set<string>(
+    guardrailMetadata?.complianceStandards ?? []
+  );
+
+  // Baseline: every export ships with these process/security commitments.
+  standards.add('SOC 2 (Type II aligned)');
+  standards.add('GDPR');
+  standards.add('CCPA');
+  standards.add('ISO/IEC 27001 (aligned)');
+
+  const blob = nodes
+    .map(n => `${n.title ?? ''} ${n.description ?? ''} ${JSON.stringify(n.config ?? {})}`.toLowerCase())
+    .join(' ');
+
+  if (/payment|stripe|paypal|card|pci|checkout|billing/.test(blob)) {
+    standards.add('PCI-DSS');
+  }
+  if (/health|patient|medical|hipaa|phi|clinical/.test(blob)) {
+    standards.add('HIPAA');
+  }
+  if (/government|federal|agency|nist|fedramp|ato/.test(blob)) {
+    standards.add('NIST SP 800-53');
+    standards.add('FedRAMP (Moderate aligned)');
+  }
+  if (hasAINodes(nodes)) {
+    standards.add('EU AI Act (transparency)');
+    standards.add('NIST AI RMF');
+  }
+
+  return Array.from(standards);
+}
+
 interface ROIMetrics {
   timeSavings: {
     manualHoursPerDay: number;
