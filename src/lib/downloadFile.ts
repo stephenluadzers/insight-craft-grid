@@ -1,16 +1,10 @@
 export function downloadBlob(blob: Blob, filename: string): string {
   const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.rel = "noopener";
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  window.setTimeout(() => {
-    link.remove();
-  }, 1_000);
   return url;
+}
+
+export function revokeDownloadUrl(url: string): void {
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export function sanitizeDownloadFilename(value: string, fallback = "workflow"): string {

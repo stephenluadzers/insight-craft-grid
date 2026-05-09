@@ -29,9 +29,7 @@ const Index = (): JSX.Element => {
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => localStorage.getItem("remora-onboarding-complete") !== "true" && localStorage.getItem("flowfuse_privacy_consent") === null
-  );
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const canvasRef = useRef<any>(null);
 
   const handleAIWorkflowGenerated = (workflow: any) => {
