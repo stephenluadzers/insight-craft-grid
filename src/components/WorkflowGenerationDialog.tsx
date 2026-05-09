@@ -83,7 +83,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             guardrailExplanations: data.workflows[0].guardrailExplanations,
             complianceStandards: data.workflows[0].complianceStandards,
             riskScore: data.workflows[0].riskScore,
-            policyAnalysis: data.workflows[0].policyAnalysis
+            policyAnalysis: data.workflows[0].policyAnalysis,
+            workflowName: data.workflows[0].workflowName || data.workflows[0].name,
+            originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.workflows[0].explanation || data.workflows[0].insights, aiModel: data.workflows[0].model })
           });
           toast({ title: "Workflow Created!", description: data.workflows[0].name || "Workflow generated successfully" });
           onOpenChange(false);
@@ -93,7 +95,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             guardrailExplanations: data.workflows[0].guardrailExplanations,
             complianceStandards: data.workflows[0].complianceStandards,
             riskScore: data.workflows[0].riskScore,
-            policyAnalysis: data.workflows[0].policyAnalysis
+            policyAnalysis: data.workflows[0].policyAnalysis,
+            workflowName: data.workflows[0].workflowName || data.workflows[0].name,
+            originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.workflows[0].explanation || data.workflows[0].insights, aiModel: data.workflows[0].model })
           });
           toast({ title: "Workflow Created!", description: `Generated ${data.workflows.length} workflows, applied first one` });
           onOpenChange(false);
@@ -242,7 +246,15 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           guardrailExplanations: data.guardrailExplanations,
           complianceStandards: data.complianceStandards,
           riskScore: data.riskScore,
-          policyAnalysis: data.policyAnalysis
+          policyAnalysis: data.policyAnalysis,
+          workflowName: data.workflowName || data.name,
+          originMetadata: buildOriginMetadata({
+            originalInput: selectedImages.map((file, index) => `${index + 1}. ${file.name} (${file.type || 'image'}, ${Math.round(file.size / 1024)} KB)`).join('\n'),
+            inputType: 'image',
+            aiReasoning: data.insights || data.explanation,
+            aiModel: data.model || 'google/gemini-2.5-flash',
+            sourceSummary: `${selectedImages.length} user-provided image(s) analyzed by AI vision`,
+          })
         });
         toast({ title: "Workflow Created!", description: `Created from ${selectedImages.length} image(s)` });
         if (configuredNodes.length > 0) {
