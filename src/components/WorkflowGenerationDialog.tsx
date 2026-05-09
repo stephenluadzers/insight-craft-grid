@@ -21,6 +21,7 @@ interface WorkflowGenerationDialogProps {
   onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number; policyAnalysis?: any; workflowName?: string; originMetadata?: WorkflowOriginMetadata }) => void;
   nodes: WorkflowNodeData[];
   workflowName: string;
+  originMetadata?: WorkflowOriginMetadata;
   guardrailMetadata?: {
     guardrailExplanations?: any[];
     complianceStandards?: string[];
@@ -29,7 +30,7 @@ interface WorkflowGenerationDialogProps {
   };
 }
 
-export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
+export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, originMetadata, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
   const [videoUrlsText, setVideoUrlsText] = useState("");
   const [githubRepoUrlsText, setGithubRepoUrlsText] = useState("");
@@ -578,7 +579,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           </div>
         </Tabs>
 
-        <WorkflowBusinessExport open={showBusinessExport} onOpenChange={setShowBusinessExport} nodes={nodes} workflowName={workflowName} guardrailMetadata={guardrailMetadata ? { explanations: guardrailMetadata.guardrailExplanations, complianceStandards: guardrailMetadata.complianceStandards, riskScore: guardrailMetadata.riskScore, policyAnalysis: guardrailMetadata.policyAnalysis } : undefined} />
+        <WorkflowBusinessExport open={showBusinessExport} onOpenChange={setShowBusinessExport} nodes={nodes} workflowName={workflowName} originMetadata={originMetadata} guardrailMetadata={guardrailMetadata ? { explanations: guardrailMetadata.guardrailExplanations, complianceStandards: guardrailMetadata.complianceStandards, riskScore: guardrailMetadata.riskScore, policyAnalysis: guardrailMetadata.policyAnalysis } : undefined} />
       </DialogContent>
     </Dialog>
   );
