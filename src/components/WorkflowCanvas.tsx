@@ -23,7 +23,7 @@ import { SidebarTrigger } from "./ui/sidebar";
 import { validateWorkflow, ValidationResult } from "@/lib/workflowValidation";
 import { useWorkflowPersistence } from "@/hooks/useWorkflowPersistence";
 import { useCollaboration } from "@/hooks/useCollaboration";
-import { downloadBlob, withExportTimeout } from "@/lib/downloadFile";
+import { downloadBlob, openDownloadWindow, withExportTimeout } from "@/lib/downloadFile";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
@@ -248,6 +248,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     },
     handleDownload: async () => {
       console.log('⬇️ Download workflow package');
+      const popup = openDownloadWindow(`${currentWorkflowName} export package`);
       try {
         const { exportWorkflowForBusiness } = await import('@/lib/workflowExport');
         const blob = await withExportTimeout(exportWorkflowForBusiness(nodes, currentWorkflowName, {
@@ -257,15 +258,16 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         }), 'Workflow package export');
 
         const filename = `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_complete_export.zip`;
-        const url = downloadBlob(blob, filename);
+        const url = downloadBlob(blob, filename, popup);
         setLastDownload({ url, filename });
         
         toast({
-          title: "Package Downloaded!",
-          description: "Workflow package with ROI analysis ready",
+          title: "Package Ready",
+          description: "A download tab opened with the export file.",
         });
       } catch (error: any) {
         console.error('Download failed:', error);
+        if (popup && !popup.closed) popup.close();
         toast({
           title: "Download Failed",
           description: error.message,
