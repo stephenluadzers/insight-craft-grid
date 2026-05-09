@@ -149,6 +149,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const handleGitHubImport = (importedNodes: WorkflowNodeData[], name: string) => {
     console.log('📥 Importing workflow from GitHub:', name, importedNodes.length, 'nodes');
     setNodes(importedNodes);
+    setCurrentWorkflowName(name);
+    setWorkflowOriginMetadata({ originalInput: name, inputType: 'github', aiGenerated: false });
     toast({
       title: "Workflow Imported",
       description: `${name} loaded with ${importedNodes.length} nodes`,
@@ -950,6 +952,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           complianceStandards,
           riskScore,
         }}
+        originMetadata={workflowOriginMetadata}
       />
 
       <APIImportDialog
