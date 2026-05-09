@@ -1,6 +1,25 @@
-type DownloadPopup = Window & typeof globalThis;
+type DownloadWindow = Window & typeof globalThis;
+type WritableFileHandle = {
+  createWritable: () => Promise<{ write: (data: Blob) => Promise<void>; close: () => Promise<void> }>;
+};
+type FilePickerWindow = Window & {
+  showSaveFilePicker?: (options?: {
+    suggestedName?: string;
+    types?: Array<{ description: string; accept: Record<string, string[]> }>;
+    excludeAcceptAllOption?: boolean;
+  }) => Promise<WritableFileHandle>;
+};
 
-const DOWNLOAD_FUNCTION_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-export`;
+export interface DownloadTarget {
+  readonly id: string;
+  readonly filename: string;
+  readonly window: DownloadWindow | null;
+  readonly nativeSave: Promise<WritableFileHandle | null> | null;
+  readonly closed: boolean;
+  close: () => void;
+}
+
+const DOWNLOAD_URL_TTL_MS = 15 * 60_000;
 
 const escapeHtml = (value: string): string =>
   value.replace(/[&<>'"]/g, (char) => ({
@@ -11,130 +30,130 @@ const escapeHtml = (value: string): string =>
     '"': "&quot;",
   }[char] || char));
 
-export function openDownloadWindow(filename = "export"): DownloadPopup | null {
-  try {
-    const popup = window.open("", "_blank", "popup,width=520,height=420") as DownloadPopup | null;
-    if (!popup) return null;
-    popup.name = `remora_download_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+const buildSafeFilename = (filename: string): string => {
+  const trimmed = filename.trim().replace(/[\r\n"\\/<>:|?*\x00-\x1F]/g, "-");
+  return trimmed.replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 180) || "remora-flow-export.bin";
+};
 
-    popup.document.open();
-    popup.document.write(`<!doctype html><html><head><title>Preparing ${escapeHtml(filename)}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0f172a;color:#f8fafc;display:grid;min-height:100vh;place-items:center}.box{max-width:420px;padding:28px}.muted{color:#cbd5e1;line-height:1.5}.name{word-break:break-word;font-weight:700}a{color:#93c5fd;font-weight:700}</style></head><body><main class="box"><h1>Preparing download…</h1><p class="muted">Keep this tab open. Your file will be ready in a moment.</p><p class="name">${escapeHtml(filename)}</p></main></body></html>`);
-    popup.document.close();
-    popup.focus();
-    return popup;
+export function openDownloadWindow(filename = "export"): DownloadTarget {
+  const safeFilename = buildSafeFilename(filename);
+  const id = `remora_download_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  let targetWindow: DownloadWindow | null = null;
+
+  try {
+    targetWindow = window.open("about:blank", id, "popup,width=560,height=460") as DownloadWindow | null;
+    if (targetWindow) {
+      targetWindow.document.open();
+      targetWindow.document.write(renderPreparingDocument(safeFilename));
+      targetWindow.document.close();
+      targetWindow.focus();
+    }
   } catch (error) {
-    console.warn("Could not open download window:", error);
+    console.warn("Download window was blocked; falling back to in-page download.", error);
+    targetWindow = null;
+  }
+
+  const nativeSave = beginNativeSave(safeFilename);
+
+  return {
+    id,
+    filename: safeFilename,
+    window: targetWindow,
+    nativeSave,
+    get closed() {
+      return !targetWindow || targetWindow.closed;
+    },
+    close: () => {
+      if (targetWindow && !targetWindow.closed) targetWindow.close();
+    },
+  };
+}
+
+export function downloadBlob(blob: Blob, filename: string, target?: DownloadTarget | DownloadWindow | null): string {
+  const safeFilename = buildSafeFilename(filename);
+  const pageUrl = URL.createObjectURL(blob);
+  const targetWindow = resolveTargetWindow(target);
+
+  void resolveNativeSave(target, blob);
+
+  if (targetWindow && !targetWindow.closed) {
+    renderReadyDocument(targetWindow, blob, safeFilename, pageUrl);
+  }
+
+  triggerAnchorDownload(pageUrl, safeFilename);
+  window.setTimeout(() => URL.revokeObjectURL(pageUrl), DOWNLOAD_URL_TTL_MS);
+  return pageUrl;
+}
+
+function resolveTargetWindow(target?: DownloadTarget | DownloadWindow | null): DownloadWindow | null {
+  if (!target) return null;
+  if ("document" in target) return target;
+  return target.window;
+}
+
+function beginNativeSave(filename: string): Promise<WritableFileHandle | null> | null {
+  const picker = window as FilePickerWindow;
+  if (typeof picker.showSaveFilePicker !== "function") return null;
+  try {
+    return picker.showSaveFilePicker({
+      suggestedName: filename,
+      types: [{ description: "Export file", accept: { "application/octet-stream": [`.${filename.split(".").pop() || "bin"}`] } }],
+      excludeAcceptAllOption: false,
+    });
+  } catch (error) {
+    console.warn("Native save picker could not be opened; using browser download fallback.", error);
     return null;
   }
 }
 
-export function downloadBlob(blob: Blob, filename: string, popup?: DownloadPopup | null): string {
-  const targetWindow = popup && !popup.closed ? popup : null;
-  const url = URL.createObjectURL(blob);
-
-  if (targetWindow) {
-    void renderDownloadForm(targetWindow, blob, filename, url);
-  } else {
-    void submitBlobAsFileResponse(blob, filename).catch((error) => {
-      console.error("Download response failed, using blob fallback:", error);
-    });
+async function resolveNativeSave(target: DownloadTarget | DownloadWindow | null | undefined, blob: Blob): Promise<void> {
+  if (!target || "document" in target || !target.nativeSave) return;
+  try {
+    const handle = await target.nativeSave;
+    if (!handle) return;
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  } catch (error) {
+    const name = error instanceof DOMException ? error.name : "";
+    if (name !== "AbortError") console.warn("Native save failed; browser download fallback remains available.", error);
   }
-
-  window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
-
-  return url;
 }
 
-async function renderDownloadForm(targetWindow: DownloadPopup, blob: Blob, filename: string, fallbackUrl: string): Promise<void> {
-  const safeFilename = escapeHtml(filename);
-  const data = await blobToBase64(blob);
-  if (targetWindow.closed) return;
+function triggerAnchorDownload(url: string, filename: string): void {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  anchor.style.position = "fixed";
+  anchor.style.left = "-9999px";
+  anchor.style.top = "-9999px";
+  document.body.appendChild(anchor);
+  anchor.click();
+  window.setTimeout(() => anchor.remove(), 1_000);
+}
 
+function renderPreparingDocument(filename: string): string {
+  return `<!doctype html><html><head><title>Preparing ${escapeHtml(filename)}</title>${downloadPageHead()}</head><body><main class="box"><h1>Preparing download…</h1><p class="muted">Keep this tab open while Remora Flow prepares your file.</p><p class="name">${escapeHtml(filename)}</p></main></body></html>`;
+}
+
+function renderReadyDocument(targetWindow: DownloadWindow, blob: Blob, filename: string, openerUrl: string): void {
   const doc = targetWindow.document;
+  const popupUrl = targetWindow.URL.createObjectURL(blob);
+
   doc.open();
-  doc.write(`<!doctype html><html><head><title>Download ${safeFilename}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0f172a;color:#f8fafc;display:grid;min-height:100vh;place-items:center}.box{max-width:460px;padding:28px}.muted{color:#cbd5e1;line-height:1.5}.name{word-break:break-word;font-weight:700}.button,.fallback{display:inline-flex;margin-top:14px;margin-right:10px;padding:12px 16px;border-radius:8px;border:0;background:#2563eb;color:white;text-decoration:none;font-weight:800;cursor:pointer}.fallback{background:#334155}</style></head><body><main class="box"><h1>Your export is ready</h1><p class="muted">If the save prompt does not open automatically, press Save to computer.</p><p class="name">${safeFilename}</p></main></body></html>`);
+  doc.write(`<!doctype html><html><head><title>Download ${escapeHtml(filename)}</title>${downloadPageHead()}</head><body><main class="box"><h1>Your export is ready</h1><p class="muted">If your browser did not show a save prompt, use the button below.</p><p class="name">${escapeHtml(filename)}</p><a id="download" class="button" href="${popupUrl}" download="${escapeHtml(filename)}">Download file</a><a class="fallback" href="${openerUrl}" download="${escapeHtml(filename)}">Backup link</a><p class="hint">You can close this tab after the file is saved.</p><script>setTimeout(function(){var a=document.getElementById('download'); if(a) a.click();}, 80);</script></main></body></html>`);
   doc.close();
-
-  const main = doc.querySelector("main");
-  const form = doc.createElement("form");
-  form.method = "POST";
-  form.action = DOWNLOAD_FUNCTION_URL;
-  form.enctype = "application/x-www-form-urlencoded";
-
-  const fields: Record<string, string> = {
-    filename,
-    contentType: blob.type || "application/octet-stream",
-    data,
-  };
-
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = doc.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  });
-
-  const button = doc.createElement("button");
-  button.type = "submit";
-  button.className = "button";
-  button.textContent = "Save to computer";
-  form.appendChild(button);
-  main?.appendChild(form);
-
-  const fallback = doc.createElement("a");
-  fallback.href = fallbackUrl;
-  fallback.download = filename;
-  fallback.className = "fallback";
-  fallback.textContent = "Fallback link";
-  main?.appendChild(fallback);
-
   targetWindow.focus();
-  targetWindow.setTimeout(() => form.requestSubmit(), 350);
+  targetWindow.setTimeout(() => targetWindow.URL.revokeObjectURL(popupUrl), DOWNLOAD_URL_TTL_MS);
 }
 
-async function submitBlobAsFileResponse(blob: Blob, filename: string, targetName?: string): Promise<void> {
-  const data = await blobToBase64(blob);
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = DOWNLOAD_FUNCTION_URL;
-  form.enctype = "application/x-www-form-urlencoded";
-  if (targetName) form.target = targetName;
-  form.style.display = "none";
-
-  const fields: Record<string, string> = {
-    filename,
-    contentType: blob.type || "application/octet-stream",
-    data,
-  };
-
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
-  window.setTimeout(() => form.remove(), 30_000);
-}
-
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      resolve(result.includes(",") ? result.split(",")[1] : result);
-    };
-    reader.onerror = () => reject(reader.error || new Error("Could not prepare file for download"));
-    reader.readAsDataURL(blob);
-  });
+function downloadPageHead(): string {
+  return `<meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f172a;color:#f8fafc;display:grid;min-height:100vh;place-items:center}.box{box-sizing:border-box;max-width:480px;padding:32px}.muted,.hint{color:#cbd5e1;line-height:1.5}.hint{font-size:13px}.name{word-break:break-word;font-weight:800}.button,.fallback{display:inline-flex;margin-top:14px;margin-right:10px;padding:12px 16px;border-radius:8px;border:0;background:#2563eb;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}.fallback{background:#334155}</style>`;
 }
 
 export function revokeDownloadUrl(url: string): void {
-  window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
+  window.setTimeout(() => URL.revokeObjectURL(url), DOWNLOAD_URL_TTL_MS);
 }
 
 export function sanitizeDownloadFilename(value: string, fallback = "workflow"): string {
