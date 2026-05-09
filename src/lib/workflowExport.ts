@@ -40,7 +40,7 @@ export interface ExportOptions {
 }
 
 // === n8n Export ===
-function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: string) {
+export function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: string) {
   return {
     name: workflowName,
     nodes: nodes.map((node, index) => ({

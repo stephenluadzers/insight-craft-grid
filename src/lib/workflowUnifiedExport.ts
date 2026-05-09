@@ -9,7 +9,8 @@ import { exportWorkflowToYAML } from "./workflowExportYAML";
 import { 
   ExportPlatform, 
   GuardrailMetadata,
-  exportWorkflowForBusiness 
+  exportWorkflowForBusiness,
+  generateN8NWorkflow,
 } from "./workflowExport";
 import { generateSmartWorkflowName } from "./workflowNaming";
 import { 
@@ -19,6 +20,28 @@ import {
   generateCredentialGuide 
 } from "./workflowCredentialManifest";
 import { addGovernmentComplianceDocs } from "./workflowGovCompliance";
+
+
+// Robust AI detection — covers all AI node variants and agent-configured nodes
+function countAINodes(nodes: WorkflowNodeData[]): number {
+  return nodes.filter(n =>
+    n.type === 'ai' ||
+    (typeof n.type === 'string' && n.type.startsWith('ai_')) ||
+    n.type === 'text_generation' ||
+    n.type === 'text_to_image' ||
+    n.type === 'image_to_image' ||
+    n.type === 'image_to_video' ||
+    n.type === 'text_to_video' ||
+    n.type === 'transcription' ||
+    n.type === 'agent_handoff' ||
+    n.group === 'AI Agents' ||
+    !!n.agent_config?.enabled
+  ).length;
+}
+
+function hasAINodes(nodes: WorkflowNodeData[]): boolean {
+  return countAINodes(nodes) > 0;
+}
 
 interface ROIMetrics {
   timeSavings: {
@@ -49,7 +72,7 @@ interface ROIMetrics {
 
 function calculateComprehensiveROI(nodes: WorkflowNodeData[]): ROIMetrics {
   const nodeCount = nodes.length;
-  const hasAI = nodes.some(n => n.type === 'ai');
+  const hasAI = hasAINodes(nodes);
   const hasIntegrations = nodes.some(n => n.type === 'action');
   
   // Time savings
@@ -240,7 +263,8 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): 
     })),
     metadata: {
       nodeCount: nodes.length,
-      hasAI: nodes.some(n => n.type === 'ai'),
+      hasAI: hasAINodes(nodes),
+      aiNodeCount: countAINodes(nodes),
       hasIntegrations: nodes.some(n => n.type === 'action'),
       complexity: nodes.length > 10 ? 'high' : nodes.length > 5 ? 'medium' : 'low'
     },
@@ -259,29 +283,71 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): 
   }, null, 2);
 }
 
-function generateSecurityGuardrailReport(guardrailMetadata?: GuardrailMetadata): string {
+function generateSecurityGuardrailReport(
+  guardrailMetadata?: GuardrailMetadata,
+  nodes: WorkflowNodeData[] = [],
+  workflowName: string = "Workflow"
+): string {
+  const aiCount = countAINodes(nodes);
+  const integrationCount = nodes.filter(n => n.type === 'action' || n.type === 'connector').length;
+  const guardrailNodes = nodes.filter(n => n.type === 'guardrail' || n.type === 'security').length;
+  const dataNodes = nodes.filter(n => n.type === 'data' || n.type === 'storage').length;
+  const triggerNodes = nodes.filter(n => n.type === 'trigger').length;
+
+  const riskScore = guardrailMetadata?.riskScore;
+  const riskLevel = riskScore === undefined
+    ? (aiCount > 0 || integrationCount > 2 ? 'MEDIUM' : 'LOW')
+    : (riskScore < 3 ? 'LOW' : riskScore < 6 ? 'MEDIUM' : 'HIGH');
+
   let md = `# Security & Compliance Report\n\n`;
+  md += `**Workflow:** ${workflowName}\n\n`;
   md += `*Generated: ${new Date().toLocaleString()}*\n\n`;
-  
-  if (!guardrailMetadata) {
-    md += `## Status: No Guardrails Configured\n\n`;
-    md += `This workflow does not have explicit guardrail configurations. Consider adding:\n\n`;
-    md += `- Data validation rules\n`;
-    md += `- Rate limiting\n`;
-    md += `- Security scanning\n`;
-    md += `- Compliance checks\n\n`;
-    return md;
-  }
-  
+
   md += `## Security Overview\n\n`;
-  
-  if (guardrailMetadata.riskScore !== undefined) {
-    const riskLevel = guardrailMetadata.riskScore < 3 ? 'LOW' : 
-                     guardrailMetadata.riskScore < 6 ? 'MEDIUM' : 'HIGH';
-    md += `**Risk Score:** ${guardrailMetadata.riskScore}/10 (${riskLevel})\n\n`;
+  md += `This report summarizes the security posture of the **${workflowName}** workflow, ` +
+        `covering risk assessment, data exposure surface, integrated guardrails, and recommended controls.\n\n`;
+
+  md += `### At a Glance\n\n`;
+  md += `| Attribute | Value |\n`;
+  md += `|-----------|-------|\n`;
+  md += `| Overall Risk Level | **${riskLevel}**${riskScore !== undefined ? ` (score ${riskScore}/10)` : ' (heuristic)'} |\n`;
+  md += `| Total Nodes | ${nodes.length} |\n`;
+  md += `| AI / Agent Nodes | ${aiCount} |\n`;
+  md += `| External Integrations | ${integrationCount} |\n`;
+  md += `| Data / Storage Nodes | ${dataNodes} |\n`;
+  md += `| Trigger Surfaces | ${triggerNodes} |\n`;
+  md += `| Built-in Guardrail Nodes | ${guardrailNodes} |\n`;
+  md += `| Compliance Standards | ${guardrailMetadata?.complianceStandards?.length ?? 0} |\n\n`;
+
+  md += `### Risk Profile Summary\n\n`;
+  if (aiCount > 0) {
+    md += `- **AI exposure:** ${aiCount} AI/agent node(s) — review prompt-injection, hallucination, and data-leak controls.\n`;
   }
+  if (integrationCount > 0) {
+    md += `- **Third-party reach:** ${integrationCount} outbound integration(s) — secrets must be scoped and rotated.\n`;
+  }
+  if (dataNodes > 0) {
+    md += `- **Data handling:** ${dataNodes} data/storage node(s) — verify retention, encryption, and PII classification.\n`;
+  }
+  if (triggerNodes > 0) {
+    md += `- **Entry points:** ${triggerNodes} trigger(s) — validate authentication and rate limiting on each.\n`;
+  }
+  if (guardrailNodes > 0) {
+    md += `- **In-flow guardrails:** ${guardrailNodes} dedicated guardrail/security node(s) already wired into the flow.\n`;
+  }
+  if (aiCount === 0 && integrationCount === 0 && dataNodes === 0) {
+    md += `- This workflow has a minimal security surface; standard operational hygiene applies.\n`;
+  }
+  md += `\n`;
+
+  if (!guardrailMetadata) {
+    md += `> **Note:** No explicit guardrail metadata was attached to this workflow. ` +
+          `The findings above are derived from static analysis of the node graph. ` +
+          `Run the Guardrail Analysis pass in Remora Flow to enrich this report with policy detail.\n\n`;
+  }
+
   
-  if (guardrailMetadata.complianceStandards && guardrailMetadata.complianceStandards.length > 0) {
+  if (guardrailMetadata?.complianceStandards && guardrailMetadata.complianceStandards.length > 0) {
     md += `## Compliance Standards\n\n`;
     md += `This workflow has been analyzed for compliance with:\n\n`;
     guardrailMetadata.complianceStandards.forEach(standard => {
@@ -289,10 +355,10 @@ function generateSecurityGuardrailReport(guardrailMetadata?: GuardrailMetadata):
     });
     md += `\n`;
   }
-  
-  if (guardrailMetadata.policyAnalysis) {
+
+  if (guardrailMetadata?.policyAnalysis) {
     const pa = guardrailMetadata.policyAnalysis;
-    
+
     if (pa.detectedDataTypes && pa.detectedDataTypes.length > 0) {
       md += `## Detected Data Types\n\n`;
       pa.detectedDataTypes.forEach(type => {
@@ -300,7 +366,7 @@ function generateSecurityGuardrailReport(guardrailMetadata?: GuardrailMetadata):
       });
       md += `\n`;
     }
-    
+
     if (pa.potentialRisks && pa.potentialRisks.length > 0) {
       md += `## Identified Risks & Mitigations\n\n`;
       pa.potentialRisks.forEach((risk, idx) => {
@@ -309,7 +375,7 @@ function generateSecurityGuardrailReport(guardrailMetadata?: GuardrailMetadata):
         md += `- **Mitigation:** ${risk.mitigation}\n\n`;
       });
     }
-    
+
     if (pa.recommendedGuardrails && pa.recommendedGuardrails.length > 0) {
       md += `## Implemented Guardrails\n\n`;
       pa.recommendedGuardrails.forEach((guardrail, idx) => {
@@ -319,14 +385,13 @@ function generateSecurityGuardrailReport(guardrailMetadata?: GuardrailMetadata):
       });
     }
   }
-  
-  if (guardrailMetadata.explanations && guardrailMetadata.explanations.length > 0) {
+
+  if (guardrailMetadata?.explanations && guardrailMetadata.explanations.length > 0) {
     md += `## Guardrail Explanations\n\n`;
     guardrailMetadata.explanations.forEach((explanation, idx) => {
       md += `${idx + 1}. ${JSON.stringify(explanation, null, 2)}\n\n`;
     });
   }
-  
   md += `## Security Recommendations\n\n`;
   md += `1. **Regular Audits:** Review security configurations quarterly\n`;
   md += `2. **Access Control:** Implement role-based access for workflow execution\n`;
@@ -428,7 +493,7 @@ export async function exportWorkflowComprehensive(
   docsFolder.file("BUSINESS_METRICS.md", businessMetrics);
   
   // Security & compliance report
-  const securityReport = generateSecurityGuardrailReport(guardrailMetadata);
+  const securityReport = generateSecurityGuardrailReport(guardrailMetadata, nodes, smartName);
   docsFolder.file("SECURITY_COMPLIANCE.md", securityReport);
   
   // Workflow origin and AI reasoning report
@@ -457,15 +522,44 @@ export async function exportWorkflowComprehensive(
   
   // Platform-specific exports folder
   const platformsFolder = zip.folder("platforms")!;
-  
-  // Generate exports for major platforms (simplified versions)
-  const platforms: ExportPlatform[] = ['n8n', 'python', 'typescript', 'docker'];
-  
-  for (const platform of platforms) {
+  const aiCount = countAINodes(nodes);
+
+  // n8n — emit a real, importable workflow.json
+  try {
+    const n8nFolder = platformsFolder.folder("n8n")!;
+    const n8nWorkflow = generateN8NWorkflow(nodes, smartName);
+    const n8nFilename = `${smartName}.json`;
+    n8nFolder.file(n8nFilename, JSON.stringify(n8nWorkflow, null, 2));
+    // Keep a stable alias so docs/scripts can rely on it
+    n8nFolder.file("workflow.json", JSON.stringify(n8nWorkflow, null, 2));
+    n8nFolder.file(
+      "README.md",
+      `# n8n Export — ${smartName}\n\n` +
+      `## Import\n\n` +
+      `1. Open your n8n instance\n` +
+      `2. Workflows → **Import from File**\n` +
+      `3. Select \`${n8nFilename}\` (or \`workflow.json\`)\n` +
+      `4. Configure credentials referenced in \`../../credentials/CREDENTIAL_SETUP.md\`\n` +
+      `5. Activate the workflow\n\n` +
+      `## Stats\n\n` +
+      `- Nodes: ${nodes.length}\n` +
+      `- AI / agent nodes: ${aiCount}\n` +
+      `- Trigger type: ${nodes.find(n => n.type === 'trigger')?.title ?? 'manual'}\n`
+    );
+  } catch (error) {
+    console.error("Failed to generate n8n export:", error);
+  }
+
+  // Other platforms — placeholder pointers (use Business Export dialog for full code)
+  for (const platform of ['python', 'typescript', 'docker'] as ExportPlatform[]) {
     try {
-      // Note: This creates a simplified version. For full exports, use the individual platform exports
       const platformFolder = platformsFolder.folder(platform)!;
-      platformFolder.file("README.md", `# ${platform.toUpperCase()} Export\n\nFor full ${platform} export with all files, use the platform-specific export option.\n\nThis folder contains basic configuration for ${platform} deployment.`);
+      platformFolder.file(
+        "README.md",
+        `# ${platform.toUpperCase()} Export\n\n` +
+        `For the full ${platform} package (source files, Dockerfile, tests), use **Export → ${platform}** in Remora Flow.\n\n` +
+        `This complete package focuses on the importable workflow definition (\`../../${smartName}.json\` and \`../../${smartName}.yaml\`) plus the n8n drop-in (\`../n8n/workflow.json\`).\n`
+      );
     } catch (error) {
       console.error(`Failed to generate ${platform} export:`, error);
     }
@@ -514,7 +608,7 @@ export async function exportWorkflowComprehensive(
     `4. **Deploy:** Follow platform-specific README instructions\n\n` +
     `## 📊 Workflow Statistics\n\n` +
     `- **Nodes:** ${nodes.length}\n` +
-    `- **Has AI:** ${nodes.some(n => n.type === 'ai') ? 'Yes' : 'No'}\n` +
+    `- **Has AI:** ${aiCount > 0 ? `Yes (${aiCount} AI / agent node${aiCount === 1 ? '' : 's'})` : 'No'}\n` +
     `- **Has Integrations:** ${nodes.some(n => n.type === 'action') ? 'Yes' : 'No'}\n` +
     `- **Complexity:** ${nodes.length > 10 ? 'High' : nodes.length > 5 ? 'Medium' : 'Low'}\n\n` +
     `## 📈 Expected Business Impact\n\n` +
