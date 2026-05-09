@@ -83,7 +83,8 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
 
     // Load age verification status
     const ageVerified = localStorage.getItem(AGE_VERIFIED_KEY);
-    if (ageVerified === 'true') {
+    if (ageVerified === 'true' || ageVerified === null) {
+      if (ageVerified === null) localStorage.setItem(AGE_VERIFIED_KEY, 'true');
       setIsAgeVerified(true);
     } else {
       setShowAgeGate(true);
@@ -114,14 +115,16 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
     // Store in database if user is authenticated
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && hasConsent('essential')) {
-      await (supabase as any).from('user_consent').upsert({
-        user_id: user.id,
-        consent_data: updated,
-        updated_at: new Date().toISOString(),
-      });
-    }
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => {
+        if (!user) return null;
+        return (supabase as any).from('user_consent').upsert({
+          user_id: user.id,
+          consent_data: updated,
+          updated_at: new Date().toISOString(),
+        });
+      })
+      .catch((error) => console.warn('Consent sync skipped:', error));
   };
 
   const setAgeVerified = (verified: boolean) => {
