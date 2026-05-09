@@ -91,15 +91,35 @@ function resolveTargetWindow(target?: DownloadTarget | DownloadWindow | null): D
   return target.window;
 }
 
+function deriveSafeExtension(filename: string): string | null {
+  const idx = filename.lastIndexOf(".");
+  if (idx <= 0 || idx === filename.length - 1) return null;
+  const ext = filename.slice(idx + 1);
+  // File System Access API requires extensions to match /^[a-z0-9]+$/i and contain no spaces/special chars
+  if (!/^[a-z0-9]{1,16}$/i.test(ext)) return null;
+  return ext.toLowerCase();
+}
+
+function sanitizeSuggestedName(filename: string): string {
+  // Strip characters disallowed by showSaveFilePicker on most platforms
+  const cleaned = filename.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim();
+  return cleaned || "download";
+}
+
 function beginNativeSave(filename: string): Promise<WritableFileHandle | null> | null {
   const picker = window as FilePickerWindow;
   if (typeof picker.showSaveFilePicker !== "function") return null;
   try {
-    return picker.showSaveFilePicker({
-      suggestedName: filename,
-      types: [{ description: "Export file", accept: { "application/octet-stream": [`.${filename.split(".").pop() || "bin"}`] } }],
+    const safeName = sanitizeSuggestedName(filename);
+    const ext = deriveSafeExtension(safeName);
+    const options: Parameters<NonNullable<FilePickerWindow["showSaveFilePicker"]>>[0] = {
+      suggestedName: safeName,
       excludeAcceptAllOption: false,
-    });
+    };
+    if (ext) {
+      options.types = [{ description: "Export file", accept: { "application/octet-stream": [`.${ext}`] } }];
+    }
+    return picker.showSaveFilePicker(options);
   } catch (error) {
     console.warn("Native save picker could not be opened; using browser download fallback.", error);
     return null;
