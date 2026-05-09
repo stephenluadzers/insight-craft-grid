@@ -355,7 +355,7 @@ function generateSecurityGuardrailReport(
   md += `| Data / Storage Nodes | ${dataNodes} |\n`;
   md += `| Trigger Surfaces | ${triggerNodes} |\n`;
   md += `| Built-in Guardrail Nodes | ${guardrailNodes} |\n`;
-  md += `| Compliance Standards | ${guardrailMetadata?.complianceStandards?.length ?? 0} |\n\n`;
+  md += `| Compliance Standards | ${inferComplianceStandards(nodes, guardrailMetadata).length} |\n\n`;
 
   md += `### Risk Profile Summary\n\n`;
   if (aiCount > 0) {
