@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2, Sparkles } from "lucide-react";
 import { WorkflowNodeData } from "@/types/workflow";
 import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
-import { exportWorkflowToYAML, downloadYAML } from "@/lib/workflowExportYAML";
+import { exportWorkflowToYAML } from "@/lib/workflowExportYAML";
 import { exportWorkflowComprehensive } from "@/lib/workflowUnifiedExport";
-import { downloadBlob, withExportTimeout } from "@/lib/downloadFile";
+import { downloadBlob, sanitizeDownloadFilename, withExportTimeout } from "@/lib/downloadFile";
 import { useToast } from "@/hooks/use-toast";
 
 interface WorkflowBusinessExportProps {
@@ -128,8 +128,8 @@ export function WorkflowBusinessExport({
       setLastDownload({ url, filename });
 
       toast({
-        title: "Export Successful",
-        description: `Workflow exported for ${PLATFORM_OPTIONS.find(p => p.id === platform)?.name}`,
+        title: "Export Ready",
+        description: `Click the download link to save the ${PLATFORM_OPTIONS.find(p => p.id === platform)?.name} package.`,
       });
     } catch (error) {
       console.error('Export failed:', error);
@@ -156,8 +156,8 @@ export function WorkflowBusinessExport({
       setLastDownload({ url, filename: smartFilename });
 
       toast({
-        title: "Complete Export Successful",
-        description: "Comprehensive package with business metrics, security reports, and all formats downloaded",
+        title: "Complete Export Ready",
+        description: "Click the download link to save the complete package to your computer.",
       });
     } catch (error) {
       console.error('Comprehensive export failed:', error);
