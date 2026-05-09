@@ -29,6 +29,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { downloadBlob, openDownloadWindow } from "@/lib/downloadFile";
 
 interface MigrationIssue {
   id: string;
@@ -274,17 +275,13 @@ export function MigrationReportDashboard({ workspaceId }: MigrationReportDashboa
       })),
     };
 
+    const filename = `migration-report-${new Date().toISOString().split("T")[0]}.json`;
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `migration-report-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, filename, openDownloadWindow(filename));
 
     toast({
-      title: "Report Exported",
-      description: "Migration report has been downloaded.",
+      title: "Report Ready",
+      description: "A download tab opened with the migration report.",
     });
   };
 
