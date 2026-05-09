@@ -21,6 +21,28 @@ import {
 } from "./workflowCredentialManifest";
 import { addGovernmentComplianceDocs } from "./workflowGovCompliance";
 
+
+// Robust AI detection — covers all AI node variants and agent-configured nodes
+function countAINodes(nodes: WorkflowNodeData[]): number {
+  return nodes.filter(n =>
+    n.type === 'ai' ||
+    (typeof n.type === 'string' && n.type.startsWith('ai_')) ||
+    n.type === 'text_generation' ||
+    n.type === 'text_to_image' ||
+    n.type === 'image_to_image' ||
+    n.type === 'image_to_video' ||
+    n.type === 'text_to_video' ||
+    n.type === 'transcription' ||
+    n.type === 'agent_handoff' ||
+    n.group === 'AI Agents' ||
+    !!n.agent_config?.enabled
+  ).length;
+}
+
+function hasAINodes(nodes: WorkflowNodeData[]): boolean {
+  return countAINodes(nodes) > 0;
+}
+
 interface ROIMetrics {
   timeSavings: {
     manualHoursPerDay: number;
