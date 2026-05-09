@@ -283,27 +283,69 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): 
   }, null, 2);
 }
 
-function generateSecurityGuardrailReport(guardrailMetadata?: GuardrailMetadata): string {
+function generateSecurityGuardrailReport(
+  guardrailMetadata?: GuardrailMetadata,
+  nodes: WorkflowNodeData[] = [],
+  workflowName: string = "Workflow"
+): string {
+  const aiCount = countAINodes(nodes);
+  const integrationCount = nodes.filter(n => n.type === 'action' || n.type === 'connector').length;
+  const guardrailNodes = nodes.filter(n => n.type === 'guardrail' || n.type === 'security').length;
+  const dataNodes = nodes.filter(n => n.type === 'data' || n.type === 'storage').length;
+  const triggerNodes = nodes.filter(n => n.type === 'trigger').length;
+
+  const riskScore = guardrailMetadata?.riskScore;
+  const riskLevel = riskScore === undefined
+    ? (aiCount > 0 || integrationCount > 2 ? 'MEDIUM' : 'LOW')
+    : (riskScore < 3 ? 'LOW' : riskScore < 6 ? 'MEDIUM' : 'HIGH');
+
   let md = `# Security & Compliance Report\n\n`;
+  md += `**Workflow:** ${workflowName}\n\n`;
   md += `*Generated: ${new Date().toLocaleString()}*\n\n`;
-  
-  if (!guardrailMetadata) {
-    md += `## Status: No Guardrails Configured\n\n`;
-    md += `This workflow does not have explicit guardrail configurations. Consider adding:\n\n`;
-    md += `- Data validation rules\n`;
-    md += `- Rate limiting\n`;
-    md += `- Security scanning\n`;
-    md += `- Compliance checks\n\n`;
-    return md;
-  }
-  
+
   md += `## Security Overview\n\n`;
-  
-  if (guardrailMetadata.riskScore !== undefined) {
-    const riskLevel = guardrailMetadata.riskScore < 3 ? 'LOW' : 
-                     guardrailMetadata.riskScore < 6 ? 'MEDIUM' : 'HIGH';
-    md += `**Risk Score:** ${guardrailMetadata.riskScore}/10 (${riskLevel})\n\n`;
+  md += `This report summarizes the security posture of the **${workflowName}** workflow, ` +
+        `covering risk assessment, data exposure surface, integrated guardrails, and recommended controls.\n\n`;
+
+  md += `### At a Glance\n\n`;
+  md += `| Attribute | Value |\n`;
+  md += `|-----------|-------|\n`;
+  md += `| Overall Risk Level | **${riskLevel}**${riskScore !== undefined ? ` (score ${riskScore}/10)` : ' (heuristic)'} |\n`;
+  md += `| Total Nodes | ${nodes.length} |\n`;
+  md += `| AI / Agent Nodes | ${aiCount} |\n`;
+  md += `| External Integrations | ${integrationCount} |\n`;
+  md += `| Data / Storage Nodes | ${dataNodes} |\n`;
+  md += `| Trigger Surfaces | ${triggerNodes} |\n`;
+  md += `| Built-in Guardrail Nodes | ${guardrailNodes} |\n`;
+  md += `| Compliance Standards | ${guardrailMetadata?.complianceStandards?.length ?? 0} |\n\n`;
+
+  md += `### Risk Profile Summary\n\n`;
+  if (aiCount > 0) {
+    md += `- **AI exposure:** ${aiCount} AI/agent node(s) — review prompt-injection, hallucination, and data-leak controls.\n`;
   }
+  if (integrationCount > 0) {
+    md += `- **Third-party reach:** ${integrationCount} outbound integration(s) — secrets must be scoped and rotated.\n`;
+  }
+  if (dataNodes > 0) {
+    md += `- **Data handling:** ${dataNodes} data/storage node(s) — verify retention, encryption, and PII classification.\n`;
+  }
+  if (triggerNodes > 0) {
+    md += `- **Entry points:** ${triggerNodes} trigger(s) — validate authentication and rate limiting on each.\n`;
+  }
+  if (guardrailNodes > 0) {
+    md += `- **In-flow guardrails:** ${guardrailNodes} dedicated guardrail/security node(s) already wired into the flow.\n`;
+  }
+  if (aiCount === 0 && integrationCount === 0 && dataNodes === 0) {
+    md += `- This workflow has a minimal security surface; standard operational hygiene applies.\n`;
+  }
+  md += `\n`;
+
+  if (!guardrailMetadata) {
+    md += `> **Note:** No explicit guardrail metadata was attached to this workflow. ` +
+          `The findings above are derived from static analysis of the node graph. ` +
+          `Run the Guardrail Analysis pass in Remora Flow to enrich this report with policy detail.\n\n`;
+  }
+
   
   if (guardrailMetadata.complianceStandards && guardrailMetadata.complianceStandards.length > 0) {
     md += `## Compliance Standards\n\n`;
