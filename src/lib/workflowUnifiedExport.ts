@@ -63,7 +63,7 @@ function normalizeWorkflowSlug(value?: string): string | null {
     ?.toLowerCase()
     .replace(/\([^)]*\)/g, ' ')
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(?:^|-)(optimized)(?:-\1)+(?:-|$)/g, '-optimized-')
+    .replace(/\b(?:optimized-){2,}optimized\b/g, 'optimized')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
@@ -507,6 +507,13 @@ function generateWorkflowOriginReport(
         md += `**Type:** Image Source\n\n`;
         md += `**Source:** ${originalInput}\n\n`;
         md += `**Source Summary:** ${sourceSummary || 'User-provided workflow image / whiteboard sketch interpreted by Remora Flow vision analysis.'}\n\n`;
+        if (originMetadata.sourceImages?.length) {
+          md += `**Attached Source Image Files:**\n`;
+          originMetadata.sourceImages.forEach((img, idx) => {
+            md += `- \`source-images/${idx + 1}-${img.name}\` (${img.mimeType}, ${Math.round(img.sizeBytes / 1024)} KB)\n`;
+          });
+          md += `\n`;
+        }
         break;
       case 'json':
         md += `**Type:** JSON Import\n\n`;
@@ -586,6 +593,13 @@ export async function exportWorkflowComprehensive(
   // Workflow origin and AI reasoning report
   const originReport = generateWorkflowOriginReport(smartName, effectiveOrigin);
   docsFolder.file("WORKFLOW_ORIGIN.md", originReport);
+  if (effectiveOrigin.sourceImages?.length) {
+    const sourceImagesFolder = docsFolder.folder("source-images")!;
+    effectiveOrigin.sourceImages.forEach((img, idx) => {
+      const base64 = img.dataUrl.includes(',') ? img.dataUrl.split(',')[1] : img.dataUrl;
+      sourceImagesFolder.file(`${idx + 1}-${img.name}`, base64, { base64: true });
+    });
+  }
   
   // Workflow JSON (now includes embedded credential manifest)
   const workflowJSON = generateWorkflowJSON(nodes, smartName, effectiveOrigin);
