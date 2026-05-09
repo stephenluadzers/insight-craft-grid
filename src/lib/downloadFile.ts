@@ -4,6 +4,8 @@ export interface DownloadTarget {
   readonly id: string;
   readonly filename: string;
   readonly window: DownloadWindow | null;
+  readonly closed: boolean;
+  close: () => void;
 }
 
 const DOWNLOAD_URL_TTL_MS = 15 * 60_000;
@@ -40,7 +42,17 @@ export function openDownloadWindow(filename = "export"): DownloadTarget {
     targetWindow = null;
   }
 
-  return { id, filename: safeFilename, window: targetWindow };
+  return {
+    id,
+    filename: safeFilename,
+    window: targetWindow,
+    get closed() {
+      return !targetWindow || targetWindow.closed;
+    },
+    close: () => {
+      if (targetWindow && !targetWindow.closed) targetWindow.close();
+    },
+  };
 }
 
 export function downloadBlob(blob: Blob, filename: string, target?: DownloadTarget | DownloadWindow | null): string {
