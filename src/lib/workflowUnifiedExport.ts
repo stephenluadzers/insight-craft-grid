@@ -358,7 +358,8 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string, o
 function generateSecurityGuardrailReport(
   guardrailMetadata?: GuardrailMetadata,
   nodes: WorkflowNodeData[] = [],
-  workflowName: string = "Workflow"
+  workflowName: string = "Workflow",
+  originMetadata?: WorkflowOriginMetadata
 ): string {
   const aiCount = countAINodes(nodes);
   const integrationCount = nodes.filter(n => n.type === 'action' || n.type === 'connector').length;
@@ -368,7 +369,7 @@ function generateSecurityGuardrailReport(
 
   const riskScore = guardrailMetadata?.riskScore;
   const riskLevel = riskScore === undefined
-    ? (aiCount > 0 || integrationCount > 2 ? 'MEDIUM' : 'LOW')
+    ? (hasAIInWorkflow(nodes, originMetadata) || integrationCount > 2 ? 'MEDIUM' : 'LOW')
     : (riskScore < 3 ? 'LOW' : riskScore < 6 ? 'MEDIUM' : 'HIGH');
 
   let md = `# Security & Compliance Report\n\n`;
@@ -389,7 +390,7 @@ function generateSecurityGuardrailReport(
   md += `| Data / Storage Nodes | ${dataNodes} |\n`;
   md += `| Trigger Surfaces | ${triggerNodes} |\n`;
   md += `| Built-in Guardrail Nodes | ${guardrailNodes} |\n`;
-  md += `| Compliance Standards | ${inferComplianceStandards(nodes, guardrailMetadata).length} |\n\n`;
+  md += `| Compliance Standards | ${inferComplianceStandards(nodes, guardrailMetadata, originMetadata).length} |\n\n`;
 
   md += `### Risk Profile Summary\n\n`;
   if (aiCount > 0) {
@@ -419,7 +420,7 @@ function generateSecurityGuardrailReport(
   }
 
   
-  const effectiveStandards = inferComplianceStandards(nodes, guardrailMetadata);
+  const effectiveStandards = inferComplianceStandards(nodes, guardrailMetadata, originMetadata);
   if (effectiveStandards.length > 0) {
     md += `## Compliance Standards\n\n`;
     md += `This workflow has been analyzed for alignment with:\n\n`;
