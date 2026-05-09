@@ -1,10 +1,49 @@
-export function downloadBlob(blob: Blob, filename: string): string {
-  const url = URL.createObjectURL(blob);
+type DownloadPopup = Window & typeof globalThis;
+
+const escapeHtml = (value: string): string =>
+  value.replace(/[&<>'"]/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  }[char] || char));
+
+export function openDownloadWindow(filename = "export"): DownloadPopup | null {
+  try {
+    const popup = window.open("", "_blank", "popup,width=520,height=420") as DownloadPopup | null;
+    if (!popup) return null;
+
+    popup.document.open();
+    popup.document.write(`<!doctype html><html><head><title>Preparing ${escapeHtml(filename)}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0f172a;color:#f8fafc;display:grid;min-height:100vh;place-items:center}.box{max-width:420px;padding:28px}.muted{color:#cbd5e1;line-height:1.5}.name{word-break:break-word;font-weight:700}a{color:#93c5fd;font-weight:700}</style></head><body><main class="box"><h1>Preparing download…</h1><p class="muted">Keep this tab open. Your file will be ready in a moment.</p><p class="name">${escapeHtml(filename)}</p></main></body></html>`);
+    popup.document.close();
+    popup.focus();
+    return popup;
+  } catch (error) {
+    console.warn("Could not open download window:", error);
+    return null;
+  }
+}
+
+export function downloadBlob(blob: Blob, filename: string, popup?: DownloadPopup | null): string {
+  const targetWindow = popup && !popup.closed ? popup : null;
+  const url = targetWindow ? targetWindow.URL.createObjectURL(blob) : URL.createObjectURL(blob);
+
+  if (targetWindow) {
+    const safeFilename = escapeHtml(filename);
+    targetWindow.document.open();
+    targetWindow.document.write(`<!doctype html><html><head><title>Download ${safeFilename}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0f172a;color:#f8fafc;display:grid;min-height:100vh;place-items:center}.box{max-width:440px;padding:28px}.muted{color:#cbd5e1;line-height:1.5}.download{display:inline-flex;margin-top:14px;padding:12px 16px;border-radius:8px;background:#2563eb;color:white;text-decoration:none;font-weight:800}.name{word-break:break-word;font-weight:700}</style></head><body><main class="box"><h1>Your export is ready</h1><p class="muted">If the download does not start automatically, use the button below.</p><p class="name">${safeFilename}</p><a id="download-link" class="download" href="${url}" download="${safeFilename}">Download file</a></main><script>setTimeout(function(){document.getElementById('download-link').click()},150)</script></body></html>`);
+    targetWindow.document.close();
+    targetWindow.focus();
+    window.setTimeout(() => targetWindow.URL.revokeObjectURL(url), 10 * 60_000);
+    return url;
+  }
+
   return url;
 }
 
 export function revokeDownloadUrl(url: string): void {
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
 }
 
 export function sanitizeDownloadFilename(value: string, fallback = "workflow"): string {

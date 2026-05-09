@@ -11,7 +11,7 @@ import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
 import { IntegrationLibrary } from "./IntegrationLibrary";
 import { GitHubImportDialog } from "./GitHubImportDialog";
-import { downloadBlob, sanitizeDownloadFilename, withExportTimeout } from "@/lib/downloadFile";
+import { downloadBlob, openDownloadWindow, sanitizeDownloadFilename, withExportTimeout } from "@/lib/downloadFile";
 
 interface FloatingBottomMenuProps {
   onSelectView: (view: string) => void;
@@ -94,6 +94,7 @@ export function FloatingBottomMenu({
 
   const handleToolbarDownload = async () => {
     if (!workflowNodes.length || isDownloading) return;
+    const popup = openDownloadWindow("Remora Flow Workflow complete package");
     setIsDownloading(true);
     try {
       const { exportWorkflowComprehensive } = await import("@/lib/workflowUnifiedExport");
@@ -102,10 +103,11 @@ export function FloatingBottomMenu({
         "Complete package export"
       );
       const filename = (blob as Blob & { smartFilename?: string }).smartFilename || `${sanitizeDownloadFilename("Remora Flow Workflow")}-complete-package.zip`;
-      const url = downloadBlob(blob, filename);
+      const url = downloadBlob(blob, filename, popup);
       setLastDownload({ url, filename });
     } catch (error) {
       console.error("Toolbar download failed:", error);
+      if (popup && !popup.closed) popup.close();
     } finally {
       setIsDownloading(false);
     }

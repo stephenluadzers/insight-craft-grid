@@ -8,7 +8,7 @@ import { WorkflowNodeData } from "@/types/workflow";
 import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
 import { exportWorkflowToYAML } from "@/lib/workflowExportYAML";
 import { exportWorkflowComprehensive } from "@/lib/workflowUnifiedExport";
-import { downloadBlob, sanitizeDownloadFilename, withExportTimeout } from "@/lib/downloadFile";
+import { downloadBlob, openDownloadWindow, sanitizeDownloadFilename, withExportTimeout } from "@/lib/downloadFile";
 import { useToast } from "@/hooks/use-toast";
 
 interface WorkflowBusinessExportProps {
@@ -113,6 +113,8 @@ export function WorkflowBusinessExport({
   const { toast } = useToast();
 
   const handleExport = async (platform: ExportPlatform) => {
+    const platformName = PLATFORM_OPTIONS.find(p => p.id === platform)?.name || platform;
+    const popup = openDownloadWindow(`${workflowName} ${platformName} export`);
     setIsExporting(true);
     
     try {
@@ -124,15 +126,16 @@ export function WorkflowBusinessExport({
       }), "Platform export");
 
       const filename = `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${platform}.zip`;
-      const url = downloadBlob(blob, filename);
+      const url = downloadBlob(blob, filename, popup);
       setLastDownload({ url, filename });
 
       toast({
         title: "Export Ready",
-        description: `Click the download link to save the ${PLATFORM_OPTIONS.find(p => p.id === platform)?.name} package.`,
+        description: `A download tab opened with the ${platformName} package.`,
       });
     } catch (error) {
       console.error('Export failed:', error);
+      if (popup && !popup.closed) popup.close();
       toast({
         title: "Export Failed",
         description: "Failed to export workflow. Please try again.",
@@ -144,6 +147,7 @@ export function WorkflowBusinessExport({
   };
 
   const handleComprehensiveExport = async () => {
+    const popup = openDownloadWindow(`${workflowName} complete package`);
     setIsExporting(true);
     
     try {
@@ -152,15 +156,16 @@ export function WorkflowBusinessExport({
       // Use smart filename if available, otherwise fallback to sanitized name
       const smartFilename = (blob as any).smartFilename || `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-complete-package.zip`;
 
-      const url = downloadBlob(blob, smartFilename);
+      const url = downloadBlob(blob, smartFilename, popup);
       setLastDownload({ url, filename: smartFilename });
 
       toast({
         title: "Complete Export Ready",
-        description: "Click the download link to save the complete package to your computer.",
+        description: "A download tab opened with the complete package.",
       });
     } catch (error) {
       console.error('Comprehensive export failed:', error);
+      if (popup && !popup.closed) popup.close();
       toast({
         title: "Export Failed",
         description: "Failed to create comprehensive export. Please try again.",
@@ -273,14 +278,15 @@ export function WorkflowBusinessExport({
             <div className="flex gap-2">
               <Button
                 onClick={() => {
+                  const popup = openDownloadWindow(`${workflowName} YAML export`);
                   const yaml = exportWorkflowToYAML(nodes, workflowName);
                   const filename = `${sanitizeDownloadFilename(workflowName)}.yaml`;
                   const blob = new Blob([yaml], { type: "text/yaml;charset=utf-8" });
-                  const url = downloadBlob(blob, filename);
+                  const url = downloadBlob(blob, filename, popup);
                   setLastDownload({ url, filename });
                   toast({
                     title: "YAML Export Ready",
-                    description: "Click the download link to save the YAML file.",
+                    description: "A download tab opened with the YAML file.",
                   });
                 }}
                 variant="outline"

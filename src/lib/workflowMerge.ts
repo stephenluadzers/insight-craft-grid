@@ -1,4 +1,5 @@
 import { WorkflowNodeData } from "@/types/workflow";
+import { downloadBlob, openDownloadWindow } from "./downloadFile";
 
 interface WorkflowToMerge {
   name: string;
@@ -114,12 +115,6 @@ export const exportFlowBundle = (workflows: any[], bundleName: string): void => 
   };
 
   const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${bundleName.toLowerCase().replace(/\s+/g, '-')}.flowbundle.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const filename = `${bundleName.toLowerCase().replace(/\s+/g, '-')}.flowbundle.json`;
+  downloadBlob(blob, filename, openDownloadWindow(filename));
 };

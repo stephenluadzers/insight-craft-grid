@@ -16,6 +16,7 @@ import { WorkflowNodeData } from '@/types/workflow';
 import { generateWorkflowDownloadPackage } from '@/lib/workflowDownload';
 import { toast } from 'sonner';
 import { WorkflowScanPanel } from './WorkflowScanPanel';
+import { downloadBlob, openDownloadWindow } from '@/lib/downloadFile';
 
 interface ROIData {
   timeSavings: {
@@ -102,23 +103,13 @@ export const WorkflowROIReport = ({ nodes, workflowName }: WorkflowROIReportProp
   const roi = calculateROI(nodes);
 
   const handleDownloadReport = async () => {
+    const popup = openDownloadWindow(`${workflowName} enterprise package`);
     try {
       const { blob, fileName } = await generateWorkflowDownloadPackage(nodes, workflowName);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
-      toast.success('Enterprise package downloaded');
+      downloadBlob(blob, fileName, popup);
+      toast.success('Enterprise package ready');
     } catch (error) {
+      if (popup && !popup.closed) popup.close();
       toast.error('Failed to download package');
     }
   };
