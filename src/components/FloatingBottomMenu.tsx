@@ -24,7 +24,6 @@ interface FloatingBottomMenuProps {
   onSave?: () => void;
   isOptimizing?: boolean;
   onOptimize?: () => void;
-  onDownload?: () => void;
   onGitHubImport?: (nodes: any[], name: string) => void;
   onOpenAPIImport?: () => void;
 }
