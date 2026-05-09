@@ -587,7 +587,19 @@ export async function exportWorkflowComprehensive(
       `## Stats\n\n` +
       `- Nodes: ${nodes.length}\n` +
       `- AI / agent nodes: ${aiCount}\n` +
-      `- Trigger type: ${nodes.find(n => n.type === 'trigger')?.title ?? 'manual'}\n`
+      `- Trigger type: ${nodes.find(n => n.type === 'trigger')?.title ?? 'manual'}\n\n` +
+      `## About \`n8n-nodes-base.noOp\` Nodes\n\n` +
+      `Most nodes in this export use n8n's built-in **\`noOp\`** (no-operation) type. This is **intentional** and matches how official n8n marketplace templates are distributed.\n\n` +
+      `**Why \`noOp\`?**\n\n` +
+      `- It guarantees the workflow imports cleanly into any n8n instance (cloud, self-hosted, any version) without missing-node errors.\n` +
+      `- Each \`noOp\` node is an architectural placeholder that documents intent (title, description, position, connections) without hard-coding a specific community or paid integration.\n` +
+      `- You wire in your own credentials and swap each \`noOp\` for the real node (HTTP Request, Slack, OpenAI, Postgres, etc.) once during setup.\n\n` +
+      `**To activate a node:**\n\n` +
+      `1. Click the \`noOp\` node in the n8n editor\n` +
+      `2. Delete it and add the real integration node in the same position\n` +
+      `3. Reconnect the input/output edges (n8n preserves them when you replace in place)\n` +
+      `4. Paste in credentials from \`../../credentials/CREDENTIAL_SETUP.md\`\n\n` +
+      `The node titles, descriptions, and connection topology in this file are the contract — the underlying node type is the part you customise.\n`
     );
   } catch (error) {
     console.error("Failed to generate n8n export:", error);
