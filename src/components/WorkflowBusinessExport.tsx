@@ -278,14 +278,15 @@ export function WorkflowBusinessExport({
             <div className="flex gap-2">
               <Button
                 onClick={() => {
+                  const popup = openDownloadWindow(`${workflowName} YAML export`);
                   const yaml = exportWorkflowToYAML(nodes, workflowName);
                   const filename = `${sanitizeDownloadFilename(workflowName)}.yaml`;
                   const blob = new Blob([yaml], { type: "text/yaml;charset=utf-8" });
-                  const url = downloadBlob(blob, filename);
+                  const url = downloadBlob(blob, filename, popup);
                   setLastDownload({ url, filename });
                   toast({
                     title: "YAML Export Ready",
-                    description: "Click the download link to save the YAML file.",
+                    description: "A download tab opened with the YAML file.",
                   });
                 }}
                 variant="outline"
