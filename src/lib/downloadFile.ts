@@ -33,20 +33,64 @@ export function downloadBlob(blob: Blob, filename: string, popup?: DownloadPopup
   const url = URL.createObjectURL(blob);
 
   if (targetWindow) {
-    const safeFilename = escapeHtml(filename);
-    targetWindow.document.open();
-    targetWindow.document.write(`<!doctype html><html><head><title>Download ${safeFilename}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0f172a;color:#f8fafc;display:grid;min-height:100vh;place-items:center}.box{max-width:440px;padding:28px}.muted{color:#cbd5e1;line-height:1.5}.name{word-break:break-word;font-weight:700}.fallback{display:inline-flex;margin-top:14px;padding:12px 16px;border-radius:8px;background:#2563eb;color:white;text-decoration:none;font-weight:800}</style></head><body><main class="box"><h1>Starting download…</h1><p class="muted">Your browser is receiving a regular file response now. If it is blocked, use the fallback link below.</p><p class="name">${safeFilename}</p><a class="fallback" href="${url}" download="${safeFilename}">Fallback download</a></main></body></html>`);
-    targetWindow.document.close();
-    targetWindow.focus();
+    void renderDownloadForm(targetWindow, blob, filename, url);
+  } else {
+    void submitBlobAsFileResponse(blob, filename).catch((error) => {
+      console.error("Download response failed, using blob fallback:", error);
+    });
   }
-
-  void submitBlobAsFileResponse(blob, filename, targetWindow?.name).catch((error) => {
-    console.error("Download response failed, using blob fallback:", error);
-  });
 
   window.setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
 
   return url;
+}
+
+async function renderDownloadForm(targetWindow: DownloadPopup, blob: Blob, filename: string, fallbackUrl: string): Promise<void> {
+  const safeFilename = escapeHtml(filename);
+  const data = await blobToBase64(blob);
+  if (targetWindow.closed) return;
+
+  const doc = targetWindow.document;
+  doc.open();
+  doc.write(`<!doctype html><html><head><title>Download ${safeFilename}</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,system-ui,sans-serif;background:#0f172a;color:#f8fafc;display:grid;min-height:100vh;place-items:center}.box{max-width:460px;padding:28px}.muted{color:#cbd5e1;line-height:1.5}.name{word-break:break-word;font-weight:700}.button,.fallback{display:inline-flex;margin-top:14px;margin-right:10px;padding:12px 16px;border-radius:8px;border:0;background:#2563eb;color:white;text-decoration:none;font-weight:800;cursor:pointer}.fallback{background:#334155}</style></head><body><main class="box"><h1>Your export is ready</h1><p class="muted">If the save prompt does not open automatically, press Save to computer.</p><p class="name">${safeFilename}</p></main></body></html>`);
+  doc.close();
+
+  const main = doc.querySelector("main");
+  const form = doc.createElement("form");
+  form.method = "POST";
+  form.action = DOWNLOAD_FUNCTION_URL;
+  form.enctype = "application/x-www-form-urlencoded";
+
+  const fields: Record<string, string> = {
+    filename,
+    contentType: blob.type || "application/octet-stream",
+    data,
+  };
+
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = doc.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  const button = doc.createElement("button");
+  button.type = "submit";
+  button.className = "button";
+  button.textContent = "Save to computer";
+  form.appendChild(button);
+  main?.appendChild(form);
+
+  const fallback = doc.createElement("a");
+  fallback.href = fallbackUrl;
+  fallback.download = filename;
+  fallback.className = "fallback";
+  fallback.textContent = "Fallback link";
+  main?.appendChild(fallback);
+
+  targetWindow.focus();
+  targetWindow.setTimeout(() => form.requestSubmit(), 350);
 }
 
 async function submitBlobAsFileResponse(blob: Blob, filename: string, targetName?: string): Promise<void> {
