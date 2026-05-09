@@ -551,33 +551,19 @@ export async function exportWorkflowComprehensive(
   workflowName?: string,
   guardrailMetadata?: GuardrailMetadata,
   originalInput?: string,
-  inputType?: 'text' | 'video' | 'image' | 'json' | 'github',
-  aiReasoning?: string
+  inputType?: WorkflowInputType,
+  aiReasoning?: string,
+  originMetadata?: WorkflowOriginMetadata
 ): Promise<Blob> {
-  // Naming consistency: if the user (or upstream caller) provided an explicit,
-  // non-generic workflow name, use it verbatim (slugified) so the zip filename,
-  // inner workflow.json `name`, YAML, n8n export, and README all match exactly.
-  // Only fall back to content-derived smart naming when no real title was given.
-  const isGenericName = (n?: string) => {
-    if (!n) return true;
-    const t = n.trim().toLowerCase();
-    return (
-      t.length === 0 ||
-      t === 'workflow' ||
-      t === 'untitled' ||
-      t === 'untitled workflow' ||
-      t.startsWith('new workflow')
-    );
+  const effectiveOrigin: WorkflowOriginMetadata = {
+    originalInput,
+    inputType,
+    aiReasoning,
+    ...originMetadata,
   };
-  const slugify = (n: string) =>
-    n
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || 'workflow';
 
   const smartName = !isGenericName(workflowName)
-    ? slugify(workflowName!)
+    ? normalizeWorkflowSlug(workflowName!)!
     : generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true });
   
   const zip = new JSZip();
@@ -595,7 +581,7 @@ export async function exportWorkflowComprehensive(
   docsFolder.file("SECURITY_COMPLIANCE.md", securityReport);
   
   // Workflow origin and AI reasoning report
-  const originReport = generateWorkflowOriginReport(smartName, originalInput, inputType, aiReasoning);
+  const originReport = generateWorkflowOriginReport(smartName, effectiveOrigin);
   docsFolder.file("WORKFLOW_ORIGIN.md", originReport);
   
   // Workflow JSON (now includes embedded credential manifest)
