@@ -72,7 +72,7 @@ interface ROIMetrics {
 
 function calculateComprehensiveROI(nodes: WorkflowNodeData[]): ROIMetrics {
   const nodeCount = nodes.length;
-  const hasAI = nodes.some(n => n.type === 'ai');
+  const hasAI = hasAINodes(nodes);
   const hasIntegrations = nodes.some(n => n.type === 'action');
   
   // Time savings
