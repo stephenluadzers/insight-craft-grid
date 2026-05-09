@@ -479,13 +479,13 @@ function generateSecurityGuardrailReport(
 
 function generateWorkflowOriginReport(
   workflowName: string,
-  originalInput?: string,
-  inputType?: 'text' | 'video' | 'image' | 'json' | 'github',
-  aiReasoning?: string
+  originMetadata: WorkflowOriginMetadata = {}
 ): string {
+  const { originalInput, inputType, aiReasoning, aiGenerated, aiModel, sourceSummary } = originMetadata;
   let md = `# Workflow Creation & Optimization Report\n\n`;
   md += `**Workflow:** ${workflowName}\n\n`;
   md += `**Generated:** ${new Date().toLocaleString()}\n\n`;
+  md += `**AI-Assisted:** ${aiGenerated || aiReasoning ? 'Yes' : 'No'}${aiModel ? ` (${aiModel})` : ''}\n\n`;
   
   md += `## 📝 Original Input Source\n\n`;
   
@@ -503,6 +503,7 @@ function generateWorkflowOriginReport(
       case 'image':
         md += `**Type:** Image Source\n\n`;
         md += `**Source:** ${originalInput}\n\n`;
+        md += `**Source Summary:** ${sourceSummary || 'User-provided workflow image / whiteboard sketch interpreted by Remora Flow vision analysis.'}\n\n`;
         break;
       case 'json':
         md += `**Type:** JSON Import\n\n`;
@@ -514,13 +515,13 @@ function generateWorkflowOriginReport(
         break;
     }
   } else {
-    md += `*No original input source recorded*\n\n`;
+    md += `*No original input source was attached to this export. Future exports should pass generation provenance from the input tab.*\n\n`;
   }
   
   md += `## 🤖 AI Optimization Analysis\n\n`;
   
   if (aiReasoning) {
-    md += `### How This Workflow Was Optimized\n\n`;
+    md += inputType === 'image' ? `### AI Vision Interpretation\n\n` : `### How This Workflow Was Optimized\n\n`;
     md += `${aiReasoning}\n\n`;
     
     md += `### Optimization Principles Applied\n\n`;
