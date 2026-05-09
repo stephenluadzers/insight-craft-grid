@@ -14,6 +14,15 @@ export function downloadBlob(blob: Blob, filename: string): string {
   return url;
 }
 
+export function sanitizeDownloadFilename(value: string, fallback = "workflow"): string {
+  const cleaned = value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return cleaned || fallback;
+}
+
 export function withExportTimeout<T>(promise: Promise<T>, label = "Export", ms = 45_000): Promise<T> {
   return Promise.race([
     promise,
