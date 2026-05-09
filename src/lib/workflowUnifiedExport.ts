@@ -580,7 +580,7 @@ export async function exportWorkflowComprehensive(
   docsFolder.file("BUSINESS_METRICS.md", businessMetrics);
   
   // Security & compliance report
-  const securityReport = generateSecurityGuardrailReport(guardrailMetadata, nodes, smartName);
+  const securityReport = generateSecurityGuardrailReport(guardrailMetadata, nodes, smartName, effectiveOrigin);
   docsFolder.file("SECURITY_COMPLIANCE.md", securityReport);
   
   // Workflow origin and AI reasoning report
@@ -588,7 +588,7 @@ export async function exportWorkflowComprehensive(
   docsFolder.file("WORKFLOW_ORIGIN.md", originReport);
   
   // Workflow JSON (now includes embedded credential manifest)
-  const workflowJSON = generateWorkflowJSON(nodes, smartName);
+  const workflowJSON = generateWorkflowJSON(nodes, smartName, effectiveOrigin);
   zip.file(`${smartName}.json`, workflowJSON);
   
   // Credential manifest — portable key mapping for any platform
@@ -707,7 +707,7 @@ export async function exportWorkflowComprehensive(
     `4. **Deploy:** Follow platform-specific README instructions\n\n` +
     `## 📊 Workflow Statistics\n\n` +
     `- **Nodes:** ${nodes.length}\n` +
-    `- **Has AI:** ${aiCount > 0 ? `Yes (${aiCount} AI / agent node${aiCount === 1 ? '' : 's'})` : 'No'}\n` +
+    `- **Has AI:** ${buildAIDisplay(nodes, effectiveOrigin)}\n` +
     `- **Has Integrations:** ${nodes.some(n => n.type === 'action') ? 'Yes' : 'No'}\n` +
     `- **Complexity:** ${nodes.length > 10 ? 'High' : nodes.length > 5 ? 'Medium' : 'Low'}\n\n` +
     `## 📈 Expected Business Impact\n\n` +
@@ -716,7 +716,7 @@ export async function exportWorkflowComprehensive(
     `${roi.revenuePotential.customerSatisfaction}\n\n` +
     `## 🔒 Security & Compliance\n\n` +
     (() => {
-      const std = inferComplianceStandards(nodes, guardrailMetadata);
+      const std = inferComplianceStandards(nodes, guardrailMetadata, effectiveOrigin);
       return `Compliant with: ${std.join(', ')}\n\n` +
         `See \`documentation/SECURITY_COMPLIANCE.md\` for the full control mapping and risk profile.\n\n`;
     })() +
