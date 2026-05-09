@@ -108,7 +108,6 @@ const Index = (): JSX.Element => {
             onOptimize={async () => {
               await canvasRef.current?.handleOptimize?.();
             }}
-            onDownload={() => canvasRef.current?.handleDownload?.()}
             onGitHubImport={(nodes, name) => canvasRef.current?.handleGitHubImport?.(nodes, name)}
             onOpenAPIImport={() => canvasRef.current?.handleOpenAPIImport?.()}
           />
