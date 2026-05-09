@@ -29,7 +29,9 @@ const Index = (): JSX.Element => {
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [executionId, setExecutionId] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => localStorage.getItem("remora-onboarding-complete") !== "true" && localStorage.getItem("flowfuse_privacy_consent") === null
+  );
   const canvasRef = useRef<any>(null);
 
   const handleAIWorkflowGenerated = (workflow: any) => {
@@ -46,7 +48,7 @@ const Index = (): JSX.Element => {
         <AppSidebar />
         <CommandPalette onNavigate={setCurrentView} />
         <ExecutionStream executionId={executionId} onClose={() => setExecutionId(null)} />
-        <OnboardingOverlay onComplete={() => setShowOnboarding(false)} onNavigate={setCurrentView} />
+        {showOnboarding && <OnboardingOverlay onComplete={() => setShowOnboarding(false)} onNavigate={setCurrentView} />}
         
         <div className="flex-1 flex flex-col">
           <div className="flex-1 p-6 pb-20 overflow-auto">
