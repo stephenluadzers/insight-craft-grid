@@ -23,6 +23,7 @@ import { SidebarTrigger } from "./ui/sidebar";
 import { validateWorkflow, ValidationResult } from "@/lib/workflowValidation";
 import { useWorkflowPersistence } from "@/hooks/useWorkflowPersistence";
 import { useCollaboration } from "@/hooks/useCollaboration";
+import { downloadBlob, withExportTimeout } from "@/lib/downloadFile";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
@@ -248,24 +249,13 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       console.log('⬇️ Download workflow package');
       try {
         const { exportWorkflowForBusiness } = await import('@/lib/workflowExport');
-        const blob = await exportWorkflowForBusiness(nodes, currentWorkflowName, {
+        const blob = await withExportTimeout(exportWorkflowForBusiness(nodes, currentWorkflowName, {
           platform: 'supabase-function',
           includeDocs: true,
           includeTests: false,
-        });
-        
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_complete_export.zip`;
-        a.rel = 'noopener';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
-        }, 1000);
+        }), 'Workflow package export');
+
+        downloadBlob(blob, `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_complete_export.zip`);
         
         toast({
           title: "Package Downloaded!",
