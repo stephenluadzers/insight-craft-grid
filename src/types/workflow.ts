@@ -185,6 +185,12 @@ export interface WorkflowOriginMetadata {
   aiGenerated?: boolean;
   aiModel?: string;
   sourceSummary?: string;
+  sourceImages?: Array<{
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
+    dataUrl: string;
+  }>;
 }
 
 // Multi-pass context extraction types
