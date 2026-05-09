@@ -9,9 +9,17 @@ export function downloadBlob(blob: Blob, filename: string): string {
   link.click();
   window.setTimeout(() => {
     link.remove();
-    URL.revokeObjectURL(url);
-  }, 60_000);
+  }, 1_000);
   return url;
+}
+
+export function sanitizeDownloadFilename(value: string, fallback = "workflow"): string {
+  const cleaned = value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return cleaned || fallback;
 }
 
 export function withExportTimeout<T>(promise: Promise<T>, label = "Export", ms = 45_000): Promise<T> {
