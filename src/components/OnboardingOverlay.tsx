@@ -59,7 +59,7 @@ const steps = [
 
 export function OnboardingOverlay({ onComplete, onNavigate }: OnboardingOverlayProps) {
   const [step, setStep] = useState(0);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => localStorage.getItem("remora-onboarding-complete") === "true");
 
   useEffect(() => {
     const seen = localStorage.getItem("remora-onboarding-complete");
@@ -97,6 +97,7 @@ export function OnboardingOverlay({ onComplete, onNavigate }: OnboardingOverlayP
           {/* Skip button */}
           <button
             onClick={handleComplete}
+            aria-label="Close onboarding"
             className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-5 h-5" />
