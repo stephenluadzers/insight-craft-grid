@@ -162,9 +162,19 @@ function renderReadyDocument(targetWindow: DownloadWindow, blob: Blob, filename:
   const popupUrl = targetWindow.URL.createObjectURL(blob);
 
   doc.open();
-  doc.write(`<!doctype html><html><head><title>Download ${escapeHtml(filename)}</title>${downloadPageHead()}</head><body><main class="box"><h1>Your export is ready</h1><p class="muted">If your browser did not show a save prompt, use the button below.</p><p class="name">${escapeHtml(filename)}</p><a id="download" class="button" href="${popupUrl}" download="${escapeHtml(filename)}">Download file</a><a class="fallback" href="${openerUrl}" download="${escapeHtml(filename)}">Backup link</a><p class="hint">You can close this tab after the file is saved.</p><script>setTimeout(function(){var a=document.getElementById('download'); if(a) a.click();}, 80);</script></main></body></html>`);
+  doc.write(`<!doctype html><html><head><title>Download ${escapeHtml(filename)}</title>${downloadPageHead()}</head><body><main class="box"><h1>Your export is ready</h1><p class="muted">If your download did not start automatically, use the button below.</p><p class="name">${escapeHtml(filename)}</p><a id="download" class="button" href="${popupUrl}" download="${escapeHtml(filename)}">Download file</a><a class="fallback" href="${openerUrl}" download="${escapeHtml(filename)}" target="_blank" rel="noopener">Open in new tab</a><p class="hint">You can close this tab after the file is saved.</p></main></body></html>`);
   doc.close();
   targetWindow.focus();
+  // Safari-friendly: navigating the popup directly to the blob: URL reliably triggers
+  // the browser's native download/preview, which the download attribute alone does not in Safari.
+  targetWindow.setTimeout(() => {
+    try {
+      targetWindow.location.href = popupUrl;
+    } catch {
+      const anchor = doc.getElementById("download") as HTMLAnchorElement | null;
+      if (anchor) anchor.click();
+    }
+  }, 150);
   targetWindow.setTimeout(() => targetWindow.URL.revokeObjectURL(popupUrl), DOWNLOAD_URL_TTL_MS);
 }
 
