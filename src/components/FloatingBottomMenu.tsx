@@ -11,6 +11,7 @@ import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
 import { IntegrationLibrary } from "./IntegrationLibrary";
 import { GitHubImportDialog } from "./GitHubImportDialog";
+import { downloadBlob, sanitizeDownloadFilename, withExportTimeout } from "@/lib/downloadFile";
 
 interface FloatingBottomMenuProps {
   onSelectView: (view: string) => void;
@@ -53,6 +54,8 @@ export function FloatingBottomMenu({
   const [isOpen, setIsOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [showGitHubImport, setShowGitHubImport] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [lastDownload, setLastDownload] = useState<{ url: string; filename: string } | null>(null);
 
   useEffect(() => {
     const dark = document.documentElement.classList.contains("dark");
@@ -89,6 +92,26 @@ export function FloatingBottomMenu({
 
   const currentItem = menuItems.find(item => item.id === currentView);
   const Icon = currentItem?.icon || Layout;
+  const workflowNodes = workflow?.nodes || [];
+
+  const handleToolbarDownload = async () => {
+    if (!workflowNodes.length || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const { exportWorkflowComprehensive } = await import("@/lib/workflowUnifiedExport");
+      const blob = await withExportTimeout(
+        exportWorkflowComprehensive(workflowNodes, "Remora Flow Workflow"),
+        "Complete package export"
+      );
+      const filename = (blob as Blob & { smartFilename?: string }).smartFilename || `${sanitizeDownloadFilename("Remora Flow Workflow")}-complete-package.zip`;
+      const url = downloadBlob(blob, filename);
+      setLastDownload({ url, filename });
+    } catch (error) {
+      console.error("Toolbar download failed:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <>
@@ -277,14 +300,14 @@ export function FloatingBottomMenu({
                 </Button>
 
                 <Button
-                  onClick={onDownload}
+                  onClick={handleToolbarDownload}
                   variant="outline"
                   size="sm"
                   className="h-9 rounded-lg shadow-sm hover:bg-accent hover:text-accent-foreground min-w-[44px]"
-                  disabled={!workflow?.nodes?.length}
+                  disabled={!workflowNodes.length || isDownloading}
                 >
-                  <Download className="w-4 h-4 mr-1.5" />
-                  <span className="text-xs font-medium hidden sm:inline">Download</span>
+                  {isDownloading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
+                  <span className="text-xs font-medium hidden sm:inline">{isDownloading ? "Exporting..." : "Download"}</span>
                 </Button>
                 
                 <Button
