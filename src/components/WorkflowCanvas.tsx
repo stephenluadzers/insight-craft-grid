@@ -97,6 +97,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const [showMetricsOverlay, setShowMetricsOverlay] = useState(true);
   const [canvasImages, setCanvasImages] = useState<CanvasImage[]>([]);
   const [showAPIImport, setShowAPIImport] = useState(false);
+  const [lastDownload, setLastDownload] = useState<{ url: string; filename: string } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodesContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -255,7 +256,9 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           includeTests: false,
         }), 'Workflow package export');
 
-        downloadBlob(blob, `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_complete_export.zip`);
+        const filename = `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_complete_export.zip`;
+        const url = downloadBlob(blob, filename);
+        setLastDownload({ url, filename });
         
         toast({
           title: "Package Downloaded!",
@@ -1018,6 +1021,16 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           complianceStandards={complianceStandards}
           riskScore={riskScore}
         />
+      )}
+
+      {lastDownload && (
+        <a
+          href={lastDownload.url}
+          download={lastDownload.filename}
+          className="fixed bottom-24 right-6 z-50 rounded-lg border bg-card px-4 py-3 text-sm font-medium text-primary shadow-lg underline-offset-4 hover:underline"
+        >
+          Click here if the download did not start
+        </a>
       )}
     </div>
     </>
