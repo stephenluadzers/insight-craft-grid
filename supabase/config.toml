@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.agent-webhook]
 verify_jwt = false
+
+[functions.download-export]
+verify_jwt = false
