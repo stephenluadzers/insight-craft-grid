@@ -28,6 +28,7 @@ export function ConsentDialog() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleAcceptAll = async () => {
+    setShowConsentDialog(false);
     await updateConsent({
       essential: true,
       analytics: true,
@@ -36,10 +37,10 @@ export function ConsentDialog() {
       marketing: true,
       thirdParty: false,
     });
-    setShowConsentDialog(false);
   };
 
   const handleEssentialOnly = async () => {
+    setShowConsentDialog(false);
     await updateConsent({
       essential: true,
       analytics: false,
@@ -48,12 +49,16 @@ export function ConsentDialog() {
       marketing: false,
       thirdParty: false,
     });
-    setShowConsentDialog(false);
   };
 
   const handleSavePreferences = async () => {
-    await updateConsent(preferences);
     setShowConsentDialog(false);
+    await updateConsent(preferences);
+  };
+
+  const handleClose = () => {
+    setShowConsentDialog(false);
+    void updateConsent({ essential: true });
   };
 
   const togglePreference = (key: keyof typeof preferences) => {
@@ -62,8 +67,8 @@ export function ConsentDialog() {
   };
 
   return (
-    <Dialog open={showConsentDialog} onOpenChange={() => {}}>
-      <DialogContent className="max-w-2xl" onInteractOutside={(e) => e.preventDefault()}>
+    <Dialog open={showConsentDialog} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl">Privacy & Data Consent</DialogTitle>
           <DialogDescription>
