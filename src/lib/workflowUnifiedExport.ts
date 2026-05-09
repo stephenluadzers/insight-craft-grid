@@ -493,7 +493,7 @@ export async function exportWorkflowComprehensive(
   docsFolder.file("BUSINESS_METRICS.md", businessMetrics);
   
   // Security & compliance report
-  const securityReport = generateSecurityGuardrailReport(guardrailMetadata);
+  const securityReport = generateSecurityGuardrailReport(guardrailMetadata, nodes, smartName);
   docsFolder.file("SECURITY_COMPLIANCE.md", securityReport);
   
   // Workflow origin and AI reasoning report
