@@ -3,7 +3,7 @@
  * Comprehensive export including all formats, documentation, and business metrics
  */
 
-import { WorkflowNodeData } from "@/types/workflow";
+import { WorkflowInputType, WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import JSZip from "jszip";
 import { exportWorkflowToYAML } from "./workflowExportYAML";
 import { 
@@ -43,11 +43,44 @@ function hasAINodes(nodes: WorkflowNodeData[]): boolean {
   return countAINodes(nodes) > 0;
 }
 
+function hasAIInWorkflow(nodes: WorkflowNodeData[], originMetadata?: WorkflowOriginMetadata): boolean {
+  return hasAINodes(nodes) || originMetadata?.aiGenerated === true || !!originMetadata?.aiReasoning;
+}
+
+function buildAIDisplay(nodes: WorkflowNodeData[], originMetadata?: WorkflowOriginMetadata): string {
+  const aiCount = countAINodes(nodes);
+  if (aiCount > 0) {
+    return `Yes (${aiCount} AI / agent node${aiCount === 1 ? '' : 's'})`;
+  }
+  if (originMetadata?.aiGenerated || originMetadata?.aiReasoning) {
+    return `Yes (AI-assisted generation${originMetadata.aiModel ? ` via ${originMetadata.aiModel}` : ''})`;
+  }
+  return 'No';
+}
+
+function normalizeWorkflowSlug(value?: string): string | null {
+  const slug = value
+    ?.toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/\b(?:optimized-){2,}optimized\b/g, 'optimized')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return slug || null;
+}
+
+function isGenericName(name?: string): boolean {
+  const slug = normalizeWorkflowSlug(name);
+  return !slug || slug === 'workflow' || slug === 'untitled' || slug === 'untitled-workflow' || slug === 'optimized' || slug.startsWith('new-workflow');
+}
+
 // Infer compliance standards from workflow shape when explicit metadata is missing.
 // Always returns at least the baseline standards every Remora Flow export aligns with.
 function inferComplianceStandards(
   nodes: WorkflowNodeData[],
   guardrailMetadata?: GuardrailMetadata,
+  originMetadata?: WorkflowOriginMetadata,
 ): string[] {
   const standards = new Set<string>(
     guardrailMetadata?.complianceStandards ?? []
@@ -73,7 +106,7 @@ function inferComplianceStandards(
     standards.add('NIST SP 800-53');
     standards.add('FedRAMP (Moderate aligned)');
   }
-  if (hasAINodes(nodes)) {
+  if (hasAIInWorkflow(nodes, originMetadata)) {
     standards.add('EU AI Act (transparency)');
     standards.add('NIST AI RMF');
   }
@@ -278,7 +311,7 @@ function generateBusinessMetricsReport(roi: ROIMetrics, nodes: WorkflowNodeData[
   return md;
 }
 
-function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): string {
+function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string, originMetadata?: WorkflowOriginMetadata): string {
   const credentialManifest = extractCredentials(nodes, workflowName);
   
   return JSON.stringify({
@@ -301,8 +334,9 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): 
     })),
     metadata: {
       nodeCount: nodes.length,
-      hasAI: hasAINodes(nodes),
+      hasAI: hasAIInWorkflow(nodes, originMetadata),
       aiNodeCount: countAINodes(nodes),
+      aiAssistedGeneration: originMetadata?.aiGenerated === true || !!originMetadata?.aiReasoning,
       hasIntegrations: nodes.some(n => n.type === 'action'),
       complexity: nodes.length > 10 ? 'high' : nodes.length > 5 ? 'medium' : 'low'
     },
@@ -324,7 +358,8 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): 
 function generateSecurityGuardrailReport(
   guardrailMetadata?: GuardrailMetadata,
   nodes: WorkflowNodeData[] = [],
-  workflowName: string = "Workflow"
+  workflowName: string = "Workflow",
+  originMetadata?: WorkflowOriginMetadata
 ): string {
   const aiCount = countAINodes(nodes);
   const integrationCount = nodes.filter(n => n.type === 'action' || n.type === 'connector').length;
@@ -334,7 +369,7 @@ function generateSecurityGuardrailReport(
 
   const riskScore = guardrailMetadata?.riskScore;
   const riskLevel = riskScore === undefined
-    ? (aiCount > 0 || integrationCount > 2 ? 'MEDIUM' : 'LOW')
+    ? (hasAIInWorkflow(nodes, originMetadata) || integrationCount > 2 ? 'MEDIUM' : 'LOW')
     : (riskScore < 3 ? 'LOW' : riskScore < 6 ? 'MEDIUM' : 'HIGH');
 
   let md = `# Security & Compliance Report\n\n`;
@@ -355,7 +390,7 @@ function generateSecurityGuardrailReport(
   md += `| Data / Storage Nodes | ${dataNodes} |\n`;
   md += `| Trigger Surfaces | ${triggerNodes} |\n`;
   md += `| Built-in Guardrail Nodes | ${guardrailNodes} |\n`;
-  md += `| Compliance Standards | ${inferComplianceStandards(nodes, guardrailMetadata).length} |\n\n`;
+  md += `| Compliance Standards | ${inferComplianceStandards(nodes, guardrailMetadata, originMetadata).length} |\n\n`;
 
   md += `### Risk Profile Summary\n\n`;
   if (aiCount > 0) {
@@ -385,7 +420,7 @@ function generateSecurityGuardrailReport(
   }
 
   
-  const effectiveStandards = inferComplianceStandards(nodes, guardrailMetadata);
+  const effectiveStandards = inferComplianceStandards(nodes, guardrailMetadata, originMetadata);
   if (effectiveStandards.length > 0) {
     md += `## Compliance Standards\n\n`;
     md += `This workflow has been analyzed for alignment with:\n\n`;
@@ -447,13 +482,13 @@ function generateSecurityGuardrailReport(
 
 function generateWorkflowOriginReport(
   workflowName: string,
-  originalInput?: string,
-  inputType?: 'text' | 'video' | 'image' | 'json' | 'github',
-  aiReasoning?: string
+  originMetadata: WorkflowOriginMetadata = {}
 ): string {
+  const { originalInput, inputType, aiReasoning, aiGenerated, aiModel, sourceSummary } = originMetadata;
   let md = `# Workflow Creation & Optimization Report\n\n`;
   md += `**Workflow:** ${workflowName}\n\n`;
   md += `**Generated:** ${new Date().toLocaleString()}\n\n`;
+  md += `**AI-Assisted:** ${aiGenerated || aiReasoning ? 'Yes' : 'No'}${aiModel ? ` (${aiModel})` : ''}\n\n`;
   
   md += `## 📝 Original Input Source\n\n`;
   
@@ -471,6 +506,14 @@ function generateWorkflowOriginReport(
       case 'image':
         md += `**Type:** Image Source\n\n`;
         md += `**Source:** ${originalInput}\n\n`;
+        md += `**Source Summary:** ${sourceSummary || 'User-provided workflow image / whiteboard sketch interpreted by Remora Flow vision analysis.'}\n\n`;
+        if (originMetadata.sourceImages?.length) {
+          md += `**Attached Source Image Files:**\n`;
+          originMetadata.sourceImages.forEach((img, idx) => {
+            md += `- \`source-images/${idx + 1}-${img.name}\` (${img.mimeType}, ${Math.round(img.sizeBytes / 1024)} KB)\n`;
+          });
+          md += `\n`;
+        }
         break;
       case 'json':
         md += `**Type:** JSON Import\n\n`;
@@ -482,13 +525,13 @@ function generateWorkflowOriginReport(
         break;
     }
   } else {
-    md += `*No original input source recorded*\n\n`;
+    md += `*No original input source was attached to this export. Future exports should pass generation provenance from the input tab.*\n\n`;
   }
   
   md += `## 🤖 AI Optimization Analysis\n\n`;
   
   if (aiReasoning) {
-    md += `### How This Workflow Was Optimized\n\n`;
+    md += inputType === 'image' ? `### AI Vision Interpretation\n\n` : `### How This Workflow Was Optimized\n\n`;
     md += `${aiReasoning}\n\n`;
     
     md += `### Optimization Principles Applied\n\n`;
@@ -518,34 +561,20 @@ export async function exportWorkflowComprehensive(
   workflowName?: string,
   guardrailMetadata?: GuardrailMetadata,
   originalInput?: string,
-  inputType?: 'text' | 'video' | 'image' | 'json' | 'github',
-  aiReasoning?: string
+  inputType?: WorkflowInputType,
+  aiReasoning?: string,
+  originMetadata?: WorkflowOriginMetadata
 ): Promise<Blob> {
-  // Naming consistency: if the user (or upstream caller) provided an explicit,
-  // non-generic workflow name, use it verbatim (slugified) so the zip filename,
-  // inner workflow.json `name`, YAML, n8n export, and README all match exactly.
-  // Only fall back to content-derived smart naming when no real title was given.
-  const isGenericName = (n?: string) => {
-    if (!n) return true;
-    const t = n.trim().toLowerCase();
-    return (
-      t.length === 0 ||
-      t === 'workflow' ||
-      t === 'untitled' ||
-      t === 'untitled workflow' ||
-      t.startsWith('new workflow')
-    );
+  const effectiveOrigin: WorkflowOriginMetadata = {
+    originalInput,
+    inputType,
+    aiReasoning,
+    ...originMetadata,
   };
-  const slugify = (n: string) =>
-    n
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || 'workflow';
 
   const smartName = !isGenericName(workflowName)
-    ? slugify(workflowName!)
-    : generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true });
+    ? normalizeWorkflowSlug(workflowName!)!
+    : normalizeWorkflowSlug(generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true })) || 'workflow';
   
   const zip = new JSZip();
   const roi = calculateComprehensiveROI(nodes);
@@ -558,15 +587,22 @@ export async function exportWorkflowComprehensive(
   docsFolder.file("BUSINESS_METRICS.md", businessMetrics);
   
   // Security & compliance report
-  const securityReport = generateSecurityGuardrailReport(guardrailMetadata, nodes, smartName);
+  const securityReport = generateSecurityGuardrailReport(guardrailMetadata, nodes, smartName, effectiveOrigin);
   docsFolder.file("SECURITY_COMPLIANCE.md", securityReport);
   
   // Workflow origin and AI reasoning report
-  const originReport = generateWorkflowOriginReport(smartName, originalInput, inputType, aiReasoning);
+  const originReport = generateWorkflowOriginReport(smartName, effectiveOrigin);
   docsFolder.file("WORKFLOW_ORIGIN.md", originReport);
+  if (effectiveOrigin.sourceImages?.length) {
+    const sourceImagesFolder = docsFolder.folder("source-images")!;
+    effectiveOrigin.sourceImages.forEach((img, idx) => {
+      const base64 = img.dataUrl.includes(',') ? img.dataUrl.split(',')[1] : img.dataUrl;
+      sourceImagesFolder.file(`${idx + 1}-${img.name}`, base64, { base64: true });
+    });
+  }
   
   // Workflow JSON (now includes embedded credential manifest)
-  const workflowJSON = generateWorkflowJSON(nodes, smartName);
+  const workflowJSON = generateWorkflowJSON(nodes, smartName, effectiveOrigin);
   zip.file(`${smartName}.json`, workflowJSON);
   
   // Credential manifest — portable key mapping for any platform
@@ -685,7 +721,7 @@ export async function exportWorkflowComprehensive(
     `4. **Deploy:** Follow platform-specific README instructions\n\n` +
     `## 📊 Workflow Statistics\n\n` +
     `- **Nodes:** ${nodes.length}\n` +
-    `- **Has AI:** ${aiCount > 0 ? `Yes (${aiCount} AI / agent node${aiCount === 1 ? '' : 's'})` : 'No'}\n` +
+    `- **Has AI:** ${buildAIDisplay(nodes, effectiveOrigin)}\n` +
     `- **Has Integrations:** ${nodes.some(n => n.type === 'action') ? 'Yes' : 'No'}\n` +
     `- **Complexity:** ${nodes.length > 10 ? 'High' : nodes.length > 5 ? 'Medium' : 'Low'}\n\n` +
     `## 📈 Expected Business Impact\n\n` +
@@ -694,7 +730,7 @@ export async function exportWorkflowComprehensive(
     `${roi.revenuePotential.customerSatisfaction}\n\n` +
     `## 🔒 Security & Compliance\n\n` +
     (() => {
-      const std = inferComplianceStandards(nodes, guardrailMetadata);
+      const std = inferComplianceStandards(nodes, guardrailMetadata, effectiveOrigin);
       return `Compliant with: ${std.join(', ')}\n\n` +
         `See \`documentation/SECURITY_COMPLIANCE.md\` for the full control mapping and risk profile.\n\n`;
     })() +

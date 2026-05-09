@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from "react";
 import { WorkflowNode } from "./WorkflowNode";
-import { WorkflowNodeData, NodeType } from "@/types/workflow";
+import { WorkflowNodeData, NodeType, WorkflowOriginMetadata } from "@/types/workflow";
 import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
@@ -27,7 +27,7 @@ import { downloadBlob, openDownloadWindow, withExportTimeout } from "@/lib/downl
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
-  onWorkflowChange?: (workflow: { nodes: WorkflowNodeData[] }) => void;
+  onWorkflowChange?: (workflow: { nodes: WorkflowNodeData[]; name?: string; originMetadata?: WorkflowOriginMetadata }) => void;
   onOptimizingChange?: (isOptimizing: boolean) => void;
 }
 
@@ -93,6 +93,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const [guardrailExplanations, setGuardrailExplanations] = useState<any[]>([]);
   const [complianceStandards, setComplianceStandards] = useState<string[]>([]);
   const [riskScore, setRiskScore] = useState<number | undefined>(undefined);
+  const [workflowOriginMetadata, setWorkflowOriginMetadata] = useState<WorkflowOriginMetadata | undefined>(undefined);
   const [showGuardrailViz, setShowGuardrailViz] = useState(false);
   const [showMetricsOverlay, setShowMetricsOverlay] = useState(true);
   const [canvasImages, setCanvasImages] = useState<CanvasImage[]>([]);
@@ -129,8 +130,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
   // Notify parent of workflow changes (memoized)
   const notifyWorkflowChange = useCallback(() => {
-    onWorkflowChange?.({ nodes });
-  }, [nodes, onWorkflowChange]);
+    onWorkflowChange?.({ nodes, name: currentWorkflowName, originMetadata: workflowOriginMetadata });
+  }, [nodes, currentWorkflowName, workflowOriginMetadata, onWorkflowChange]);
 
   useEffect(() => {
     notifyWorkflowChange();
@@ -148,6 +149,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const handleGitHubImport = (importedNodes: WorkflowNodeData[], name: string) => {
     console.log('📥 Importing workflow from GitHub:', name, importedNodes.length, 'nodes');
     setNodes(importedNodes);
+    setCurrentWorkflowName(name);
+    setWorkflowOriginMetadata({ originalInput: name, inputType: 'github', aiGenerated: false });
     toast({
       title: "Workflow Imported",
       description: `${name} loaded with ${importedNodes.length} nodes`,
@@ -157,7 +160,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     handleAddNode,
-    workflow: { nodes },
+    workflow: { nodes, name: currentWorkflowName, originMetadata: workflowOriginMetadata },
     handleWorkflowOptimized,
     handleOpenAIGenerator: () => setShowTextGeneration(true),
     handleOpenAPIImport: () => setShowAPIImport(true),
@@ -432,6 +435,9 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     guardrailExplanations?: any[];
     complianceStandards?: string[];
     riskScore?: number;
+    policyAnalysis?: any;
+    workflowName?: string;
+    originMetadata?: WorkflowOriginMetadata;
   }): void => {
     console.log('handleWorkflowGenerated called with:', {
       nodeCount: generatedNodes?.length || 0,
@@ -449,6 +455,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       });
       return;
     }
+    const currentNameIsGeneric = /^(untitled workflow|untitled|workflow|new workflow)$/i.test(currentWorkflowName.trim());
     
     // Position nodes in visible area, accounting for toolbar at bottom
     // Center horizontally in viewport, start from top with spacing
@@ -472,6 +479,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     console.log('Setting positioned nodes:', positionedNodes);
     setNodes(positionedNodes);
     setSelectedNodeId(null);
+    if (metadata?.workflowName && currentNameIsGeneric) setCurrentWorkflowName(metadata.workflowName);
+    if (metadata?.originMetadata) setWorkflowOriginMetadata(metadata.originMetadata);
     
     // Store guardrail metadata
     if (metadata?.guardrailExplanations) {
@@ -509,9 +518,9 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     
     // Clear current workflow ID to force "Save As New" for optimized workflow
     setCurrentWorkflowId(null);
-    // Append "-optimized" to the name to differentiate
+    // Keep optimization naming idempotent; do not stack "Optimized" on repeated passes.
     if (currentWorkflowName) {
-      setCurrentWorkflowName(currentWorkflowName + " (Optimized)");
+      setCurrentWorkflowName(currentWorkflowName.replace(/(\s*\(Optimized\))+$/i, '') + " (Optimized)");
     }
   };
 
@@ -944,6 +953,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           complianceStandards,
           riskScore,
         }}
+        originMetadata={workflowOriginMetadata}
       />
 
       <APIImportDialog

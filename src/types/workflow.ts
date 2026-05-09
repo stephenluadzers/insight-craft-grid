@@ -176,6 +176,23 @@ export interface WorkflowNodeData {
   color?: string;
 }
 
+export type WorkflowInputType = 'text' | 'video' | 'image' | 'json' | 'github';
+
+export interface WorkflowOriginMetadata {
+  originalInput?: string;
+  inputType?: WorkflowInputType;
+  aiReasoning?: string;
+  aiGenerated?: boolean;
+  aiModel?: string;
+  sourceSummary?: string;
+  sourceImages?: Array<{
+    name: string;
+    mimeType: string;
+    sizeBytes: number;
+    dataUrl: string;
+  }>;
+}
+
 // Multi-pass context extraction types
 export interface ExtractedEntity {
   name: string;

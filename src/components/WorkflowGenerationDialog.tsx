@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Package, X, Github, FolderOpen } from "lucide-react";
-import { WorkflowNodeData } from "@/types/workflow";
+import { WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import { z } from "zod";
 import { generateWorkflowName } from "@/lib/workflowUtils";
 import { WorkflowBusinessExport } from "./WorkflowBusinessExport";
@@ -18,9 +18,10 @@ const workflowIdeaSchema = z.string().trim().min(10, "Description must be at lea
 interface WorkflowGenerationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number; policyAnalysis?: any }) => void;
+  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number; policyAnalysis?: any; workflowName?: string; originMetadata?: WorkflowOriginMetadata }) => void;
   nodes: WorkflowNodeData[];
   workflowName: string;
+  originMetadata?: WorkflowOriginMetadata;
   guardrailMetadata?: {
     guardrailExplanations?: any[];
     complianceStandards?: string[];
@@ -29,7 +30,7 @@ interface WorkflowGenerationDialogProps {
   };
 }
 
-export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
+export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, originMetadata, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
   const [videoUrlsText, setVideoUrlsText] = useState("");
   const [githubRepoUrlsText, setGithubRepoUrlsText] = useState("");
@@ -46,6 +47,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const imageInputRef = useRef<HTMLInputElement>(null);
   const ideProjectInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  const buildOriginMetadata = (overrides: WorkflowOriginMetadata): WorkflowOriginMetadata => ({
+    aiGenerated: true,
+    ...overrides,
+  });
 
   const handleGenerate = async () => {
     const validation = workflowIdeaSchema.safeParse(workflowIdea);
@@ -78,7 +84,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             guardrailExplanations: data.workflows[0].guardrailExplanations,
             complianceStandards: data.workflows[0].complianceStandards,
             riskScore: data.workflows[0].riskScore,
-            policyAnalysis: data.workflows[0].policyAnalysis
+            policyAnalysis: data.workflows[0].policyAnalysis,
+            workflowName: data.workflows[0].workflowName || data.workflows[0].name,
+            originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.workflows[0].explanation || data.workflows[0].insights, aiModel: data.workflows[0].model })
           });
           toast({ title: "Workflow Created!", description: data.workflows[0].name || "Workflow generated successfully" });
           onOpenChange(false);
@@ -88,7 +96,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             guardrailExplanations: data.workflows[0].guardrailExplanations,
             complianceStandards: data.workflows[0].complianceStandards,
             riskScore: data.workflows[0].riskScore,
-            policyAnalysis: data.workflows[0].policyAnalysis
+            policyAnalysis: data.workflows[0].policyAnalysis,
+            workflowName: data.workflows[0].workflowName || data.workflows[0].name,
+            originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.workflows[0].explanation || data.workflows[0].insights, aiModel: data.workflows[0].model })
           });
           toast({ title: "Workflow Created!", description: `Generated ${data.workflows.length} workflows, applied first one` });
           onOpenChange(false);
@@ -99,7 +109,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           guardrailExplanations: data.guardrailExplanations, 
           complianceStandards: data.complianceStandards, 
           riskScore: data.riskScore,
-          policyAnalysis: data.policyAnalysis
+          policyAnalysis: data.policyAnalysis,
+          workflowName: data.workflowName || data.name,
+          originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.explanation || data.insights, aiModel: data.model })
         });
         toast({ title: "Workflow Created!", description: `Created ${data.nodes.length} nodes` });
         onOpenChange(false);
@@ -235,7 +247,21 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           guardrailExplanations: data.guardrailExplanations,
           complianceStandards: data.complianceStandards,
           riskScore: data.riskScore,
-          policyAnalysis: data.policyAnalysis
+          policyAnalysis: data.policyAnalysis,
+          workflowName: data.workflowName || data.name,
+          originMetadata: buildOriginMetadata({
+            originalInput: selectedImages.map((file, index) => `${index + 1}. ${file.name} (${file.type || 'image'}, ${Math.round(file.size / 1024)} KB)`).join('\n'),
+            inputType: 'image',
+            aiReasoning: data.insights || data.explanation,
+            aiModel: data.model || 'google/gemini-2.5-flash',
+            sourceSummary: `${selectedImages.length} user-provided image(s) analyzed by AI vision`,
+            sourceImages: selectedImages.map((file, index) => ({
+              name: file.name.replace(/[^a-zA-Z0-9._-]/g, '-'),
+              mimeType: file.type || 'image/png',
+              sizeBytes: file.size,
+              dataUrl: imageDataArray[index],
+            })),
+          })
         });
         toast({ title: "Workflow Created!", description: `Created from ${selectedImages.length} image(s)` });
         if (configuredNodes.length > 0) {
@@ -559,7 +585,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           </div>
         </Tabs>
 
-        <WorkflowBusinessExport open={showBusinessExport} onOpenChange={setShowBusinessExport} nodes={nodes} workflowName={workflowName} guardrailMetadata={guardrailMetadata ? { explanations: guardrailMetadata.guardrailExplanations, complianceStandards: guardrailMetadata.complianceStandards, riskScore: guardrailMetadata.riskScore, policyAnalysis: guardrailMetadata.policyAnalysis } : undefined} />
+        <WorkflowBusinessExport open={showBusinessExport} onOpenChange={setShowBusinessExport} nodes={nodes} workflowName={workflowName} originMetadata={originMetadata} guardrailMetadata={guardrailMetadata ? { explanations: guardrailMetadata.guardrailExplanations, complianceStandards: guardrailMetadata.complianceStandards, riskScore: guardrailMetadata.riskScore, policyAnalysis: guardrailMetadata.policyAnalysis } : undefined} />
       </DialogContent>
     </Dialog>
   );
