@@ -4,6 +4,7 @@
  */
 
 import { WorkflowNodeData } from "@/types/workflow";
+import { downloadBlob, openDownloadWindow } from "./downloadFile";
 
 export function exportWorkflowToYAML(nodes: WorkflowNodeData[], workflowName: string): string {
   const yaml = `# Remora Flow Workflow Export
@@ -48,13 +49,7 @@ ${Array.from(new Set(nodes.map(n => n.type))).map(type => `    - ${type}`).join(
 }
 
 export function downloadYAML(yamlContent: string, filename: string): void {
+  const resolvedFilename = filename.endsWith('.yaml') ? filename : `${filename}.yaml`;
   const blob = new Blob([yamlContent], { type: 'text/yaml;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename.endsWith('.yaml') ? filename : `${filename}.yaml`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, resolvedFilename, openDownloadWindow(resolvedFilename));
 }
