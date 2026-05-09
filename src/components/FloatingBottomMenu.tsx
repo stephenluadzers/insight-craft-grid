@@ -47,7 +47,6 @@ export function FloatingBottomMenu({
   onSave,
   isOptimizing = false,
   onOptimize,
-  onDownload,
   onGitHubImport,
   onOpenAPIImport
 }: FloatingBottomMenuProps) {
