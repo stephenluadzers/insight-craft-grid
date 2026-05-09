@@ -72,7 +72,7 @@ function normalizeWorkflowSlug(value?: string): string | null {
 
 function isGenericName(name?: string): boolean {
   const slug = normalizeWorkflowSlug(name);
-  return !slug || slug === 'workflow' || slug === 'untitled' || slug === 'untitled-workflow' || slug.startsWith('new-workflow');
+  return !slug || slug === 'workflow' || slug === 'untitled' || slug === 'untitled-workflow' || slug === 'optimized' || slug.startsWith('new-workflow');
 }
 
 // Infer compliance standards from workflow shape when explicit metadata is missing.
