@@ -274,10 +274,13 @@ export function WorkflowBusinessExport({
               <Button
                 onClick={() => {
                   const yaml = exportWorkflowToYAML(nodes, workflowName);
-                  downloadYAML(yaml, `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`);
+                  const filename = `${sanitizeDownloadFilename(workflowName)}.yaml`;
+                  const blob = new Blob([yaml], { type: "text/yaml;charset=utf-8" });
+                  const url = downloadBlob(blob, filename);
+                  setLastDownload({ url, filename });
                   toast({
-                    title: "YAML Exported",
-                    description: "Workflow exported to YAML format with complete architecture",
+                    title: "YAML Export Ready",
+                    description: "Click the download link to save the YAML file.",
                   });
                 }}
                 variant="outline"
