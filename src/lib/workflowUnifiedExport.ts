@@ -522,15 +522,44 @@ export async function exportWorkflowComprehensive(
   
   // Platform-specific exports folder
   const platformsFolder = zip.folder("platforms")!;
-  
-  // Generate exports for major platforms (simplified versions)
-  const platforms: ExportPlatform[] = ['n8n', 'python', 'typescript', 'docker'];
-  
-  for (const platform of platforms) {
+  const aiCount = countAINodes(nodes);
+
+  // n8n — emit a real, importable workflow.json
+  try {
+    const n8nFolder = platformsFolder.folder("n8n")!;
+    const n8nWorkflow = generateN8NWorkflow(nodes, smartName);
+    const n8nFilename = `${smartName}.json`;
+    n8nFolder.file(n8nFilename, JSON.stringify(n8nWorkflow, null, 2));
+    // Keep a stable alias so docs/scripts can rely on it
+    n8nFolder.file("workflow.json", JSON.stringify(n8nWorkflow, null, 2));
+    n8nFolder.file(
+      "README.md",
+      `# n8n Export — ${smartName}\n\n` +
+      `## Import\n\n` +
+      `1. Open your n8n instance\n` +
+      `2. Workflows → **Import from File**\n` +
+      `3. Select \`${n8nFilename}\` (or \`workflow.json\`)\n` +
+      `4. Configure credentials referenced in \`../../credentials/CREDENTIAL_SETUP.md\`\n` +
+      `5. Activate the workflow\n\n` +
+      `## Stats\n\n` +
+      `- Nodes: ${nodes.length}\n` +
+      `- AI / agent nodes: ${aiCount}\n` +
+      `- Trigger type: ${nodes.find(n => n.type === 'trigger')?.title ?? 'manual'}\n`
+    );
+  } catch (error) {
+    console.error("Failed to generate n8n export:", error);
+  }
+
+  // Other platforms — placeholder pointers (use Business Export dialog for full code)
+  for (const platform of ['python', 'typescript', 'docker'] as ExportPlatform[]) {
     try {
-      // Note: This creates a simplified version. For full exports, use the individual platform exports
       const platformFolder = platformsFolder.folder(platform)!;
-      platformFolder.file("README.md", `# ${platform.toUpperCase()} Export\n\nFor full ${platform} export with all files, use the platform-specific export option.\n\nThis folder contains basic configuration for ${platform} deployment.`);
+      platformFolder.file(
+        "README.md",
+        `# ${platform.toUpperCase()} Export\n\n` +
+        `For the full ${platform} package (source files, Dockerfile, tests), use **Export → ${platform}** in Remora Flow.\n\n` +
+        `This complete package focuses on the importable workflow definition (\`../../${smartName}.json\` and \`../../${smartName}.yaml\`) plus the n8n drop-in (\`../n8n/workflow.json\`).\n`
+      );
     } catch (error) {
       console.error(`Failed to generate ${platform} export:`, error);
     }
