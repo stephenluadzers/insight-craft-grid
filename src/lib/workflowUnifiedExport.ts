@@ -347,7 +347,7 @@ function generateSecurityGuardrailReport(
   }
 
   
-  if (guardrailMetadata.complianceStandards && guardrailMetadata.complianceStandards.length > 0) {
+  if (guardrailMetadata?.complianceStandards && guardrailMetadata.complianceStandards.length > 0) {
     md += `## Compliance Standards\n\n`;
     md += `This workflow has been analyzed for compliance with:\n\n`;
     guardrailMetadata.complianceStandards.forEach(standard => {
@@ -355,10 +355,10 @@ function generateSecurityGuardrailReport(
     });
     md += `\n`;
   }
-  
-  if (guardrailMetadata.policyAnalysis) {
+
+  if (guardrailMetadata?.policyAnalysis) {
     const pa = guardrailMetadata.policyAnalysis;
-    
+
     if (pa.detectedDataTypes && pa.detectedDataTypes.length > 0) {
       md += `## Detected Data Types\n\n`;
       pa.detectedDataTypes.forEach(type => {
@@ -366,7 +366,7 @@ function generateSecurityGuardrailReport(
       });
       md += `\n`;
     }
-    
+
     if (pa.potentialRisks && pa.potentialRisks.length > 0) {
       md += `## Identified Risks & Mitigations\n\n`;
       pa.potentialRisks.forEach((risk, idx) => {
@@ -375,7 +375,7 @@ function generateSecurityGuardrailReport(
         md += `- **Mitigation:** ${risk.mitigation}\n\n`;
       });
     }
-    
+
     if (pa.recommendedGuardrails && pa.recommendedGuardrails.length > 0) {
       md += `## Implemented Guardrails\n\n`;
       pa.recommendedGuardrails.forEach((guardrail, idx) => {
@@ -385,14 +385,13 @@ function generateSecurityGuardrailReport(
       });
     }
   }
-  
-  if (guardrailMetadata.explanations && guardrailMetadata.explanations.length > 0) {
+
+  if (guardrailMetadata?.explanations && guardrailMetadata.explanations.length > 0) {
     md += `## Guardrail Explanations\n\n`;
     guardrailMetadata.explanations.forEach((explanation, idx) => {
       md += `${idx + 1}. ${JSON.stringify(explanation, null, 2)}\n\n`;
     });
   }
-  
   md += `## Security Recommendations\n\n`;
   md += `1. **Regular Audits:** Review security configurations quarterly\n`;
   md += `2. **Access Control:** Implement role-based access for workflow execution\n`;
