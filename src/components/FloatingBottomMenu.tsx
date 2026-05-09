@@ -334,6 +334,15 @@ export function FloatingBottomMenu({
 
           {/* Theme Toggle - Always visible at the end */}
           <div className="w-px h-6 bg-border flex-shrink-0 mx-1 ml-auto" />
+          {lastDownload && (
+            <a
+              href={lastDownload.url}
+              download={lastDownload.filename}
+              className="flex-shrink-0 rounded-md border px-3 py-2 text-xs font-medium text-primary underline-offset-4 hover:bg-accent hover:underline"
+            >
+              Download ready
+            </a>
+          )}
           <Button
             onClick={toggleTheme}
             variant="outline"
