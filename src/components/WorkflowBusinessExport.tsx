@@ -115,7 +115,6 @@ export function WorkflowBusinessExport({
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
-    a.target = '_blank';
     a.rel = 'noopener';
     a.style.display = 'none';
     document.body.appendChild(a);

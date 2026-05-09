@@ -258,7 +258,6 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         const a = document.createElement('a');
         a.href = url;
         a.download = `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_complete_export.zip`;
-        a.target = '_blank';
         a.rel = 'noopener';
         a.style.display = 'none';
         document.body.appendChild(a);
