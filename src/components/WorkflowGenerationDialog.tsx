@@ -11,6 +11,7 @@ import { WorkflowNodeData } from "@/types/workflow";
 import { z } from "zod";
 import { generateWorkflowName } from "@/lib/workflowUtils";
 import { WorkflowBusinessExport } from "./WorkflowBusinessExport";
+import { downloadBlob } from "@/lib/downloadFile";
 
 const workflowIdeaSchema = z.string().trim().min(10, "Description must be at least 10 characters").max(50000, "Description must be less than 50000 characters");
 
@@ -40,6 +41,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const [isExporting, setIsExporting] = useState(false);
   const [showBusinessExport, setShowBusinessExport] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [lastExport, setLastExport] = useState<{ url: string; filename: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const ideProjectInputRef = useRef<HTMLInputElement>(null);
@@ -387,12 +389,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     try {
       const workflowData = { nodes, metadata: guardrailMetadata, name: workflowName };
       const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${generateWorkflowName(nodes)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const filename = `${generateWorkflowName(nodes)}.json`;
+      const url = downloadBlob(blob, filename);
+      setLastExport({ url, filename });
       toast({ title: "Exported!", description: "Workflow saved" });
     } catch (error: any) {
       console.error('Export error:', error);
@@ -547,6 +546,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
                   <Button onClick={() => setShowBusinessExport(true)} disabled={nodes.length === 0} size="lg" className="w-full">
                     <Package className="w-5 h-5 mr-2" />Deploy to Production
                   </Button>
+                  {lastExport && (
+                    <a href={lastExport.url} download={lastExport.filename} className="block text-sm font-medium text-primary underline-offset-4 hover:underline">
+                      Click here if the download did not start
+                    </a>
+                  )}
                 </div>
               </TabsContent>
             </div>

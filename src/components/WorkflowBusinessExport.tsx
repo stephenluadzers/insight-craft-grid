@@ -8,6 +8,7 @@ import { WorkflowNodeData } from "@/types/workflow";
 import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
 import { exportWorkflowToYAML, downloadYAML } from "@/lib/workflowExportYAML";
 import { exportWorkflowComprehensive } from "@/lib/workflowUnifiedExport";
+import { downloadBlob, withExportTimeout } from "@/lib/downloadFile";
 import { useToast } from "@/hooks/use-toast";
 
 interface WorkflowBusinessExportProps {
@@ -108,38 +109,23 @@ export function WorkflowBusinessExport({
 }: WorkflowBusinessExportProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [lastDownload, setLastDownload] = useState<{ url: string; filename: string } | null>(null);
   const { toast } = useToast();
-
-  const downloadBlob = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.rel = 'noopener';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-
-    window.setTimeout(() => {
-      if (document.body.contains(a)) {
-        document.body.removeChild(a);
-      }
-      URL.revokeObjectURL(url);
-    }, 1000);
-  };
 
   const handleExport = async (platform: ExportPlatform) => {
     setIsExporting(true);
     
     try {
-      const blob = await exportWorkflowForBusiness(nodes, workflowName, {
+      const blob = await withExportTimeout(exportWorkflowForBusiness(nodes, workflowName, {
         platform,
         includeDocs: true,
         includeTests: false,
         guardrailMetadata,
-      });
+      }), "Platform export");
 
-      downloadBlob(blob, `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${platform}.zip`);
+      const filename = `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${platform}.zip`;
+      const url = downloadBlob(blob, filename);
+      setLastDownload({ url, filename });
 
       toast({
         title: "Export Successful",
@@ -161,12 +147,13 @@ export function WorkflowBusinessExport({
     setIsExporting(true);
     
     try {
-      const blob = await exportWorkflowComprehensive(nodes, workflowName, guardrailMetadata);
+      const blob = await withExportTimeout(exportWorkflowComprehensive(nodes, workflowName, guardrailMetadata), "Complete package export");
 
       // Use smart filename if available, otherwise fallback to sanitized name
       const smartFilename = (blob as any).smartFilename || `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-complete-package.zip`;
 
-      downloadBlob(blob, smartFilename);
+      const url = downloadBlob(blob, smartFilename);
+      setLastDownload({ url, filename: smartFilename });
 
       toast({
         title: "Complete Export Successful",
@@ -258,6 +245,15 @@ export function WorkflowBusinessExport({
                       </>
                     )}
                   </Button>
+                  {lastDownload && (
+                    <a
+                      href={lastDownload.url}
+                      download={lastDownload.filename}
+                      className="mt-3 inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Click here if the download did not start
+                    </a>
+                  )}
                 </div>
               </div>
             </CardContent>
