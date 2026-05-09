@@ -47,6 +47,11 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
   const ideProjectInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const buildOriginMetadata = (overrides: WorkflowOriginMetadata): WorkflowOriginMetadata => ({
+    aiGenerated: true,
+    ...overrides,
+  });
+
   const handleGenerate = async () => {
     const validation = workflowIdeaSchema.safeParse(workflowIdea);
     if (!validation.success) {
@@ -99,7 +104,9 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           guardrailExplanations: data.guardrailExplanations, 
           complianceStandards: data.complianceStandards, 
           riskScore: data.riskScore,
-          policyAnalysis: data.policyAnalysis
+          policyAnalysis: data.policyAnalysis,
+          workflowName: data.workflowName || data.name,
+          originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.explanation || data.insights, aiModel: data.model })
         });
         toast({ title: "Workflow Created!", description: `Created ${data.nodes.length} nodes` });
         onOpenChange(false);
