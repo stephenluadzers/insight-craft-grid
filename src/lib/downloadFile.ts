@@ -91,15 +91,35 @@ function resolveTargetWindow(target?: DownloadTarget | DownloadWindow | null): D
   return target.window;
 }
 
+function deriveSafeExtension(filename: string): string | null {
+  const idx = filename.lastIndexOf(".");
+  if (idx <= 0 || idx === filename.length - 1) return null;
+  const ext = filename.slice(idx + 1);
+  // File System Access API requires extensions to match /^[a-z0-9]+$/i and contain no spaces/special chars
+  if (!/^[a-z0-9]{1,16}$/i.test(ext)) return null;
+  return ext.toLowerCase();
+}
+
+function sanitizeSuggestedName(filename: string): string {
+  // Strip characters disallowed by showSaveFilePicker on most platforms
+  const cleaned = filename.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, " ").trim();
+  return cleaned || "download";
+}
+
 function beginNativeSave(filename: string): Promise<WritableFileHandle | null> | null {
   const picker = window as FilePickerWindow;
   if (typeof picker.showSaveFilePicker !== "function") return null;
   try {
-    return picker.showSaveFilePicker({
-      suggestedName: filename,
-      types: [{ description: "Export file", accept: { "application/octet-stream": [`.${filename.split(".").pop() || "bin"}`] } }],
+    const safeName = sanitizeSuggestedName(filename);
+    const ext = deriveSafeExtension(safeName);
+    const options: Parameters<NonNullable<FilePickerWindow["showSaveFilePicker"]>>[0] = {
+      suggestedName: safeName,
       excludeAcceptAllOption: false,
-    });
+    };
+    if (ext) {
+      options.types = [{ description: "Export file", accept: { "application/octet-stream": [`.${ext}`] } }];
+    }
+    return picker.showSaveFilePicker(options);
   } catch (error) {
     console.warn("Native save picker could not be opened; using browser download fallback.", error);
     return null;
@@ -142,9 +162,19 @@ function renderReadyDocument(targetWindow: DownloadWindow, blob: Blob, filename:
   const popupUrl = targetWindow.URL.createObjectURL(blob);
 
   doc.open();
-  doc.write(`<!doctype html><html><head><title>Download ${escapeHtml(filename)}</title>${downloadPageHead()}</head><body><main class="box"><h1>Your export is ready</h1><p class="muted">If your browser did not show a save prompt, use the button below.</p><p class="name">${escapeHtml(filename)}</p><a id="download" class="button" href="${popupUrl}" download="${escapeHtml(filename)}">Download file</a><a class="fallback" href="${openerUrl}" download="${escapeHtml(filename)}">Backup link</a><p class="hint">You can close this tab after the file is saved.</p><script>setTimeout(function(){var a=document.getElementById('download'); if(a) a.click();}, 80);</script></main></body></html>`);
+  doc.write(`<!doctype html><html><head><title>Download ${escapeHtml(filename)}</title>${downloadPageHead()}</head><body><main class="box"><h1>Your export is ready</h1><p class="muted">If your download did not start automatically, use the button below.</p><p class="name">${escapeHtml(filename)}</p><a id="download" class="button" href="${popupUrl}" download="${escapeHtml(filename)}">Download file</a><a class="fallback" href="${openerUrl}" download="${escapeHtml(filename)}" target="_blank" rel="noopener">Open in new tab</a><p class="hint">You can close this tab after the file is saved.</p></main></body></html>`);
   doc.close();
   targetWindow.focus();
+  // Safari-friendly: navigating the popup directly to the blob: URL reliably triggers
+  // the browser's native download/preview, which the download attribute alone does not in Safari.
+  targetWindow.setTimeout(() => {
+    try {
+      targetWindow.location.href = popupUrl;
+    } catch {
+      const anchor = doc.getElementById("download") as HTMLAnchorElement | null;
+      if (anchor) anchor.click();
+    }
+  }, 150);
   targetWindow.setTimeout(() => targetWindow.URL.revokeObjectURL(popupUrl), DOWNLOAD_URL_TTL_MS);
 }
 
