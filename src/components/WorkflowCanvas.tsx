@@ -130,8 +130,8 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
   // Notify parent of workflow changes (memoized)
   const notifyWorkflowChange = useCallback(() => {
-    onWorkflowChange?.({ nodes });
-  }, [nodes, onWorkflowChange]);
+    onWorkflowChange?.({ nodes, name: currentWorkflowName, originMetadata: workflowOriginMetadata });
+  }, [nodes, currentWorkflowName, workflowOriginMetadata, onWorkflowChange]);
 
   useEffect(() => {
     notifyWorkflowChange();
@@ -160,7 +160,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     handleAddNode,
-    workflow: { nodes },
+    workflow: { nodes, name: currentWorkflowName, originMetadata: workflowOriginMetadata },
     handleWorkflowOptimized,
     handleOpenAIGenerator: () => setShowTextGeneration(true),
     handleOpenAPIImport: () => setShowAPIImport(true),
