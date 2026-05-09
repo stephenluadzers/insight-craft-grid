@@ -355,7 +355,7 @@ function generateSecurityGuardrailReport(
   md += `| Data / Storage Nodes | ${dataNodes} |\n`;
   md += `| Trigger Surfaces | ${triggerNodes} |\n`;
   md += `| Built-in Guardrail Nodes | ${guardrailNodes} |\n`;
-  md += `| Compliance Standards | ${guardrailMetadata?.complianceStandards?.length ?? 0} |\n\n`;
+  md += `| Compliance Standards | ${inferComplianceStandards(nodes, guardrailMetadata).length} |\n\n`;
 
   md += `### Risk Profile Summary\n\n`;
   if (aiCount > 0) {
@@ -521,9 +521,31 @@ export async function exportWorkflowComprehensive(
   inputType?: 'text' | 'video' | 'image' | 'json' | 'github',
   aiReasoning?: string
 ): Promise<Blob> {
-  // Generate smart filename incorporating workflow title and content
-  // If workflowName is provided, use it as context for smarter naming
-  const smartName = generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true });
+  // Naming consistency: if the user (or upstream caller) provided an explicit,
+  // non-generic workflow name, use it verbatim (slugified) so the zip filename,
+  // inner workflow.json `name`, YAML, n8n export, and README all match exactly.
+  // Only fall back to content-derived smart naming when no real title was given.
+  const isGenericName = (n?: string) => {
+    if (!n) return true;
+    const t = n.trim().toLowerCase();
+    return (
+      t.length === 0 ||
+      t === 'workflow' ||
+      t === 'untitled' ||
+      t === 'untitled workflow' ||
+      t.startsWith('new workflow')
+    );
+  };
+  const slugify = (n: string) =>
+    n
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'workflow';
+
+  const smartName = !isGenericName(workflowName)
+    ? slugify(workflowName!)
+    : generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true });
   
   const zip = new JSZip();
   const roi = calculateComprehensiveROI(nodes);
