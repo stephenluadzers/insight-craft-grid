@@ -263,7 +263,8 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string): 
     })),
     metadata: {
       nodeCount: nodes.length,
-      hasAI: nodes.some(n => n.type === 'ai'),
+      hasAI: hasAINodes(nodes),
+      aiNodeCount: countAINodes(nodes),
       hasIntegrations: nodes.some(n => n.type === 'action'),
       complexity: nodes.length > 10 ? 'high' : nodes.length > 5 ? 'medium' : 'low'
     },
