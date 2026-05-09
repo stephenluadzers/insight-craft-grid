@@ -27,7 +27,7 @@ import { downloadBlob, openDownloadWindow, withExportTimeout } from "@/lib/downl
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
-  onWorkflowChange?: (workflow: { nodes: WorkflowNodeData[] }) => void;
+  onWorkflowChange?: (workflow: { nodes: WorkflowNodeData[]; name?: string; originMetadata?: WorkflowOriginMetadata }) => void;
   onOptimizingChange?: (isOptimizing: boolean) => void;
 }
 
