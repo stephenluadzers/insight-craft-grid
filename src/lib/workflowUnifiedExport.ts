@@ -3,7 +3,7 @@
  * Comprehensive export including all formats, documentation, and business metrics
  */
 
-import { WorkflowNodeData } from "@/types/workflow";
+import { WorkflowInputType, WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import JSZip from "jszip";
 import { exportWorkflowToYAML } from "./workflowExportYAML";
 import { 
@@ -41,6 +41,38 @@ function countAINodes(nodes: WorkflowNodeData[]): number {
 
 function hasAINodes(nodes: WorkflowNodeData[]): boolean {
   return countAINodes(nodes) > 0;
+}
+
+function hasAIInWorkflow(nodes: WorkflowNodeData[], originMetadata?: WorkflowOriginMetadata): boolean {
+  return hasAINodes(nodes) || originMetadata?.aiGenerated === true || !!originMetadata?.aiReasoning;
+}
+
+function buildAIDisplay(nodes: WorkflowNodeData[], originMetadata?: WorkflowOriginMetadata): string {
+  const aiCount = countAINodes(nodes);
+  if (aiCount > 0) {
+    return `Yes (${aiCount} AI / agent node${aiCount === 1 ? '' : 's'})`;
+  }
+  if (originMetadata?.aiGenerated || originMetadata?.aiReasoning) {
+    return `Yes (AI-assisted generation${originMetadata.aiModel ? ` via ${originMetadata.aiModel}` : ''})`;
+  }
+  return 'No';
+}
+
+function normalizeWorkflowSlug(value?: string): string | null {
+  const slug = value
+    ?.toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(?:^|-)(optimized)(?:-\1)+(?:-|$)/g, '-optimized-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return slug || null;
+}
+
+function isGenericName(name?: string): boolean {
+  const slug = normalizeWorkflowSlug(name);
+  return !slug || slug === 'workflow' || slug === 'untitled' || slug === 'untitled-workflow' || slug.startsWith('new-workflow');
 }
 
 // Infer compliance standards from workflow shape when explicit metadata is missing.
