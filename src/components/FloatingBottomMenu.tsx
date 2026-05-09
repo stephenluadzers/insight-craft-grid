@@ -94,15 +94,16 @@ export function FloatingBottomMenu({
 
   const handleToolbarDownload = async () => {
     if (!workflowNodes.length || isDownloading) return;
-    const popup = openDownloadWindow("Remora Flow Workflow complete package");
+    const exportName = workflow?.name || "Remora Flow Workflow";
+    const popup = openDownloadWindow(`${exportName} complete package`);
     setIsDownloading(true);
     try {
       const { exportWorkflowComprehensive } = await import("@/lib/workflowUnifiedExport");
       const blob = await withExportTimeout(
-        exportWorkflowComprehensive(workflowNodes, "Remora Flow Workflow"),
+        exportWorkflowComprehensive(workflowNodes, exportName, undefined, undefined, undefined, undefined, workflow?.originMetadata),
         "Complete package export"
       );
-      const filename = (blob as Blob & { smartFilename?: string }).smartFilename || `${sanitizeDownloadFilename("Remora Flow Workflow")}-complete-package.zip`;
+      const filename = (blob as Blob & { smartFilename?: string }).smartFilename || `${sanitizeDownloadFilename(exportName)}-complete-package.zip`;
       const url = downloadBlob(blob, filename, popup);
       setLastDownload({ url, filename });
     } catch (error) {
