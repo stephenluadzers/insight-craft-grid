@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Bot, Sparkles, Download, Store, Loader2, CheckCircle2, ArrowRight, Package, FileJson } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { downloadBlob, openDownloadWindow } from "@/lib/downloadFile";
 
 interface PipelineResult {
   name: string;
@@ -74,20 +75,10 @@ export default function AIWorkflowPipeline({ onWorkflowGenerated }: { onWorkflow
 
   const handleDownload = () => {
     if (!result) return;
+    const filename = `${result.name.replace(/\s+/g, "-").toLowerCase()}-v${result.version || "1.0"}.json`;
+    const popup = openDownloadWindow(filename);
     const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${result.name.replace(/\s+/g, "-").toLowerCase()}-v${result.version || "1.0"}.json`;
-    a.target = "_blank";
-    a.rel = "noopener";
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }, 1000);
+    downloadBlob(blob, filename, popup);
   };
 
   return (
