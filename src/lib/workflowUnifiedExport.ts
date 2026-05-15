@@ -70,6 +70,69 @@ function normalizeWorkflowSlug(value?: string): string | null {
   return slug || null;
 }
 
+/**
+ * Normalize node IDs to a stable, human-readable, type-aware scheme so that
+ * the IDs that appear in exported workflow files (workflow.json, n8n,
+ * YAML, READMEs) match the IDs referenced by guardrail explanations,
+ * credential manifests, and any other metadata travelling alongside the
+ * export. Without this step, guardrail metadata can reference the
+ * timestamp-suffixed IDs assigned at injection time
+ * (e.g. `guardrail_sql_injection_1731_abc`) while the rest of the package
+ * sees the renumbered shape (e.g. `guardrail_security_check_n1`).
+ *
+ * Returns the rewritten nodes plus the old→new ID map so callers can
+ * rewrite any sibling metadata (explanations, credentials, etc.).
+ */
+function normalizeNodeIds(nodes: WorkflowNodeData[]): {
+  nodes: WorkflowNodeData[];
+  idMap: Map<string, string>;
+} {
+  const idMap = new Map<string, string>();
+  const usedIds = new Set<string>();
+  const counters = new Map<string, number>();
+
+  const slug = (s: string) =>
+    (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+  const baseFor = (n: WorkflowNodeData): string => {
+    if (n.type === 'guardrail') {
+      const gt = slug(String(n.config?.guardrailType ?? 'check'));
+      return `guardrail_${gt || 'check'}`;
+    }
+    return slug(String(n.type)) || 'node';
+  };
+
+  const rewritten = nodes.map((n) => {
+    const base = baseFor(n);
+    const next = (counters.get(base) ?? 0) + 1;
+    counters.set(base, next);
+    let candidate = `${base}_n${next}`;
+    while (usedIds.has(candidate)) {
+      const bumped = (counters.get(base) ?? next) + 1;
+      counters.set(base, bumped);
+      candidate = `${base}_n${bumped}`;
+    }
+    usedIds.add(candidate);
+    idMap.set(n.id, candidate);
+    return { ...n, id: candidate };
+  });
+
+  return { nodes: rewritten, idMap };
+}
+
+function rewriteGuardrailMetadataIds(
+  metadata: GuardrailMetadata | undefined,
+  idMap: Map<string, string>,
+): GuardrailMetadata | undefined {
+  if (!metadata?.explanations?.length) return metadata;
+  const explanations = metadata.explanations.map((exp: any) => {
+    if (!exp || typeof exp !== 'object') return exp;
+    const mapped = exp.nodeId && idMap.get(exp.nodeId);
+    return mapped ? { ...exp, nodeId: mapped, originalNodeId: exp.nodeId } : exp;
+  });
+  return { ...metadata, explanations };
+}
+
 function isGenericName(name?: string): boolean {
   const slug = normalizeWorkflowSlug(name);
   return !slug || slug === 'workflow' || slug === 'untitled' || slug === 'untitled-workflow' || slug === 'optimized' || slug.startsWith('new-workflow');
@@ -575,7 +638,14 @@ export async function exportWorkflowComprehensive(
   const smartName = !isGenericName(workflowName)
     ? normalizeWorkflowSlug(workflowName!)!
     : normalizeWorkflowSlug(generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true })) || 'workflow';
-  
+
+  // Normalize node IDs to a stable, human-readable scheme and rewrite any
+  // sibling metadata (guardrail explanations, etc.) so every artifact in the
+  // export package refers to the same IDs.
+  const { nodes: normalizedNodes, idMap } = normalizeNodeIds(nodes);
+  nodes = normalizedNodes;
+  guardrailMetadata = rewriteGuardrailMetadataIds(guardrailMetadata, idMap);
+
   const zip = new JSZip();
   const roi = calculateComprehensiveROI(nodes);
   
