@@ -638,7 +638,14 @@ export async function exportWorkflowComprehensive(
   const smartName = !isGenericName(workflowName)
     ? normalizeWorkflowSlug(workflowName!)!
     : normalizeWorkflowSlug(generateSmartWorkflowName(nodes, { workflowTitle: workflowName, includeTimestamp: true })) || 'workflow';
-  
+
+  // Normalize node IDs to a stable, human-readable scheme and rewrite any
+  // sibling metadata (guardrail explanations, etc.) so every artifact in the
+  // export package refers to the same IDs.
+  const { nodes: normalizedNodes, idMap } = normalizeNodeIds(nodes);
+  nodes = normalizedNodes;
+  guardrailMetadata = rewriteGuardrailMetadataIds(guardrailMetadata, idMap);
+
   const zip = new JSZip();
   const roi = calculateComprehensiveROI(nodes);
   
