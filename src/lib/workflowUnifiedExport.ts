@@ -39,6 +39,136 @@ function countAINodes(nodes: WorkflowNodeData[]): number {
   ).length;
 }
 
+// ============================================================================
+// RUNNER SPEC — Execution contract for local/self-hosted workflow runners
+// ============================================================================
+// Documents the JSON schema + execution semantics so anyone (including a local
+// Mac/Linux runner using Ollama/LM Studio for AI steps) can implement a
+// compatible executor against the exported workflow.json.
+function generateRunnerSpec(nodes: WorkflowNodeData[], smartName: string): string {
+  const nodeTypes = Array.from(new Set(nodes.map(n => n.type))).sort();
+  const sample = nodes[0];
+  const sampleJson = sample
+    ? JSON.stringify({ id: sample.id, type: sample.type, title: sample.title, config: (sample as any).config ?? {} }, null, 2)
+    : '{}';
+
+  return `# Runner Specification — ${smartName}
+
+This document is the **execution contract** for any runtime that wants to execute this workflow — including local runners (e.g. a MacBook app using Ollama / LM Studio for AI steps and the user's own OAuth tokens for SaaS integrations).
+
+Implement against this spec and your runner is portable across every Remora Flow export.
+
+---
+
+## 1. Input
+
+The runner reads \`${smartName}.json\` from the package root. Top-level shape:
+
+\`\`\`jsonc
+{
+  "name": "${smartName}",
+  "nodes":  [ /* WorkflowNode[] */ ],
+  "edges":  [ { "source": "<nodeId>", "target": "<nodeId>" } ],
+  "credentialPlatformSetup": { /* see credentials/credentials.json */ },
+  "metadata": { "origin": { ... }, "guardrailExplanations": [ ... ] }
+}
+\`\`\`
+
+### WorkflowNode
+
+\`\`\`jsonc
+${sampleJson}
+\`\`\`
+
+Required fields: \`id\` (string, unique), \`type\` (string), \`title\` (string).
+Optional: \`config\` (object), \`description\`, \`group\`, \`agent_config\`.
+
+Node IDs in this export follow the stable scheme \`{type}_n{index}\` so metadata references (guardrail explanations, credential bindings) map 1:1.
+
+---
+
+## 2. Execution model
+
+1. **Build a dependency graph** from \`edges\` (target depends on source).
+2. **Topological execution with parallelism**: every wave, run all nodes whose dependencies are satisfied **in parallel**.
+3. **Retry policy**: 3 attempts per node with exponential backoff (1s, 2s, 4s).
+4. **Failure**: mark the node failed, propagate the error in \`results[nodeId]\`, continue executing independent branches (do not deadlock siblings).
+5. **Deadlock detection**: if a wave produces zero ready nodes but unfinished nodes remain, abort with a deadlock error listing the stuck node IDs.
+6. **Context auto-wiring**: before executing a node, resolve any \`{{context.path.to.value}}\` placeholders in its \`config\` against:
+   - the workflow-level \`context\` object (passed in at run start), and
+   - \`results[<upstreamNodeId>]\` for any ancestor node.
+
+---
+
+## 3. Node-type dispatch
+
+A compliant runner MUST handle these core types. Unknown types should be treated as no-ops that log "executed" and return \`{ status: "skipped" }\` (mirroring Remora Flow's behaviour).
+
+| Type | Behaviour |
+|------|-----------|
+| \`trigger\` | Entry point. Returns \`{ status: "triggered", timestamp }\`. |
+| \`condition\` | Evaluate \`config.field\` against \`config.value\` using \`config.operator\` (\`equals\`, \`not_equals\`, \`contains\`, \`greater_than\`, \`less_than\`). Reads \`field\` from \`results[config.sourceNode]\`. |
+| \`action\` | HTTP call. \`config.method\` ∈ {\`API_CALL\`, \`WEBHOOK\`, \`LOG\`}. For \`API_CALL\` use \`config.endpoint\`, \`config.httpMethod\`, \`config.headers\`, \`config.body\`. |
+| \`data\` | Pass-through / transform stub. Implement \`config.operation\` as needed. |
+| \`ai\` | **Local-AI plug point.** Send \`config.prompt\` (+ optional upstream context) to the local model. Default Remora model is \`google/gemini-3-flash-preview\`; a local runner SHOULD map this to its Ollama/LM Studio equivalent (e.g. \`llama3.1:8b\`, \`qwen2.5\`). Return \`{ status, data: { model, result, tokensUsed } }\`. |
+| \`loop\` | Iterate \`results[config.sourceNode].data.items\` (or \`config.items\`) up to \`config.maxIterations\` (default 50). |
+| \`guardrail\` | Pre/post check. \`config.guardrailType\` ∈ {\`rate_limit\`, \`input_validation\`, \`security_check\`}. Throws on violation. See \`documentation/SECURITY_COMPLIANCE.md\` for the full registry. |
+
+### This workflow uses the following node types:
+${nodeTypes.map(t => `- \`${t}\``).join('\n')}
+
+---
+
+## 4. Credentials
+
+Read \`credentials/credentials.json\` and \`credentials/.env.template\`. Each credential entry has:
+
+- \`id\` — referenced by nodes via \`config.credentialId\`
+- \`service\` — e.g. \`slack\`, \`google_sheets\`, \`openai\`
+- \`envVar\` — environment variable the runner should read at execution time
+
+The runner must NEVER hard-code secrets — always resolve from the host environment.
+
+---
+
+## 5. Output
+
+After execution, emit:
+
+\`\`\`jsonc
+{
+  "status": "success" | "error",
+  "duration_ms": <number>,
+  "results": { "<nodeId>": { /* node return value */ } },
+  "errors":  [ { "nodeId": "...", "message": "...", "attempt": 3 } ],
+  "completedAt": "<ISO timestamp>"
+}
+\`\`\`
+
+Per-node logs SHOULD include: \`nodeId\`, \`type\`, \`status\`, \`started_at\`, \`duration_ms\`, \`retry_count\`, \`input\`, \`output\` (or \`error\`).
+
+---
+
+## 6. Reference implementation
+
+Remora Flow's cloud runner is the canonical implementation:
+\`supabase/functions/execute-workflow/index.ts\` in the Remora Flow source.
+
+A local runner only needs to substitute:
+- the AI gateway call → local Ollama / LM Studio HTTP endpoint
+- the credential vault → host \`.env\` / OS keychain
+- the execution log sink → local SQLite / JSONL file
+
+Everything else (graph traversal, retries, guardrails, context wiring) is identical.
+
+---
+
+## 7. Versioning
+
+This spec is **v1**. The \`workflow.json\` file does not currently carry a \`specVersion\` field; runners SHOULD assume v1 when absent and reject unknown future versions with a clear error rather than executing partially.
+`;
+}
+
 function hasAINodes(nodes: WorkflowNodeData[]): boolean {
   return countAINodes(nodes) > 0;
 }
@@ -663,6 +793,9 @@ export async function exportWorkflowComprehensive(
   // Workflow origin and AI reasoning report
   const originReport = generateWorkflowOriginReport(smartName, effectiveOrigin);
   docsFolder.file("WORKFLOW_ORIGIN.md", originReport);
+
+  // Runner specification — execution contract for local / self-hosted runners
+  docsFolder.file("RUNNER_SPEC.md", generateRunnerSpec(nodes, smartName));
   if (effectiveOrigin.sourceImages?.length) {
     const sourceImagesFolder = docsFolder.folder("source-images")!;
     effectiveOrigin.sourceImages.forEach((img, idx) => {
@@ -764,7 +897,8 @@ export async function exportWorkflowComprehensive(
     `### Documentation\n` +
     `- \`documentation/BUSINESS_METRICS.md\` - Comprehensive ROI and business analysis\n` +
     `- \`documentation/SECURITY_COMPLIANCE.md\` - Security guardrails and compliance report\n` +
-    `- \`documentation/WORKFLOW_ORIGIN.md\` - Original input and AI optimization reasoning\n\n` +
+    `- \`documentation/WORKFLOW_ORIGIN.md\` - Original input and AI optimization reasoning\n` +
+    `- \`documentation/RUNNER_SPEC.md\` - Execution contract for local / self-hosted runners (Ollama, LM Studio, custom)\n\n` +
     `### 🏛️ Government Compliance (ATO Package)\n` +
     `- \`government/SYSTEM_SECURITY_PLAN.md\` - SSP excerpt with NIST SP 800-53 controls\n` +
     `- \`government/PRIVACY_IMPACT_ASSESSMENT.md\` - PIA for Privacy Act compliance\n` +
