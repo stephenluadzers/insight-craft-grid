@@ -897,7 +897,8 @@ export async function exportWorkflowComprehensive(
     `### Documentation\n` +
     `- \`documentation/BUSINESS_METRICS.md\` - Comprehensive ROI and business analysis\n` +
     `- \`documentation/SECURITY_COMPLIANCE.md\` - Security guardrails and compliance report\n` +
-    `- \`documentation/WORKFLOW_ORIGIN.md\` - Original input and AI optimization reasoning\n\n` +
+    `- \`documentation/WORKFLOW_ORIGIN.md\` - Original input and AI optimization reasoning\n` +
+    `- \`documentation/RUNNER_SPEC.md\` - Execution contract for local / self-hosted runners (Ollama, LM Studio, custom)\n\n` +
     `### 🏛️ Government Compliance (ATO Package)\n` +
     `- \`government/SYSTEM_SECURITY_PLAN.md\` - SSP excerpt with NIST SP 800-53 controls\n` +
     `- \`government/PRIVACY_IMPACT_ASSESSMENT.md\` - PIA for Privacy Act compliance\n` +
