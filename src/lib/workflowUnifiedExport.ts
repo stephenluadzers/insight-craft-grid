@@ -663,6 +663,9 @@ export async function exportWorkflowComprehensive(
   // Workflow origin and AI reasoning report
   const originReport = generateWorkflowOriginReport(smartName, effectiveOrigin);
   docsFolder.file("WORKFLOW_ORIGIN.md", originReport);
+
+  // Runner specification — execution contract for local / self-hosted runners
+  docsFolder.file("RUNNER_SPEC.md", generateRunnerSpec(nodes, smartName));
   if (effectiveOrigin.sourceImages?.length) {
     const sourceImagesFolder = docsFolder.folder("source-images")!;
     effectiveOrigin.sourceImages.forEach((img, idx) => {
