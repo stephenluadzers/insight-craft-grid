@@ -108,30 +108,61 @@ serve(async (req) => {
 
     // Create AbortController for timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s timeout (Edge Functions have 60s limit)
+    const timeoutId = setTimeout(() => controller.abort(), 115000); // 115s (functions have 2-min limit)
 
     try {
       // Build the content array with all images
       const userContent: any[] = [
         {
           type: 'text',
-          text: imageArray.length > 1 
-            ? `Analyze these ${imageArray.length} workflow images and combine them into a single cohesive workflow. Extract all nodes, connections, and workflow logic from all images. If there are overlapping or related concepts, merge them intelligently. Return structured JSON data.`
-            : 'Analyze this workflow image and extract all nodes, connections, and workflow logic. Return structured JSON data.'
+          text: imageArray.length > 1
+            ? `Extract a single cohesive workflow from these ${imageArray.length} images. Call extract_workflow with every node and connection visible.`
+            : 'Extract the workflow from this image. Call extract_workflow with every node and connection visible.'
         }
       ];
 
-      // Add all images to the content
       imageArray.forEach((img: string) => {
         userContent.push({
           type: 'image_url',
-          image_url: {
-            url: img // base64 data URL or https URL
-          }
+          image_url: { url: img }
         });
       });
 
-      // Use Gemini 2.5 Flash for vision analysis (free during promo)
+      // Tool-calling schema — forces compact, valid JSON and avoids truncation on large whiteboards
+      const extractWorkflowTool = {
+        type: 'function',
+        function: {
+          name: 'extract_workflow',
+          description: 'Return the workflow extracted from the image(s)',
+          parameters: {
+            type: 'object',
+            properties: {
+              nodes: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    type: { type: 'string', enum: ['trigger', 'action', 'condition', 'data', 'ai', 'connector'] },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    x: { type: 'number' },
+                    y: { type: 'number' },
+                    next: { type: 'array', items: { type: 'string' }, description: 'IDs of downstream nodes (success/YES path)' },
+                    nextOnFalse: { type: 'array', items: { type: 'string' }, description: 'IDs of NO/false branch (decisions only)' },
+                    config: { type: 'object', additionalProperties: true }
+                  },
+                  required: ['id', 'type', 'title']
+                }
+              },
+              insights: { type: 'string' }
+            },
+            required: ['nodes']
+          }
+        }
+      };
+
+      // Gemini 3 Flash Preview — much faster than 2.5-flash for vision + structured extraction
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -140,104 +171,32 @@ serve(async (req) => {
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          max_tokens: 16000,
-          response_format: { type: 'json_object' },
+          model: 'google/gemini-3-flash-preview',
+          tools: [extractWorkflowTool],
+          tool_choice: { type: 'function', function: { name: 'extract_workflow' } },
           messages: [
             {
               role: 'system',
-              content: `You are an Expert Workflow Understanding Engine. Analyze images containing workflows, diagrams, sketches, or process descriptions and extract structured workflow data.
+              content: `You convert workflow diagrams/whiteboards into structured workflow JSON via the extract_workflow tool.
 
 ${GUARDRAIL_SYSTEM_PROMPT}
 
-${existingWorkflow ? `
-IMPORTANT: You are IMPROVING an existing workflow. The user has provided an image to enhance their current workflow.
+${existingWorkflow ? `IMPROVING existing workflow — preserve existing node IDs where unchanged, add new IDs for new nodes:\n${JSON.stringify(existingWorkflow).slice(0, 4000)}\n` : ''}
 
-EXISTING WORKFLOW:
-${JSON.stringify(existingWorkflow, null, 2)}
-
-Your task:
-1. Understand the existing workflow structure
-2. Analyze the provided image(s) for new features/nodes
-3. Integrate image insights with existing workflow
-4. Keep relevant existing nodes
-5. Add new nodes from the image
-6. Maintain logical connections
-7. Preserve node IDs for unchanged nodes
-8. Generate new IDs only for new nodes
-9. Explain what was improved/added in the insights
-` : 'Your task:'}
-1. Identify all workflow nodes (triggers, actions, conditions, data operations, AI steps) across ALL provided images
-2. Detect connections and flow between nodes, even across different images
-3. Extract node properties (titles, descriptions, types)
-4. **CRITICAL: Extract ALL configuration details visible in the image** including:
-   - Authentication settings (OAuth, API keys, bearer tokens, basic auth, etc.)
-   - API endpoints, URLs, webhook URLs
-   - HTTP methods (GET, POST, PUT, DELETE)
-   - Request headers and parameters
-   - Database queries, table names, column mappings
-   - Email recipients, subjects, templates
-   - Scheduling/cron expressions
-   - Filter conditions, field mappings
-   - Any key-value pairs, dropdowns, form fields visible in configuration panels
-5. Infer logical relationships and dependencies
-6. If multiple images are provided, intelligently combine them into a single cohesive workflow
-7. Position nodes logically to show the combined flow
-8. Generate a complete, executable workflow JSON with full configuration
-
-Return ONLY valid JSON in this exact format:
-{
-  "nodes": [
-    {
-      "id": "unique_id",
-      "type": "trigger|action|condition|data|ai|connector",
-      "title": "Node Title",
-      "description": "Detailed description of what this node does",
-      "x": 100,
-      "y": 100,
-      "config": {
-        "// Include ALL configuration extracted from the image here",
-        "// Examples:",
-        "url": "https://api.example.com/endpoint",
-        "method": "POST",
-        "headers": { "Authorization": "Bearer {{context.api_key}}", "Content-Type": "application/json" },
-        "body": { "field": "value" },
-        "auth_type": "oauth2|api_key|bearer|basic",
-        "auth_config": { "client_id": "...", "scope": "..." },
-        "schedule": "0 9 * * MON-FRI",
-        "filter": { "field": "status", "operator": "equals", "value": "active" }
-      }
-    }
-  ],
-  "insights": "AI analysis of the workflow including what configurations were extracted from the image"
-}
-
-CONFIGURATION EXTRACTION RULES:
-- If you see a configuration panel, settings form, or property inspector in the image, extract EVERY visible field into the node's "config" object
-- Use "{{context.field}}" placeholders for sensitive values like API keys, tokens, passwords, secrets
-- Preserve exact field names, URLs, and values as shown in the image
-- If authentication is configured (OAuth, API key, etc.), include full auth_type and auth_config
-- If you see dropdown selections, capture the selected value
-- If you see toggle switches, capture their on/off state as booleans
-- Map visual form fields to structured JSON keys intelligently
-
-OUTPUT FORMAT:
-- CRITICAL: Return ONLY valid, complete JSON - no markdown, no code blocks, no truncation
-- CRITICAL: Ensure all JSON strings are properly closed and terminated
-- CRITICAL: Keep responses under 12000 tokens to avoid truncation
-- If the workflow is complex, prioritize core nodes and essential connections
-- Use concise descriptions and explanations
-
-IMPORTANT: Always include this AI Transparency & Fair-Use Statement at the end of your "insights" field or as a separate "disclaimer" field:
-
-"AI TRANSPARENCY NOTICE: This workflow is a transformative interpretation generated by Remora Flow (Remora Development) for educational and productivity purposes. No copyrighted content was stored or redistributed. This analysis complies with U.S. Copyright Law (17 U.S.C. §107 - Fair Use), YouTube Developer Policies (Section 5.B), and GDPR (Article 5.1.c). All intellectual property rights remain with original creators. Users must ensure compliance with local laws and platform policies. © 2025 Remora Development | Contact: legal@remoradev.ai"`
+RULES:
+- Extract EVERY node visible (boxes, diamonds, cylinders). Decisions/diamonds = "condition". Triggers/inputs = "trigger". Manual tasks & system processes = "action". External systems/DBs = "connector". AI steps = "ai". Data ops = "data".
+- For each node populate "next" with downstream IDs following SOLID lines (success/YES). For condition nodes also populate "nextOnFalse" for the NO/dashed branch.
+- Position x/y on a grid by the visible layout: x = column*280, y = row*160.
+- Put any visible config (URLs, methods, schedules, recipients, queries, auth) into config. Use {{context.field}} for secrets.
+- Use concise titles (1-5 words) and one-line descriptions.
+- Call the tool exactly once with ALL nodes. Do NOT reply with text.`
             },
             {
               role: 'user',
               content: userContent
             }
           ],
-          temperature: 0.3
+          temperature: 0.2
         }),
       });
 
@@ -262,41 +221,30 @@ IMPORTANT: Always include this AI Transparency & Fair-Use Statement at the end o
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    
-    if (!content) {
+    const message = data.choices?.[0]?.message;
+    const toolCall = message?.tool_calls?.[0];
+    const rawArgs = toolCall?.function?.arguments ?? message?.content;
+
+    if (!rawArgs) {
       throw new Error('No response from AI');
     }
 
-    console.log('AI response:', content);
-
-    // Parse the JSON response
+    // Parse tool-call arguments (usually a JSON string)
     let workflowData;
     try {
-      // Extract JSON from markdown code blocks if present
-      let jsonStr = content.trim();
-      
-      // Remove markdown code blocks if present
-      const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (codeBlockMatch) {
-        jsonStr = codeBlockMatch[1].trim();
-      }
-      
-      // If no code block, try to find JSON object
-      if (!jsonStr.startsWith('{') && !jsonStr.startsWith('[')) {
-        const jsonMatch = jsonStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-        if (jsonMatch) {
-          jsonStr = jsonMatch[1];
+      if (typeof rawArgs === 'object') {
+        workflowData = rawArgs;
+      } else {
+        let jsonStr = rawArgs.trim();
+        const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
+        if (!jsonStr.startsWith('{') && !jsonStr.startsWith('[')) {
+          const jsonMatch = jsonStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+          if (jsonMatch) jsonStr = jsonMatch[1];
         }
+        workflowData = JSON.parse(jsonStr);
       }
-      
-      // Check if the response looks truncated
-      if (!jsonStr.endsWith('}') && !jsonStr.endsWith(']')) {
-        console.warn('Response appears truncated, attempting to parse anyway');
-      }
-      
-      workflowData = JSON.parse(jsonStr);
-      console.log('Successfully parsed workflow from image(s)');
+      console.log(`Parsed workflow — ${workflowData.nodes?.length ?? 0} nodes`);
       
       // If AI returned multiple workflows in a workflows array, validate each has nodes
       if (workflowData.workflows && Array.isArray(workflowData.workflows)) {
@@ -315,7 +263,7 @@ IMPORTANT: Always include this AI Transparency & Fair-Use Statement at the end o
             workflow.guardrailExplanations = injectionResult.explanations;
             workflow.complianceStandards = injectionResult.complianceStandards;
             workflow.guardrailsAdded = injectionResult.guardrailsAdded;
-            workflow.model = 'google/gemini-2.5-flash';
+            workflow.model = 'google/gemini-3-flash-preview';
             workflow.inputType = 'image';
             workflow.insights = workflow.insights || workflow.explanation || `AI vision interpreted ${imageArray.length} source image(s) and converted the visible whiteboard/process structure into workflow nodes, connections, and implementation notes.`;
             console.log(`Guardrails injected for workflow ${index}:`, injectionResult.guardrailsAdded);
@@ -331,7 +279,7 @@ IMPORTANT: Always include this AI Transparency & Fair-Use Statement at the end o
           workflowData.guardrailExplanations = injectionResult.explanations;
           workflowData.complianceStandards = injectionResult.complianceStandards;
           workflowData.guardrailsAdded = injectionResult.guardrailsAdded;
-          workflowData.model = 'google/gemini-2.5-flash';
+          workflowData.model = 'google/gemini-3-flash-preview';
           workflowData.inputType = 'image';
           workflowData.insights = workflowData.insights || workflowData.explanation || `AI vision interpreted ${imageArray.length} source image(s) and converted the visible whiteboard/process structure into workflow nodes, connections, and implementation notes.`;
           console.log('Guardrail nodes injected from image analysis:', injectionResult.guardrailsAdded);
