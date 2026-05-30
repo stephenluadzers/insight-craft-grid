@@ -221,41 +221,30 @@ RULES:
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    
-    if (!content) {
+    const message = data.choices?.[0]?.message;
+    const toolCall = message?.tool_calls?.[0];
+    const rawArgs = toolCall?.function?.arguments ?? message?.content;
+
+    if (!rawArgs) {
       throw new Error('No response from AI');
     }
 
-    console.log('AI response:', content);
-
-    // Parse the JSON response
+    // Parse tool-call arguments (usually a JSON string)
     let workflowData;
     try {
-      // Extract JSON from markdown code blocks if present
-      let jsonStr = content.trim();
-      
-      // Remove markdown code blocks if present
-      const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      if (codeBlockMatch) {
-        jsonStr = codeBlockMatch[1].trim();
-      }
-      
-      // If no code block, try to find JSON object
-      if (!jsonStr.startsWith('{') && !jsonStr.startsWith('[')) {
-        const jsonMatch = jsonStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-        if (jsonMatch) {
-          jsonStr = jsonMatch[1];
+      if (typeof rawArgs === 'object') {
+        workflowData = rawArgs;
+      } else {
+        let jsonStr = rawArgs.trim();
+        const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (codeBlockMatch) jsonStr = codeBlockMatch[1].trim();
+        if (!jsonStr.startsWith('{') && !jsonStr.startsWith('[')) {
+          const jsonMatch = jsonStr.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+          if (jsonMatch) jsonStr = jsonMatch[1];
         }
+        workflowData = JSON.parse(jsonStr);
       }
-      
-      // Check if the response looks truncated
-      if (!jsonStr.endsWith('}') && !jsonStr.endsWith(']')) {
-        console.warn('Response appears truncated, attempting to parse anyway');
-      }
-      
-      workflowData = JSON.parse(jsonStr);
-      console.log('Successfully parsed workflow from image(s)');
+      console.log(`Parsed workflow — ${workflowData.nodes?.length ?? 0} nodes`);
       
       // If AI returned multiple workflows in a workflows array, validate each has nodes
       if (workflowData.workflows && Array.isArray(workflowData.workflows)) {
