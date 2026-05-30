@@ -287,7 +287,8 @@ RULES:
       }
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('Content preview:', content.substring(0, 500));
+      const preview = typeof rawArgs === 'string' ? rawArgs.substring(0, 500) : JSON.stringify(rawArgs).substring(0, 500);
+      console.error('Content preview:', preview);
       throw new Error('AI returned invalid JSON format. Please try again.');
     }
 
