@@ -263,7 +263,7 @@ RULES:
             workflow.guardrailExplanations = injectionResult.explanations;
             workflow.complianceStandards = injectionResult.complianceStandards;
             workflow.guardrailsAdded = injectionResult.guardrailsAdded;
-            workflow.model = 'google/gemini-2.5-flash';
+            workflow.model = 'google/gemini-3-flash-preview';
             workflow.inputType = 'image';
             workflow.insights = workflow.insights || workflow.explanation || `AI vision interpreted ${imageArray.length} source image(s) and converted the visible whiteboard/process structure into workflow nodes, connections, and implementation notes.`;
             console.log(`Guardrails injected for workflow ${index}:`, injectionResult.guardrailsAdded);
@@ -279,7 +279,7 @@ RULES:
           workflowData.guardrailExplanations = injectionResult.explanations;
           workflowData.complianceStandards = injectionResult.complianceStandards;
           workflowData.guardrailsAdded = injectionResult.guardrailsAdded;
-          workflowData.model = 'google/gemini-2.5-flash';
+          workflowData.model = 'google/gemini-3-flash-preview';
           workflowData.inputType = 'image';
           workflowData.insights = workflowData.insights || workflowData.explanation || `AI vision interpreted ${imageArray.length} source image(s) and converted the visible whiteboard/process structure into workflow nodes, connections, and implementation notes.`;
           console.log('Guardrail nodes injected from image analysis:', injectionResult.guardrailsAdded);
