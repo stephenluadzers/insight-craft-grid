@@ -61,12 +61,14 @@ export const WorkflowDoctorDialog = ({ open, onOpenChange, workflow, onApplyFix 
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DoctorResult | null>(null);
+  const [mode, setMode] = useState<"diagnose" | "fix">("fix");
 
-  const runDiagnosis = async () => {
+  const runDiagnosis = async (selectedMode: "diagnose" | "fix") => {
     if (!workflow?.nodes?.length) {
       toast({ title: "Empty canvas", description: "Add some nodes first", variant: "destructive" });
       return;
     }
+    setMode(selectedMode);
     setLoading(true);
     setResult(null);
     try {
@@ -93,6 +95,31 @@ export const WorkflowDoctorDialog = ({ open, onOpenChange, workflow, onApplyFix 
     toast({ title: "Fixes applied", description: "Your workflow has been healed" });
     onOpenChange(false);
     setResult(null);
+  };
+
+  const copyReport = async () => {
+    if (!result) return;
+    const r = result.diagnosis;
+    const lines = [
+      `Remora Flow — Workflow Diagnosis`,
+      `Health Score: ${r.healthScore}/100`,
+      r.intent ? `Detected intent: ${r.intent}` : "",
+      ``,
+      `Summary:`,
+      r.summary,
+      ``,
+      `Issues (${r.issues?.length || 0}):`,
+      ...(r.issues || []).map((i, idx) =>
+        `${idx + 1}. [${i.severity.toUpperCase()}] ${i.title}\n   ${i.description}\n   Fix: ${i.recommendation}`
+      ),
+      r.suggestions?.length ? `\nOptional improvements:\n${r.suggestions.map((s) => `- ${s}`).join("\n")}` : "",
+    ].filter(Boolean).join("\n");
+    try {
+      await navigator.clipboard.writeText(lines);
+      toast({ title: "Report copied", description: "Diagnosis copied to clipboard" });
+    } catch {
+      toast({ title: "Copy failed", description: "Unable to access clipboard", variant: "destructive" });
+    }
   };
 
   const healthColor = (score: number) =>
