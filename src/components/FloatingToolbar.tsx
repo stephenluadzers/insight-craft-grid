@@ -1,4 +1,4 @@
-import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library, Shield, Globe } from "lucide-react";
+import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library, Shield, Globe, Stethoscope } from "lucide-react";
 import { Button } from "./ui/button";
 import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { IntegrationLibrary } from "./IntegrationLibrary";
+import { WorkflowDoctorDialog } from "./WorkflowDoctorDialog";
 
 interface FloatingToolbarProps {
   onAddNode: (type: NodeType, title?: string, config?: any) => void;
