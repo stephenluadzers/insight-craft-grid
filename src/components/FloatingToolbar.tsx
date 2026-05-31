@@ -1,4 +1,4 @@
-import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library, Shield, Globe } from "lucide-react";
+import { Zap, Mail, Database, FileText, Image as ImageIcon, Moon, Sun, Loader2, Sparkles, Save, Library, Shield, Globe, Stethoscope } from "lucide-react";
 import { Button } from "./ui/button";
 import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { IntegrationLibrary } from "./IntegrationLibrary";
+import { WorkflowDoctorDialog } from "./WorkflowDoctorDialog";
 
 interface FloatingToolbarProps {
   onAddNode: (type: NodeType, title?: string, config?: any) => void;
@@ -28,6 +29,7 @@ const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = 
 export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGenerator, onSave, onOpenAPIImport }: FloatingToolbarProps): JSX.Element => {
   const [isDark, setIsDark] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [doctorOpen, setDoctorOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -173,6 +175,26 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
         {/* Divider */}
         <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
 
+        {/* Workflow Doctor — Fix My Mess */}
+        <Button
+          onClick={() => setDoctorOpen(true)}
+          disabled={!workflow?.nodes?.length}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "flex items-center gap-2 rounded-xl",
+            "hover:bg-primary/20 hover:text-primary",
+            "disabled:opacity-50 disabled:pointer-events-none"
+          )}
+          title="Workflow Doctor — deep AI diagnosis & fix"
+        >
+          <Stethoscope className="w-4 h-4" />
+          <span className="text-xs font-medium hidden sm:inline">Fix My Mess</span>
+        </Button>
+
+        {/* Divider */}
+        <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
+
         {/* Save Button */}
         <Button
           onClick={onSave}
@@ -197,6 +219,13 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
       </div>
+
+      <WorkflowDoctorDialog
+        open={doctorOpen}
+        onOpenChange={setDoctorOpen}
+        workflow={workflow}
+        onApplyFix={(nodes) => onOptimized(nodes)}
+      />
     </div>
   );
 };
