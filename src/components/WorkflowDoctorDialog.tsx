@@ -61,12 +61,14 @@ export const WorkflowDoctorDialog = ({ open, onOpenChange, workflow, onApplyFix 
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DoctorResult | null>(null);
+  const [mode, setMode] = useState<"diagnose" | "fix">("fix");
 
-  const runDiagnosis = async () => {
+  const runDiagnosis = async (selectedMode: "diagnose" | "fix") => {
     if (!workflow?.nodes?.length) {
       toast({ title: "Empty canvas", description: "Add some nodes first", variant: "destructive" });
       return;
     }
+    setMode(selectedMode);
     setLoading(true);
     setResult(null);
     try {
@@ -95,6 +97,31 @@ export const WorkflowDoctorDialog = ({ open, onOpenChange, workflow, onApplyFix 
     setResult(null);
   };
 
+  const copyReport = async () => {
+    if (!result) return;
+    const r = result.diagnosis;
+    const lines = [
+      `Remora Flow — Workflow Diagnosis`,
+      `Health Score: ${r.healthScore}/100`,
+      r.intent ? `Detected intent: ${r.intent}` : "",
+      ``,
+      `Summary:`,
+      r.summary,
+      ``,
+      `Issues (${r.issues?.length || 0}):`,
+      ...(r.issues || []).map((i, idx) =>
+        `${idx + 1}. [${i.severity.toUpperCase()}] ${i.title}\n   ${i.description}\n   Fix: ${i.recommendation}`
+      ),
+      r.suggestions?.length ? `\nOptional improvements:\n${r.suggestions.map((s) => `- ${s}`).join("\n")}` : "",
+    ].filter(Boolean).join("\n");
+    try {
+      await navigator.clipboard.writeText(lines);
+      toast({ title: "Report copied", description: "Diagnosis copied to clipboard" });
+    } catch {
+      toast({ title: "Copy failed", description: "Unable to access clipboard", variant: "destructive" });
+    }
+  };
+
   const healthColor = (score: number) =>
     score >= 80 ? "text-emerald-500" : score >= 60 ? "text-yellow-500" : score >= 40 ? "text-orange-500" : "text-destructive";
 
@@ -120,10 +147,26 @@ export const WorkflowDoctorDialog = ({ open, onOpenChange, workflow, onApplyFix 
               I'll inspect your workflow across 7 dimensions: structure, logic, missing steps,
               redundancy, error handling, compliance, and conciseness — then propose a fully fixed version you can accept.
             </p>
-            <Button onClick={runDiagnosis} className="bg-gradient-accent text-primary-foreground">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Diagnose My Workflow
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full max-w-md">
+              <Button
+                onClick={() => runDiagnosis("diagnose")}
+                variant="outline"
+                className="flex-1"
+              >
+                <Stethoscope className="w-4 h-4 mr-2" />
+                Diagnose Only
+              </Button>
+              <Button
+                onClick={() => runDiagnosis("fix")}
+                className="flex-1 bg-gradient-accent text-primary-foreground"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Diagnose & Fix
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground text-center max-w-md">
+              <strong>Diagnose Only</strong> just tells you what's wrong. <strong>Diagnose & Fix</strong> also generates a healed workflow you can apply.
+            </p>
           </div>
         )}
 
@@ -229,17 +272,22 @@ export const WorkflowDoctorDialog = ({ open, onOpenChange, workflow, onApplyFix 
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2 sticky bottom-0 bg-card/95 backdrop-blur-xl pb-1">
-                <Button variant="outline" onClick={() => { setResult(null); }} className="flex-1">
-                  Discard
+              <div className="flex flex-wrap gap-2 pt-2 sticky bottom-0 bg-card/95 backdrop-blur-xl pb-1">
+                <Button variant="outline" onClick={() => setResult(null)} className="flex-1 min-w-[100px]">
+                  Close
                 </Button>
-                <Button onClick={runDiagnosis} variant="outline">
+                <Button onClick={copyReport} variant="outline" className="flex-1 min-w-[120px]">
+                  Copy Report
+                </Button>
+                <Button onClick={() => runDiagnosis(mode)} variant="outline">
                   Re-diagnose
                 </Button>
-                <Button onClick={applyFix} className="flex-1 bg-gradient-accent text-primary-foreground">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Apply All Fixes
-                </Button>
+                {mode === "fix" && (
+                  <Button onClick={applyFix} className="flex-1 min-w-[140px] bg-gradient-accent text-primary-foreground">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Apply All Fixes
+                  </Button>
+                )}
               </div>
             </div>
           </ScrollArea>
