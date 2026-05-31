@@ -175,6 +175,26 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
         {/* Divider */}
         <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
 
+        {/* Workflow Doctor — Fix My Mess */}
+        <Button
+          onClick={() => setDoctorOpen(true)}
+          disabled={!workflow?.nodes?.length}
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "flex items-center gap-2 rounded-xl",
+            "hover:bg-primary/20 hover:text-primary",
+            "disabled:opacity-50 disabled:pointer-events-none"
+          )}
+          title="Workflow Doctor — deep AI diagnosis & fix"
+        >
+          <Stethoscope className="w-4 h-4" />
+          <span className="text-xs font-medium hidden sm:inline">Fix My Mess</span>
+        </Button>
+
+        {/* Divider */}
+        <div className="w-px h-4 sm:h-6 bg-border flex-shrink-0" />
+
         {/* Save Button */}
         <Button
           onClick={onSave}
