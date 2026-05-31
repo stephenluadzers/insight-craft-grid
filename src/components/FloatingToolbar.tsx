@@ -29,6 +29,7 @@ const nodeButtons: Array<{ type: NodeType; icon: typeof Zap; label: string }> = 
 export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGenerator, onSave, onOpenAPIImport }: FloatingToolbarProps): JSX.Element => {
   const [isDark, setIsDark] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [doctorOpen, setDoctorOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
