@@ -147,10 +147,26 @@ export const WorkflowDoctorDialog = ({ open, onOpenChange, workflow, onApplyFix 
               I'll inspect your workflow across 7 dimensions: structure, logic, missing steps,
               redundancy, error handling, compliance, and conciseness — then propose a fully fixed version you can accept.
             </p>
-            <Button onClick={runDiagnosis} className="bg-gradient-accent text-primary-foreground">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Diagnose My Workflow
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full max-w-md">
+              <Button
+                onClick={() => runDiagnosis("diagnose")}
+                variant="outline"
+                className="flex-1"
+              >
+                <Stethoscope className="w-4 h-4 mr-2" />
+                Diagnose Only
+              </Button>
+              <Button
+                onClick={() => runDiagnosis("fix")}
+                className="flex-1 bg-gradient-accent text-primary-foreground"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Diagnose & Fix
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground text-center max-w-md">
+              <strong>Diagnose Only</strong> just tells you what's wrong. <strong>Diagnose & Fix</strong> also generates a healed workflow you can apply.
+            </p>
           </div>
         )}
 
