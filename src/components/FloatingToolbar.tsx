@@ -219,6 +219,13 @@ export const FloatingToolbar = ({ onAddNode, workflow, onOptimized, onOpenAIGene
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
       </div>
+
+      <WorkflowDoctorDialog
+        open={doctorOpen}
+        onOpenChange={setDoctorOpen}
+        workflow={workflow}
+        onApplyFix={(nodes) => onOptimized(nodes)}
+      />
     </div>
   );
 };
