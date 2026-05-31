@@ -272,17 +272,22 @@ export const WorkflowDoctorDialog = ({ open, onOpenChange, workflow, onApplyFix 
                 </div>
               )}
 
-              <div className="flex gap-2 pt-2 sticky bottom-0 bg-card/95 backdrop-blur-xl pb-1">
-                <Button variant="outline" onClick={() => { setResult(null); }} className="flex-1">
-                  Discard
+              <div className="flex flex-wrap gap-2 pt-2 sticky bottom-0 bg-card/95 backdrop-blur-xl pb-1">
+                <Button variant="outline" onClick={() => setResult(null)} className="flex-1 min-w-[100px]">
+                  Close
                 </Button>
-                <Button onClick={runDiagnosis} variant="outline">
+                <Button onClick={copyReport} variant="outline" className="flex-1 min-w-[120px]">
+                  Copy Report
+                </Button>
+                <Button onClick={() => runDiagnosis(mode)} variant="outline">
                   Re-diagnose
                 </Button>
-                <Button onClick={applyFix} className="flex-1 bg-gradient-accent text-primary-foreground">
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Apply All Fixes
-                </Button>
+                {mode === "fix" && (
+                  <Button onClick={applyFix} className="flex-1 min-w-[140px] bg-gradient-accent text-primary-foreground">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Apply All Fixes
+                  </Button>
+                )}
               </div>
             </div>
           </ScrollArea>
