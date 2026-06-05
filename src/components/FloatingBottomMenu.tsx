@@ -5,7 +5,7 @@ import {
   Sparkles, Store, Users, Zap, Code2, Bug, TestTube, 
   BarChart3, DollarSign, Menu, X, Layout, Mail, Database, 
   FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download, Github, Upload,
-  Layers, FolderOpen, TestTube2, TrendingUp, Play, Globe
+  Layers, FolderOpen, TestTube2, TrendingUp, Play, Globe, Bot
 } from "lucide-react";
 import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
