@@ -5,7 +5,7 @@
  */
 import { Hono } from "https://esm.sh/hono@4.6.14";
 import { McpServer, StreamableHttpTransport } from "https://esm.sh/mcp-lite@0.10.0";
-import { z } from "https://esm.sh/zod@3.23.8";
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders: Record<string, string> = {
