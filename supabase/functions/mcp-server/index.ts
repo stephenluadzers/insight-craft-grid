@@ -63,19 +63,24 @@ function buildServer(auth: Auth): McpServer {
   const mcp = new McpServer({
     name: "remora-flow",
     version: "1.0.0",
-    schemaAdapter: (schema) => z.toJSONSchema(schema as z.ZodType),
+    schemaAdapter: (schema: unknown) => schema, // JSON Schema passed through
   });
 
   mcp.tool("generate_workflow", {
     description:
       "Generate a complete Remora Flow workflow from a natural-language description. " +
       "Returns nodes, connections, and metadata ready to save, run, or sell.",
-    inputSchema: z.object({
-      prompt: z.string().describe("Plain-English description of the workflow to build"),
-      name: z.string().optional().describe("Optional workflow name"),
-      save: z.boolean().optional().describe("If true, persist to the workspace"),
-    }),
-    handler: async ({ prompt, name, save }) => {
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: { type: "string", description: "Plain-English description of the workflow" },
+        name: { type: "string", description: "Optional workflow name" },
+        save: { type: "boolean", description: "If true, persist to the workspace" },
+      },
+      required: ["prompt"],
+    },
+    handler: async (args: any) => {
+      const { prompt, name, save } = args ?? {};
       const result = await invokeFn("generate-workflow-from-text", { prompt });
       const workflow = result?.workflow ?? result;
       let saved_id: string | undefined;
@@ -99,12 +104,17 @@ function buildServer(auth: Auth): McpServer {
     description:
       "Run the Workflow Doctor: deep semantic + structural diagnosis. Returns health score, " +
       "issues, and (in 'fix' mode) a repaired workflow.",
-    inputSchema: z.object({
-      nodes: z.array(z.any()),
-      connections: z.array(z.any()).optional(),
-      mode: z.enum(["diagnose", "fix"]).optional(),
-    }),
-    handler: async ({ nodes, connections, mode }) => {
+    inputSchema: {
+      type: "object",
+      properties: {
+        nodes: { type: "array" },
+        connections: { type: "array" },
+        mode: { type: "string", enum: ["diagnose", "fix"] },
+      },
+      required: ["nodes"],
+    },
+    handler: async (args: any) => {
+      const { nodes, connections, mode } = args ?? {};
       return json(await invokeFn("diagnose-workflow", {
         nodes, connections: connections ?? [], mode: mode ?? "fix",
       }));
@@ -113,16 +123,20 @@ function buildServer(auth: Auth): McpServer {
 
   mcp.tool("list_workflows", {
     description: "List workflows in the authenticated workspace.",
-    inputSchema: z.object({
-      limit: z.number().int().min(1).max(100).optional(),
-      status: z.string().optional(),
-    }),
-    handler: async ({ limit, status }) => {
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "number" },
+        status: { type: "string" },
+      },
+    },
+    handler: async (args: any) => {
+      const { limit, status } = args ?? {};
       let q = admin.from("workflows")
         .select("id, name, description, status, created_at, updated_at")
         .eq("workspace_id", auth.workspace_id)
         .order("updated_at", { ascending: false })
-        .limit(limit ?? 25);
+        .limit(Math.min(Number(limit) || 25, 100));
       if (status) q = q.eq("status", status);
       const { data, error } = await q;
       if (error) throw new Error(error.message);
@@ -132,8 +146,13 @@ function buildServer(auth: Auth): McpServer {
 
   mcp.tool("get_workflow", {
     description: "Fetch a workflow by id (full nodes + connections).",
-    inputSchema: z.object({ id: z.string() }),
-    handler: async ({ id }) => {
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string" } },
+      required: ["id"],
+    },
+    handler: async (args: any) => {
+      const { id } = args ?? {};
       const { data, error } = await admin.from("workflows").select("*")
         .eq("id", id).eq("workspace_id", auth.workspace_id).maybeSingle();
       if (error) throw new Error(error.message);
@@ -146,12 +165,17 @@ function buildServer(auth: Auth): McpServer {
     description:
       "Build a sellable package payload for a workflow: nodes, connections, metadata, suggested " +
       "pricing, and marketplace description. Use when preparing to sell.",
-    inputSchema: z.object({
-      id: z.string(),
-      price_usd: z.number().optional(),
-      category: z.string().optional(),
-    }),
-    handler: async ({ id, price_usd, category }) => {
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        price_usd: { type: "number" },
+        category: { type: "string" },
+      },
+      required: ["id"],
+    },
+    handler: async (args: any) => {
+      const { id, price_usd, category } = args ?? {};
       const { data: wf, error } = await admin.from("workflows").select("*")
         .eq("id", id).eq("workspace_id", auth.workspace_id).maybeSingle();
       if (error) throw new Error(error.message);
