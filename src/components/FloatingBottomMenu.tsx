@@ -86,6 +86,7 @@ export function FloatingBottomMenu({
     { id: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Performance insights' },
     { id: 'pipeline', label: 'AI Pipeline', icon: Play, description: 'Create → Optimize → Export → Sell' },
     { id: 'cost', label: 'Cost', icon: DollarSign, description: 'Cost estimation' },
+    { id: 'remote-agent', label: 'Remote Agent (MCP)', icon: Bot, description: 'Connect external AI assistants' },
   ];
 
   const currentItem = menuItems.find(item => item.id === currentView);
