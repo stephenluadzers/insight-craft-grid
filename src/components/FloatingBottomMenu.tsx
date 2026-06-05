@@ -5,7 +5,7 @@ import {
   Sparkles, Store, Users, Zap, Code2, Bug, TestTube, 
   BarChart3, DollarSign, Menu, X, Layout, Mail, Database, 
   FileText, Image as ImageIcon, Moon, Sun, Loader2, Save, Download, Github, Upload,
-  Layers, FolderOpen, TestTube2, TrendingUp, Play, Globe
+  Layers, FolderOpen, TestTube2, TrendingUp, Play, Globe, Bot
 } from "lucide-react";
 import { NodeType } from "@/types/workflow";
 import { cn } from "@/lib/utils";
@@ -86,6 +86,7 @@ export function FloatingBottomMenu({
     { id: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Performance insights' },
     { id: 'pipeline', label: 'AI Pipeline', icon: Play, description: 'Create → Optimize → Export → Sell' },
     { id: 'cost', label: 'Cost', icon: DollarSign, description: 'Cost estimation' },
+    { id: 'remote-agent', label: 'Remote Agent (MCP)', icon: Bot, description: 'Connect external AI assistants' },
   ];
 
   const currentItem = menuItems.find(item => item.id === currentView);
