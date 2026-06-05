@@ -21,6 +21,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { ExecutionStream } from "@/components/ExecutionStream";
 import { OnboardingOverlay } from "@/components/OnboardingOverlay";
 import { LiveMetricsPanel } from "@/components/LiveMetricsPanel";
+import { RemoteAgentPanel } from "@/components/RemoteAgentPanel";
 
 const Index = (): JSX.Element => {
   const [currentView, setCurrentView] = useState('canvas');
@@ -78,6 +79,7 @@ const Index = (): JSX.Element => {
               setTimeout(() => canvasRef.current?.loadWorkflow?.(nodes), 100);
             }} />}
             {currentView === 'cost' && <WorkflowCostEstimator nodes={[]} executionsPerMonth={1000} />}
+            {currentView === 'remote-agent' && <RemoteAgentPanel />}
             {currentView === 'metrics' && (
               <LiveMetricsPanel
                 totalExecutions={1247}
