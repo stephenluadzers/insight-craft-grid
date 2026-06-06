@@ -88,19 +88,15 @@ Deno.serve(async (req) => {
   );
   const result = await exec.json().catch(() => ({ ok: false }));
 
+  // Best-effort counter increment
+  const { data: current } = await supabase
+    .from("published_workflow_apis")
+    .select("request_count")
+    .eq("id", api.id)
+    .maybeSingle();
   await supabase
     .from("published_workflow_apis")
-    .update({ request_count: (undefined as any) })
-    .eq("id", api.id);
-  // increment via RPC-less update: do a fetch-then-set
-  await supabase.rpc("noop").catch(() => {});
-  await supabase
-    .from("published_workflow_apis")
-    .update({
-      request_count: ((): number => {
-        return 0; // best-effort; real counter handled by trigger if added later
-      })(),
-    })
+    .update({ request_count: (current?.request_count ?? 0) + 1 })
     .eq("id", api.id);
 
   return new Response(JSON.stringify({ ok: true, result }), {
