@@ -16,7 +16,6 @@ interface Version {
   id: string;
   version_number: number;
   nodes: any;
-  edges: any;
   created_at: string;
 }
 
@@ -37,7 +36,7 @@ export function VersionDiffModal({ workflowId, open, onOpenChange }: Props) {
     (async () => {
       const { data } = await supabase
         .from("workflow_versions")
-        .select("id, version_number, nodes, edges, created_at")
+        .select("id, version_number, nodes, created_at")
         .eq("workflow_id", workflowId)
         .order("version_number", { ascending: false })
         .limit(20);
