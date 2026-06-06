@@ -24,7 +24,8 @@ interface IntegrationLibraryProps {
 
 const iconMap: Record<string, any> = {
   Mail, MessageSquare, Globe, Brain, Webhook, RefreshCw, GitBranch, Clock,
-  Settings, Merge, Split, Code, Network, Timer, Terminal, Send, Hash, Sheet, FileText, Database
+  Settings, Merge, Split, Code, Network, Timer, Terminal, Send, Hash, Sheet, FileText, Database,
+  Search,
 };
 
 export const IntegrationLibrary = ({ onAddNode }: IntegrationLibraryProps) => {
