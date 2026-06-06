@@ -24,7 +24,8 @@ interface IntegrationLibraryProps {
 
 const iconMap: Record<string, any> = {
   Mail, MessageSquare, Globe, Brain, Webhook, RefreshCw, GitBranch, Clock,
-  Settings, Merge, Split, Code, Network, Timer, Terminal, Send, Hash, Sheet, FileText, Database
+  Settings, Merge, Split, Code, Network, Timer, Terminal, Send, Hash, Sheet, FileText, Database,
+  Search,
 };
 
 export const IntegrationLibrary = ({ onAddNode }: IntegrationLibraryProps) => {
@@ -47,12 +48,18 @@ export const IntegrationLibrary = ({ onAddNode }: IntegrationLibraryProps) => {
   });
 
   const categories = integrations
-    ? Array.from(new Set(integrations.map((i) => i.category)))
+    ? Array.from(new Set(integrations.map((i) => i.category))).sort()
     : [];
+
+  const categoryCounts = (integrations ?? []).reduce<Record<string, number>>((acc, i) => {
+    acc[i.category] = (acc[i.category] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const filteredIntegrations = integrations?.filter((integration) => {
     const matchesSearch = integration.name.toLowerCase().includes(search.toLowerCase()) ||
-      integration.description?.toLowerCase().includes(search.toLowerCase());
+      integration.description?.toLowerCase().includes(search.toLowerCase()) ||
+      integration.category.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = !selectedCategory || integration.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -104,7 +111,7 @@ export const IntegrationLibrary = ({ onAddNode }: IntegrationLibraryProps) => {
               size="sm"
               onClick={() => setSelectedCategory(null)}
             >
-              All
+              All <Badge variant="secondary" className="ml-2">{integrations?.length ?? 0}</Badge>
             </Button>
             {categories.map((category) => (
               <Button
@@ -112,8 +119,9 @@ export const IntegrationLibrary = ({ onAddNode }: IntegrationLibraryProps) => {
                 variant={selectedCategory === category ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedCategory(category)}
+                className="capitalize"
               >
-                {category}
+                {category} <Badge variant="secondary" className="ml-2">{categoryCounts[category]}</Badge>
               </Button>
             ))}
           </div>
