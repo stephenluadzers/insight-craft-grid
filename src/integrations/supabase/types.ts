@@ -71,6 +71,59 @@ export type Database = {
           },
         ]
       }
+      agent_orchestrations: {
+        Row: {
+          created_at: string
+          id: string
+          last_result: Json | null
+          last_run_at: string | null
+          max_iterations: number
+          mode: string
+          node_id: string
+          status: string
+          supervisor_config: Json
+          updated_at: string
+          worker_configs: Json
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_result?: Json | null
+          last_run_at?: string | null
+          max_iterations?: number
+          mode?: string
+          node_id: string
+          status?: string
+          supervisor_config?: Json
+          updated_at?: string
+          worker_configs?: Json
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_result?: Json | null
+          last_run_at?: string | null
+          max_iterations?: number
+          mode?: string
+          node_id?: string
+          status?: string
+          supervisor_config?: Json
+          updated_at?: string
+          worker_configs?: Json
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_orchestrations_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           created_at: string
@@ -688,6 +741,100 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      knowledge_bases: {
+        Row: {
+          chunk_overlap: number
+          chunk_size: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          document_count: number
+          embedding_model: string
+          id: string
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          chunk_overlap?: number
+          chunk_size?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          document_count?: number
+          embedding_model?: string
+          id?: string
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          chunk_overlap?: number
+          chunk_size?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          document_count?: number
+          embedding_model?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_bases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_documents: {
+        Row: {
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          knowledge_base_id: string
+          metadata: Json | null
+          source: string | null
+          title: string | null
+        }
+        Insert: {
+          chunk_index?: number
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          knowledge_base_id: string
+          metadata?: Json | null
+          source?: string | null
+          title?: string | null
+        }
+        Update: {
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          knowledge_base_id?: string
+          metadata?: Json | null
+          source?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_documents_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_bases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       learned_node_types: {
         Row: {
@@ -2970,6 +3117,71 @@ export type Database = {
           },
         ]
       }
+      workflow_test_cases: {
+        Row: {
+          ai_generated: boolean
+          assertions: Json | null
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expected_output: Json | null
+          id: string
+          input_payload: Json
+          last_actual_output: Json | null
+          last_duration_ms: number | null
+          last_run_at: string | null
+          last_status: string | null
+          name: string
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          assertions?: Json | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expected_output?: Json | null
+          id?: string
+          input_payload?: Json
+          last_actual_output?: Json | null
+          last_duration_ms?: number | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name: string
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          ai_generated?: boolean
+          assertions?: Json | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expected_output?: Json | null
+          id?: string
+          input_payload?: Json
+          last_actual_output?: Json | null
+          last_duration_ms?: number | null
+          last_run_at?: string | null
+          last_status?: string | null
+          name?: string
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_test_cases_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_test_runs: {
         Row: {
           actual_output: Json | null
@@ -3466,6 +3678,21 @@ export type Database = {
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
+      }
+      match_knowledge_documents: {
+        Args: {
+          kb_id: string
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          content: string
+          id: string
+          similarity: number
+          source: string
+          title: string
+        }[]
       }
       purge_old_webhook_logs: { Args: never; Returns: undefined }
       release_workflow_lock: {
