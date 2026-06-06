@@ -271,6 +271,11 @@ export const WorkflowNode = ({
       <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background shadow-glow transition-all duration-200 group-hover:scale-125">
         <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20 group-hover:opacity-40" />
       </div>
+
+      {/* Wave 1 — Visual error-branch port */}
+      {showErrorPort && (
+        <ErrorPortHandle active={errorBranchActive} onClick={onErrorPortClick} />
+      )}
     </div>
   );
 };
