@@ -378,6 +378,56 @@ export type Database = {
           },
         ]
       }
+      canvas_annotations: {
+        Row: {
+          color: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          member_node_ids: Json
+          position: Json
+          size: Json
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          color?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          member_node_ids?: Json
+          position?: Json
+          size?: Json
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          color?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          member_node_ids?: Json
+          position?: Json
+          size?: Json
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "canvas_annotations_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       collaboration_activity: {
         Row: {
           activity_data: Json
@@ -649,6 +699,47 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flow_data_stores: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          store_key: string
+          ttl_seconds: number | null
+          updated_at: string
+          value: Json
+          workflow_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          store_key: string
+          ttl_seconds?: number | null
+          updated_at?: string
+          value?: Json
+          workflow_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          store_key?: string
+          ttl_seconds?: number | null
+          updated_at?: string
+          value?: Json
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_data_stores_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
         ]
@@ -1055,6 +1146,62 @@ export type Database = {
           },
         ]
       }
+      published_workflow_apis: {
+        Row: {
+          api_key_hash: string | null
+          auth_required: boolean
+          created_at: string
+          created_by: string
+          id: string
+          input_schema: Json
+          is_active: boolean
+          method: string
+          output_schema: Json
+          request_count: number
+          slug: string
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          api_key_hash?: string | null
+          auth_required?: boolean
+          created_at?: string
+          created_by: string
+          id?: string
+          input_schema?: Json
+          is_active?: boolean
+          method?: string
+          output_schema?: Json
+          request_count?: number
+          slug: string
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          api_key_hash?: string | null
+          auth_required?: boolean
+          created_at?: string
+          created_by?: string
+          id?: string
+          input_schema?: Json
+          is_active?: boolean
+          method?: string
+          output_schema?: Json
+          request_count?: number
+          slug?: string
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "published_workflow_apis_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       run_step_logs: {
         Row: {
           attempt: number
@@ -1168,6 +1315,54 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      subworkflow_links: {
+        Row: {
+          child_workflow_id: string
+          created_at: string
+          id: string
+          input_mapping: Json
+          output_mapping: Json
+          parent_node_id: string
+          parent_workflow_id: string
+          updated_at: string
+        }
+        Insert: {
+          child_workflow_id: string
+          created_at?: string
+          id?: string
+          input_mapping?: Json
+          output_mapping?: Json
+          parent_node_id: string
+          parent_workflow_id: string
+          updated_at?: string
+        }
+        Update: {
+          child_workflow_id?: string
+          created_at?: string
+          id?: string
+          input_mapping?: Json
+          output_mapping?: Json
+          parent_node_id?: string
+          parent_workflow_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subworkflow_links_child_workflow_id_fkey"
+            columns: ["child_workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subworkflow_links_parent_workflow_id_fkey"
+            columns: ["parent_workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suspicious_activity_log: {
         Row: {
