@@ -1,6 +1,7 @@
 import { GripVertical, Zap, Mail, Database, FileText, Image, Clock, Shield, Bot, Brain, Target, Play, Eye, MessageSquare, Plug, Wand2, CheckCircle, GraduationCap, Type, Video, ImagePlus, Paintbrush, Volume2, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NodeCategoryBadge } from "./NodeCategoryBadge";
+import { ErrorPortHandle } from "./ErrorPortHandle";
 import type { NodeType, WorkflowNodeData } from "@/types/workflow";
 import { getNodeCategory } from "@/types/workflow";
 
@@ -13,6 +14,9 @@ interface WorkflowNodeProps {
   onSelect?: () => void;
   isDragging?: boolean;
   showCategory?: boolean;
+  showErrorPort?: boolean;
+  errorBranchActive?: boolean;
+  onErrorPortClick?: (e: React.MouseEvent) => void;
 }
 
 const nodeTypeConfig: Record<
@@ -194,6 +198,9 @@ export const WorkflowNode = ({
   onSelect,
   isDragging = false,
   showCategory = true,
+  showErrorPort = true,
+  errorBranchActive = false,
+  onErrorPortClick,
 }: WorkflowNodeProps) => {
   const nodeType = data.type in nodeTypeConfig ? data.type : 'action';
   const config = nodeTypeConfig[nodeType];
@@ -264,6 +271,11 @@ export const WorkflowNode = ({
       <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-primary border-2 border-background shadow-glow transition-all duration-200 group-hover:scale-125">
         <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20 group-hover:opacity-40" />
       </div>
+
+      {/* Wave 1 — Visual error-branch port */}
+      {showErrorPort && (
+        <ErrorPortHandle active={errorBranchActive} onClick={onErrorPortClick} />
+      )}
     </div>
   );
 };

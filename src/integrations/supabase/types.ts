@@ -908,6 +908,78 @@ export type Database = {
           },
         ]
       }
+      run_step_logs: {
+        Row: {
+          attempt: number
+          branch: string | null
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          error_stack: string | null
+          execution_id: string
+          finished_at: string | null
+          id: string
+          input_payload: Json | null
+          node_id: string
+          node_type: string | null
+          output_payload: Json | null
+          started_at: string
+          status: string
+          workflow_id: string
+        }
+        Insert: {
+          attempt?: number
+          branch?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          error_stack?: string | null
+          execution_id: string
+          finished_at?: string | null
+          id?: string
+          input_payload?: Json | null
+          node_id: string
+          node_type?: string | null
+          output_payload?: Json | null
+          started_at?: string
+          status: string
+          workflow_id: string
+        }
+        Update: {
+          attempt?: number
+          branch?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          error_stack?: string | null
+          execution_id?: string
+          finished_at?: string | null
+          id?: string
+          input_payload?: Json | null
+          node_id?: string
+          node_type?: string | null
+          output_payload?: Json | null
+          started_at?: string
+          status?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_step_logs_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_step_logs_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_rules: {
         Row: {
           auto_block: boolean
@@ -1978,6 +2050,63 @@ export type Database = {
           },
         ]
       }
+      workflow_failure_diagnostics: {
+        Row: {
+          applied: boolean | null
+          confidence: number | null
+          created_at: string
+          created_by: string | null
+          execution_id: string
+          explanation: string
+          id: string
+          node_id: string
+          root_cause: string
+          suggested_fix: Json | null
+          workflow_id: string
+        }
+        Insert: {
+          applied?: boolean | null
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          execution_id: string
+          explanation: string
+          id?: string
+          node_id: string
+          root_cause: string
+          suggested_fix?: Json | null
+          workflow_id: string
+        }
+        Update: {
+          applied?: boolean | null
+          confidence?: number | null
+          created_at?: string
+          created_by?: string | null
+          execution_id?: string
+          explanation?: string
+          id?: string
+          node_id?: string
+          root_cause?: string
+          suggested_fix?: Json | null
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_failure_diagnostics_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "workflow_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_failure_diagnostics_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflow_healing_logs: {
         Row: {
           attempted_at: string
@@ -2687,6 +2816,56 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_step_retries: {
+        Row: {
+          backoff_strategy: string
+          created_at: string
+          enabled: boolean
+          id: string
+          initial_delay_ms: number
+          max_attempts: number
+          max_delay_ms: number
+          node_id: string
+          retry_on_errors: string[] | null
+          updated_at: string
+          workflow_id: string
+        }
+        Insert: {
+          backoff_strategy?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          initial_delay_ms?: number
+          max_attempts?: number
+          max_delay_ms?: number
+          node_id: string
+          retry_on_errors?: string[] | null
+          updated_at?: string
+          workflow_id: string
+        }
+        Update: {
+          backoff_strategy?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          initial_delay_ms?: number
+          max_attempts?: number
+          max_delay_ms?: number
+          node_id?: string
+          retry_on_errors?: string[] | null
+          updated_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_step_retries_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
             referencedColumns: ["id"]
           },
         ]
