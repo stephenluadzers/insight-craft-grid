@@ -48,12 +48,18 @@ export const IntegrationLibrary = ({ onAddNode }: IntegrationLibraryProps) => {
   });
 
   const categories = integrations
-    ? Array.from(new Set(integrations.map((i) => i.category)))
+    ? Array.from(new Set(integrations.map((i) => i.category))).sort()
     : [];
+
+  const categoryCounts = (integrations ?? []).reduce<Record<string, number>>((acc, i) => {
+    acc[i.category] = (acc[i.category] ?? 0) + 1;
+    return acc;
+  }, {});
 
   const filteredIntegrations = integrations?.filter((integration) => {
     const matchesSearch = integration.name.toLowerCase().includes(search.toLowerCase()) ||
-      integration.description?.toLowerCase().includes(search.toLowerCase());
+      integration.description?.toLowerCase().includes(search.toLowerCase()) ||
+      integration.category.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = !selectedCategory || integration.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
