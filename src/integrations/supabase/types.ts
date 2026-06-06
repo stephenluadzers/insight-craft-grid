@@ -744,6 +744,57 @@ export type Database = {
           },
         ]
       }
+      governance_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          severity: string
+          summary: string
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          severity?: string
+          summary: string
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          severity?: string
+          summary?: string
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_events_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_circuit_breakers: {
         Row: {
           created_at: string
@@ -1105,6 +1156,47 @@ export type Database = {
           },
         ]
       }
+      pii_scrubbing_rules: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          pattern: string
+          replacement: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          pattern: string
+          replacement?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          pattern?: string
+          replacement?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pii_scrubbing_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1315,6 +1407,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      step_cost_metrics: {
+        Row: {
+          cost_usd: number
+          execution_id: string | null
+          id: string
+          input_tokens: number
+          latency_ms: number
+          model: string | null
+          node_id: string
+          node_type: string | null
+          output_tokens: number
+          provider: string | null
+          recorded_at: string
+          workflow_id: string
+        }
+        Insert: {
+          cost_usd?: number
+          execution_id?: string | null
+          id?: string
+          input_tokens?: number
+          latency_ms?: number
+          model?: string | null
+          node_id: string
+          node_type?: string | null
+          output_tokens?: number
+          provider?: string | null
+          recorded_at?: string
+          workflow_id: string
+        }
+        Update: {
+          cost_usd?: number
+          execution_id?: string | null
+          id?: string
+          input_tokens?: number
+          latency_ms?: number
+          model?: string | null
+          node_id?: string
+          node_type?: string | null
+          output_tokens?: number
+          provider?: string | null
+          recorded_at?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "step_cost_metrics_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subworkflow_links: {
         Row: {
@@ -2146,6 +2291,63 @@ export type Database = {
             columns: ["workflow_id"]
             isOneToOne: false
             referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflow_environments: {
+        Row: {
+          config_overrides: Json
+          created_at: string
+          environment: string
+          id: string
+          is_active: boolean
+          promoted_at: string
+          promoted_by: string | null
+          updated_at: string
+          version_id: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          config_overrides?: Json
+          created_at?: string
+          environment: string
+          id?: string
+          is_active?: boolean
+          promoted_at?: string
+          promoted_by?: string | null
+          updated_at?: string
+          version_id?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          config_overrides?: Json
+          created_at?: string
+          environment?: string
+          id?: string
+          is_active?: boolean
+          promoted_at?: string
+          promoted_by?: string | null
+          updated_at?: string
+          version_id?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_environments_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_environments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
