@@ -1,6 +1,7 @@
 import { GripVertical, Zap, Mail, Database, FileText, Image, Clock, Shield, Bot, Brain, Target, Play, Eye, MessageSquare, Plug, Wand2, CheckCircle, GraduationCap, Type, Video, ImagePlus, Paintbrush, Volume2, Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NodeCategoryBadge } from "./NodeCategoryBadge";
+import { ErrorPortHandle } from "./ErrorPortHandle";
 import type { NodeType, WorkflowNodeData } from "@/types/workflow";
 import { getNodeCategory } from "@/types/workflow";
 
@@ -13,6 +14,9 @@ interface WorkflowNodeProps {
   onSelect?: () => void;
   isDragging?: boolean;
   showCategory?: boolean;
+  showErrorPort?: boolean;
+  errorBranchActive?: boolean;
+  onErrorPortClick?: (e: React.MouseEvent) => void;
 }
 
 const nodeTypeConfig: Record<
