@@ -199,6 +199,212 @@ function buildServer(auth: Auth): McpServer {
     },
   });
 
+  // ───────────────────────── NOTES & DEEP READ ─────────────────────────
+
+  mcp.tool("list_all_notes", {
+    description:
+      "Read EVERY note across the workspace: workflow_comments rows + any node whose type is " +
+      "'note'/'comment'/'sticky' or which has a description/notes field. Use to give the agent " +
+      "full context on what the user has documented.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        workflow_id: { type: "string", description: "Optional: scope to one workflow" },
+        limit: { type: "number" },
+      },
+    },
+    handler: async (args: any) => {
+      const { workflow_id, limit } = args ?? {};
+      const cap = Math.min(Number(limit) || 500, 2000);
+
+      let wfQuery = admin
+        .from("workflows")
+        .select("id, name, description, nodes")
+        .eq("workspace_id", auth.workspace_id);
+      if (workflow_id) wfQuery = wfQuery.eq("id", workflow_id);
+      const { data: workflows, error: wfErr } = await wfQuery;
+      if (wfErr) throw new Error(wfErr.message);
+
+      const ids = (workflows ?? []).map((w: any) => w.id);
+      let comments: any[] = [];
+      if (ids.length) {
+        let cQ = admin
+          .from("workflow_comments")
+          .select("id, workflow_id, user_id, content, created_at, updated_at")
+          .in("workflow_id", ids)
+          .order("created_at", { ascending: false })
+          .limit(cap);
+        const { data, error } = await cQ;
+        if (error) throw new Error(error.message);
+        comments = data ?? [];
+      }
+
+      const node_notes: any[] = [];
+      for (const w of workflows ?? []) {
+        const nodes = Array.isArray(w.nodes) ? w.nodes : [];
+        for (const n of nodes) {
+          const t = (n?.type ?? "").toLowerCase();
+          const isNoteNode = ["note", "comment", "sticky", "annotation"].includes(t);
+          const desc = n?.description ?? n?.config?.description ?? n?.config?.notes;
+          if (isNoteNode || desc) {
+            node_notes.push({
+              workflow_id: w.id,
+              workflow_name: w.name,
+              node_id: n.id,
+              node_type: n.type,
+              title: n.title ?? null,
+              text: isNoteNode ? n?.config?.text ?? n?.config?.content ?? desc : desc,
+            });
+          }
+        }
+      }
+
+      return json({
+        workflow_descriptions: (workflows ?? []).map((w: any) => ({
+          id: w.id, name: w.name, description: w.description,
+        })),
+        comments,
+        node_notes,
+        totals: {
+          workflows: workflows?.length ?? 0,
+          comments: comments.length,
+          node_notes: node_notes.length,
+        },
+      });
+    },
+  });
+
+  mcp.tool("search_workspace", {
+    description:
+      "Full-text search across every workflow's name, description, node titles, node configs, " +
+      "and comments. Returns matching workflows + matched fragments.",
+    inputSchema: {
+      type: "object",
+      properties: { query: { type: "string" }, limit: { type: "number" } },
+      required: ["query"],
+    },
+    handler: async (args: any) => {
+      const { query, limit } = args ?? {};
+      const q = String(query).toLowerCase();
+      const { data: workflows, error } = await admin
+        .from("workflows")
+        .select("id, name, description, nodes, updated_at")
+        .eq("workspace_id", auth.workspace_id);
+      if (error) throw new Error(error.message);
+
+      const hits: any[] = [];
+      for (const w of workflows ?? []) {
+        const matches: string[] = [];
+        if (w.name?.toLowerCase().includes(q)) matches.push(`name: ${w.name}`);
+        if (w.description?.toLowerCase().includes(q)) matches.push(`description: ${w.description.slice(0,200)}`);
+        const nodes = Array.isArray(w.nodes) ? w.nodes : [];
+        for (const n of nodes) {
+          const blob = JSON.stringify(n).toLowerCase();
+          if (blob.includes(q)) matches.push(`node[${n.id}/${n.type}]: ${n.title ?? ""}`);
+        }
+        if (matches.length) hits.push({ id: w.id, name: w.name, matches: matches.slice(0, 10) });
+      }
+      return json({ query, results: hits.slice(0, Math.min(Number(limit) || 50, 200)) });
+    },
+  });
+
+  // ───────────────────────── INTEGRATIONS ─────────────────────────
+
+  const INTEGRATIONS: Record<string, { description: string; fn: string; sample: any }> = {
+    generate_from_url: {
+      description: "Generate a workflow from a website URL.",
+      fn: "analyze-workflow-website",
+      sample: { url: "https://example.com" },
+    },
+    generate_from_api: {
+      description: "Generate a workflow from a Swagger/OpenAPI spec or API URL.",
+      fn: "generate-workflow-from-api",
+      sample: { spec_url: "https://api.example.com/openapi.json" },
+    },
+    generate_from_github: {
+      description: "Generate a workflow by analyzing a GitHub repo.",
+      fn: "analyze-github-repo",
+      sample: { repo_url: "https://github.com/owner/repo" },
+    },
+    generate_from_youtube: {
+      description: "Generate a workflow from a YouTube tutorial.",
+      fn: "analyze-youtube-video",
+      sample: { video_url: "https://youtube.com/watch?v=..." },
+    },
+    optimize_workflow: {
+      description: "Optimize an existing workflow's nodes for performance.",
+      fn: "optimize-workflow",
+      sample: { nodes: [], connections: [] },
+    },
+    self_heal_workflow: {
+      description: "Auto-fix structural issues in a workflow.",
+      fn: "self-heal-workflow",
+      sample: { nodes: [], connections: [] },
+    },
+    execute_workflow: {
+      description: "Execute a saved workflow by id.",
+      fn: "execute-workflow",
+      sample: { workflow_id: "uuid", input: {} },
+    },
+    suggest_integrations: {
+      description: "Suggest integrations to add based on a workflow's intent.",
+      fn: "suggest-integrations",
+      sample: { workflow_id: "uuid" },
+    },
+    scan_security: {
+      description: "Run a security scan on a workflow.",
+      fn: "calculate-health-score",
+      sample: { workflow_id: "uuid" },
+    },
+    validate_credential: {
+      description: "Validate a third-party credential is live.",
+      fn: "validate-credential",
+      sample: { service: "stripe", credentials: {} },
+    },
+    run_full_pipeline: {
+      description: "Generate → Optimize → Guard → Export a sellable workflow in one call.",
+      fn: "ai-workflow-pipeline",
+      sample: { prompt: "..." },
+    },
+  };
+
+  mcp.tool("list_integrations", {
+    description:
+      "List every integration the agent can call (like the bottom-left node list in the canvas). " +
+      "Each entry shows id, description, and a sample input.",
+    inputSchema: { type: "object", properties: {} },
+    handler: async () => json({
+      integrations: Object.entries(INTEGRATIONS).map(([id, v]) => ({
+        id, description: v.description, sample_input: v.sample,
+      })),
+    }),
+  });
+
+  mcp.tool("call_integration", {
+    description:
+      "Invoke any integration from `list_integrations` by id. The `input` object is forwarded " +
+      "to the underlying capability and the result is returned verbatim.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        integration_id: { type: "string" },
+        input: { type: "object" },
+      },
+      required: ["integration_id"],
+    },
+    handler: async (args: any) => {
+      const { integration_id, input } = args ?? {};
+      const spec = INTEGRATIONS[integration_id];
+      if (!spec) throw new Error(`Unknown integration: ${integration_id}`);
+      const result = await invokeFn(spec.fn, {
+        ...(input ?? {}),
+        _workspace_id: auth.workspace_id,
+        _user_id: auth.user_id,
+      });
+      return json({ integration_id, result });
+    },
+  });
+
   return mcp;
 }
 
