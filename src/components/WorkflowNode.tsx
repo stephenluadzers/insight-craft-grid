@@ -198,6 +198,9 @@ export const WorkflowNode = ({
   onSelect,
   isDragging = false,
   showCategory = true,
+  showErrorPort = true,
+  errorBranchActive = false,
+  onErrorPortClick,
 }: WorkflowNodeProps) => {
   const nodeType = data.type in nodeTypeConfig ? data.type : 'action';
   const config = nodeTypeConfig[nodeType];
