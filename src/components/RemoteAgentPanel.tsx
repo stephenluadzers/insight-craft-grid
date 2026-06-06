@@ -78,6 +78,10 @@ export const RemoteAgentPanel = () => {
                 "list_workflows",
                 "get_workflow",
                 "export_workflow",
+                "list_all_notes",
+                "search_workspace",
+                "list_integrations",
+                "call_integration",
               ].map((t) => (
                 <Badge key={t} variant="secondary">{t}</Badge>
               ))}
