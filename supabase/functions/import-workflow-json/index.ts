@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { injectGuardrailNodes } from "../_shared/guardrails.ts";
+import { specifyWorkflow } from "../_shared/specify.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { workflow } = await req.json();
+    const { workflow, skipSpecify } = await req.json();
 
     if (!workflow) {
       return new Response(
@@ -21,7 +22,6 @@ serve(async (req) => {
       );
     }
 
-    // Validate workflow structure
     if (!workflow.nodes || !Array.isArray(workflow.nodes)) {
       return new Response(
         JSON.stringify({ error: 'Invalid workflow structure: nodes array required' }),
@@ -31,14 +31,21 @@ serve(async (req) => {
 
     console.log('Importing workflow with', workflow.nodes.length, 'nodes');
 
-    // Check if guardrails already exist
-    const existingGuardrails = workflow.nodes.filter((n: any) => n.type === 'guardrail');
-    console.log('Existing guardrails:', existingGuardrails.length);
+    // ---- Jerry Specify pass (auto-concretize underspecified nodes) ----
+    let processedWorkflow: any = { ...workflow };
+    let specifyChanges: any[] = [];
+    if (!skipSpecify) {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      const specified = await specifyWorkflow(processedWorkflow, LOVABLE_API_KEY);
+      processedWorkflow = specified.workflow;
+      specifyChanges = specified.changes;
+      console.log(`Jerry Specify applied ${specifyChanges.length} change(s)`);
+    }
 
-    // Inject guardrails if none exist
-    let processedWorkflow = { ...workflow };
+    // ---- Guardrail injection ----
+    const existingGuardrails = processedWorkflow.nodes.filter((n: any) => n.type === 'guardrail');
     if (existingGuardrails.length === 0) {
-      const injectionResult = injectGuardrailNodes(workflow.nodes);
+      const injectionResult = injectGuardrailNodes(processedWorkflow.nodes);
       processedWorkflow.nodes = injectionResult.nodes;
       processedWorkflow.guardrailExplanations = injectionResult.explanations;
       processedWorkflow.complianceStandards = injectionResult.complianceStandards;
@@ -50,9 +57,9 @@ serve(async (req) => {
         workflow: processedWorkflow,
         guardrailsAdded: processedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length - existingGuardrails.length,
         complianceStandards: processedWorkflow.complianceStandards || [],
-        message: existingGuardrails.length === 0 
-          ? 'Workflow imported with automatic guardrail protection' 
-          : 'Workflow imported (guardrails already present)'
+        specifyChanges,
+        specifyCount: specifyChanges.length,
+        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}${existingGuardrails.length === 0 ? ' and added guardrail protection' : ''}.`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -61,7 +68,7 @@ serve(async (req) => {
     console.error('Error in import-workflow-json:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
       }
