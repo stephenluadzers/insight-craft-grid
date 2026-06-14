@@ -362,21 +362,34 @@ Respect the workflow's overall intent inferred from its name and surrounding nod
   return { workflow: { ...workflow, nodes: newNodes }, changes };
 }
 
-/** Run both phases. AI phase is best-effort: errors don't block the import. */
+/** Run both phases plus placeholder annotation. AI phase is best-effort. */
 export async function specifyWorkflow(
   workflow: any,
   apiKey: string | undefined,
-): Promise<{ workflow: any; changes: SpecifyChange[] }> {
+): Promise<{ workflow: any; changes: SpecifyChange[]; placeholders: PlaceholderFlag[] }> {
   const phase1 = deterministicCleanup(workflow);
-  if (!apiKey) return phase1;
-  try {
-    const phase2 = await aiConcretize(phase1.workflow, apiKey);
-    return {
-      workflow: phase2.workflow,
-      changes: [...phase1.changes, ...phase2.changes],
-    };
-  } catch (e) {
-    console.error("aiConcretize failed, returning phase1 only", e);
-    return phase1;
+  let current = phase1.workflow;
+  let changes = phase1.changes;
+
+  if (apiKey) {
+    try {
+      const phase2 = await aiConcretize(current, apiKey);
+      current = phase2.workflow;
+      changes = [...changes, ...phase2.changes];
+    } catch (e) {
+      console.error("aiConcretize failed, continuing with phase1 only", e);
+    }
   }
+
+  const annotated = annotatePlaceholders(current);
+  for (const f of annotated.flags) {
+    changes.push({
+      nodeId: f.nodeId,
+      field: "placeholder",
+      before: f.currentValue,
+      after: null,
+      reason: `${f.nodeTitle}: ${f.hint} (field ${f.field})`,
+    });
+  }
+  return { workflow: annotated.workflow, changes, placeholders: annotated.flags };
 }
