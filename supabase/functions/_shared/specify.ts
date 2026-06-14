@@ -10,10 +10,125 @@
 
 export interface SpecifyChange {
   nodeId: string;
-  field: "type" | "title" | "config" | "prompt" | "trigger" | "removed_field";
+  field: "type" | "title" | "config" | "prompt" | "trigger" | "removed_field" | "placeholder";
   before: unknown;
   after: unknown;
   reason: string;
+}
+
+export interface PlaceholderFlag {
+  nodeId: string;
+  nodeTitle: string;
+  field: string;
+  kind: "credential" | "template_id" | "bucket" | "url" | "value";
+  currentValue: unknown;
+  hint: string;
+}
+
+const PLACEHOLDER_VALUE_RE =
+  /^(=|=\s*$|enter[\s_-]?\w+|your[\s_-]?\w+|<.*>|xxx+|todo|tbd|placeholder|change[\s_-]?me|api[\s_-]?key|secret|token)$/i;
+
+const CREDENTIAL_HINTS: Array<{ match: RegExp; service: string }> = [
+  { match: /leonardo|leo\b/i, service: "Leonardo AI" },
+  { match: /runway/i, service: "Runway" },
+  { match: /creatomate/i, service: "Creatomate" },
+  { match: /minio|s3\b/i, service: "MinIO / S3" },
+  { match: /openai|chatgpt/i, service: "OpenAI" },
+  { match: /anthropic|claude/i, service: "Anthropic" },
+  { match: /gemini|google.?ai/i, service: "Google AI" },
+  { match: /slack/i, service: "Slack" },
+  { match: /notion/i, service: "Notion" },
+  { match: /airtable/i, service: "Airtable" },
+];
+
+function looksLikePlaceholder(v: unknown): boolean {
+  if (v === null || v === undefined) return true;
+  if (typeof v !== "string") return false;
+  const s = v.trim();
+  if (s.length === 0) return true;
+  return PLACEHOLDER_VALUE_RE.test(s);
+}
+
+/** Walk a node and return every placeholder we'd want a human to fill in. */
+export function detectPlaceholders(node: any): PlaceholderFlag[] {
+  const flags: PlaceholderFlag[] = [];
+  const cfg = node?.config || {};
+  const title: string = node?.title || node?.type || "Untitled node";
+
+  const creds = cfg.credentials || node?.credentials;
+  if (creds && typeof creds === "object") {
+    for (const [credName, credVal] of Object.entries(creds)) {
+      const id = (credVal as any)?.id ?? credVal;
+      if (looksLikePlaceholder(id)) {
+        const svc = CREDENTIAL_HINTS.find((h) => h.match.test(credName) || h.match.test(title));
+        flags.push({
+          nodeId: node.id,
+          nodeTitle: title,
+          field: `credentials.${credName}`,
+          kind: "credential",
+          currentValue: id,
+          hint: `Provide ${svc?.service ?? credName} credentials.`,
+        });
+      }
+    }
+  } else {
+    const svc = CREDENTIAL_HINTS.find((h) => h.match.test(title));
+    const authish = cfg.authentication || cfg.authType || cfg.genericAuthType;
+    if (svc && (authish || /api|http/i.test(node?.type || ""))) {
+      flags.push({
+        nodeId: node.id,
+        nodeTitle: title,
+        field: "credentials",
+        kind: "credential",
+        currentValue: null,
+        hint: `Attach ${svc.service} credentials (auth token / API key).`,
+      });
+    }
+  }
+
+  const FIELD_HINTS: Record<string, { kind: PlaceholderFlag["kind"]; hint: string }> = {
+    templateId: { kind: "template_id", hint: "Set the template ID (e.g. Creatomate template UUID)." },
+    template_id: { kind: "template_id", hint: "Set the template ID." },
+    bucketName: { kind: "bucket", hint: "Set the destination bucket name." },
+    bucket: { kind: "bucket", hint: "Set the destination bucket name." },
+    url: { kind: "url", hint: "Set the request URL." },
+    endpoint: { kind: "url", hint: "Set the endpoint URL." },
+    webhookUrl: { kind: "url", hint: "Set the webhook URL." },
+    apiKey: { kind: "credential", hint: "Provide the API key." },
+    token: { kind: "credential", hint: "Provide the auth token." },
+  };
+
+  for (const [key, meta] of Object.entries(FIELD_HINTS)) {
+    if (key in cfg && looksLikePlaceholder(cfg[key])) {
+      flags.push({
+        nodeId: node.id,
+        nodeTitle: title,
+        field: `config.${key}`,
+        kind: meta.kind,
+        currentValue: cfg[key],
+        hint: meta.hint,
+      });
+    }
+  }
+
+  return flags;
+}
+
+/** Scan all nodes and return both the flag list and an annotated workflow
+ *  (each flagged node gets `config._placeholders: PlaceholderFlag[]` so the
+ *  canvas can render a warning badge without extra plumbing). */
+export function annotatePlaceholders(workflow: any): {
+  workflow: any;
+  flags: PlaceholderFlag[];
+} {
+  const allFlags: PlaceholderFlag[] = [];
+  const nodes = (workflow.nodes || []).map((n: any) => {
+    const f = detectPlaceholders(n);
+    if (f.length === 0) return n;
+    allFlags.push(...f);
+    return { ...n, config: { ...(n.config || {}), _placeholders: f } };
+  });
+  return { workflow: { ...workflow, nodes, placeholders: allFlags }, flags: allFlags };
 }
 
 const FOREIGN_ROLE_KEYS = new Set([
