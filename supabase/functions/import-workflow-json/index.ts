@@ -61,7 +61,9 @@ serve(async (req) => {
         complianceStandards: processedWorkflow.complianceStandards || [],
         specifyChanges,
         specifyCount: specifyChanges.length,
-        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}${existingGuardrails.length === 0 ? ' and added guardrail protection' : ''}.`,
+        placeholders,
+        placeholderCount: placeholders.length,
+        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, flagged ${placeholders.length} placeholder${placeholders.length === 1 ? '' : 's'}${existingGuardrails.length === 0 ? ', and added guardrail protection' : ''}.`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
