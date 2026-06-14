@@ -81,8 +81,14 @@ ${GUARDRAIL_SYSTEM_PROMPT}
 
 ${ROLE_CONTRACT_SYSTEM_PROMPT}
 
-Focus on: error handling/retries, missing critical steps, security, performance.
-Return the FULL optimized node array (preserve every existing node id unless removing is justified) and a concise suggestions list. Keep node descriptions brief to fit the response budget.`,
+CRITICAL OUTPUT RULES — violating these makes your response unusable:
+1. Return the EXACT SAME nodes that were given to you, preserving every "id" verbatim.
+2. DO NOT add new nodes. DO NOT remove nodes. DO NOT split or duplicate nodes.
+3. You may only edit a node's "description" or "config" — never invent placeholder nodes.
+4. optimizedWorkflow.nodes.length MUST equal the input nodes.length.
+5. Put all recommendations for new steps, refactors, or removals into "suggestions" as text — never materialize them as nodes.
+
+Focus on: error handling/retries, missing critical steps, security, performance. Keep node descriptions brief.`,
             },
             {
               role: 'user',
@@ -179,6 +185,41 @@ Return the FULL optimized node array (preserve every existing node id unless rem
     if (!optimizationData.optimizedWorkflow?.nodes || !Array.isArray(optimizationData.suggestions)) {
       throw new Error('AI response missing required fields.');
     }
+
+    // ---- Sanity guard: the AI must not invent or drop nodes ----
+    const inputNodes = workflow.nodes;
+    const outNodes = optimizationData.optimizedWorkflow.nodes;
+    const inputIds = new Set(inputNodes.map((n: any) => n.id));
+    const isHollow = (n: any) =>
+      !n || typeof n !== 'object' || !n.id ||
+      (!n.type && !n.title && (!n.config || Object.keys(n.config).length === 0));
+    const hollowCount = outNodes.filter(isHollow).length;
+    const ballooned = outNodes.length > Math.max(inputNodes.length + 5, Math.ceil(inputNodes.length * 1.25));
+    const idsDiverged = outNodes.filter((n: any) => n?.id && !inputIds.has(n.id)).length > Math.ceil(inputNodes.length * 0.25);
+
+    if (ballooned || hollowCount > 0 || idsDiverged) {
+      console.warn(
+        `⚠️ Rejecting AI optimization — inputNodes=${inputNodes.length} outNodes=${outNodes.length} hollow=${hollowCount} idsDiverged=${idsDiverged}. Falling back to original nodes with suggestions only.`
+      );
+      optimizationData.optimizedWorkflow.nodes = inputNodes;
+      optimizationData.warning =
+        `The optimizer returned an invalid node set (${outNodes.length} nodes vs ${inputNodes.length} input). ` +
+        `Kept your original workflow unchanged; review the suggestions list below instead.`;
+    } else {
+      // Merge AI edits onto originals by id so we never lose data the AI omitted.
+      const byId: Record<string, any> = {};
+      for (const n of outNodes) if (n?.id) byId[n.id] = n;
+      optimizationData.optimizedWorkflow.nodes = inputNodes.map((orig: any) => {
+        const edited = byId[orig.id];
+        if (!edited) return orig;
+        return {
+          ...orig,
+          description: edited.description ?? orig.description,
+          config: { ...(orig.config || {}), ...(edited.config || {}) },
+        };
+      });
+    }
+
 
     // Auto-inject guardrails + role contracts if missing
     const existingGuardrails = optimizationData.optimizedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length;
