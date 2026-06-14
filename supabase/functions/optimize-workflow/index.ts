@@ -55,61 +55,94 @@ serve(async (req) => {
     console.log('🤖 Optimizing workflow with AI Genius...');
     console.log('📊 Nodes to optimize:', workflow.nodes?.length || 0);
 
-    // Use Gemini 2.5 Pro for advanced reasoning and optimization
-    console.log('🌐 Calling Lovable AI Gateway...');
-    
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a workflow optimization expert. Analyze workflows and provide focused improvements.
+    // Use Gemini 2.5 Flash with tool-calling for guaranteed structured JSON
+    console.log('🌐 Calling Lovable AI Gateway (tool-calling mode)...');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 110_000);
+
+    let response: Response;
+    try {
+      response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a workflow optimization expert. Analyze workflows and propose focused improvements.
 
 ${GUARDRAIL_SYSTEM_PROMPT}
 
 ${ROLE_CONTRACT_SYSTEM_PROMPT}
 
-Return ONLY valid JSON with this exact structure (no markdown, no code blocks):
-{
-  "optimizedWorkflow": {
-    "nodes": [/* optimized node array */]
-  },
-  "suggestions": [
-    {
-      "type": "performance|security|reliability|ux",
-      "title": "Brief title",
-      "description": "Concise description",
-      "impact": "high|medium|low"
+Focus on: error handling/retries, missing critical steps, security, performance.
+Return the FULL optimized node array (preserve every existing node id unless removing is justified) and a concise suggestions list. Keep node descriptions brief to fit the response budget.`,
+            },
+            {
+              role: 'user',
+              content: `Optimize this workflow:\n\n${JSON.stringify(workflow)}`,
+            },
+          ],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'return_optimization',
+                description: 'Return the optimized workflow and suggestions.',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    optimizedWorkflow: {
+                      type: 'object',
+                      properties: {
+                        nodes: { type: 'array', items: { type: 'object', additionalProperties: true } },
+                      },
+                      required: ['nodes'],
+                      additionalProperties: true,
+                    },
+                    suggestions: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          type: { type: 'string', enum: ['performance', 'security', 'reliability', 'ux'] },
+                          title: { type: 'string' },
+                          description: { type: 'string' },
+                          impact: { type: 'string', enum: ['high', 'medium', 'low'] },
+                        },
+                        required: ['type', 'title', 'description', 'impact'],
+                      },
+                    },
+                  },
+                  required: ['optimizedWorkflow', 'suggestions'],
+                },
+              },
+            },
+          ],
+          tool_choice: { type: 'function', function: { name: 'return_optimization' } },
+        }),
+      });
+    } catch (e: any) {
+      clearTimeout(timeoutId);
+      if (e?.name === 'AbortError') {
+        return new Response(
+          JSON.stringify({ error: 'Optimization timed out. Try fewer nodes or split the workflow.' }),
+          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      throw e;
     }
-  ]
-}
+    clearTimeout(timeoutId);
 
-Focus on:
-- Error handling and retries
-- Missing critical steps
-- Security improvements
-- Performance optimizations
-
-Keep nodes array complete but descriptions brief.`
-          },
-          {
-            role: 'user',
-            content: `Optimize this workflow:\n\n${JSON.stringify(workflow, null, 2)}`
-          }
-        ]
-      }),
-    });
-    
     console.log('📡 AI Gateway response status:', response.status);
 
     if (!response.ok) {
-      console.error('❌ AI Gateway error status:', response.status);
       if (response.status === 429) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again in a moment.' }),
@@ -128,69 +161,39 @@ Keep nodes array complete but descriptions brief.`
     }
 
     const data = await response.json();
-    console.log('📨 AI Gateway raw data:', JSON.stringify(data, null, 2));
-    
-    const content = data.choices?.[0]?.message?.content;
-    console.log('📝 AI content length:', content?.length || 0);
-    
-    if (!content) {
-      console.error('❌ No content in AI response');
-      throw new Error('No response from AI');
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      console.error('❌ No tool_call in AI response:', JSON.stringify(data).slice(0, 1000));
+      throw new Error('AI did not return a structured optimization. Please try again.');
     }
 
-    console.log('✅ AI optimization response received, parsing...');
-
-    // Parse the JSON response with improved extraction
-    let optimizationData;
+    let optimizationData: any;
     try {
-      // Try to extract JSON from markdown code blocks first
-      let jsonStr = content;
-      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      
-      if (codeBlockMatch) {
-        jsonStr = codeBlockMatch[1];
-      } else {
-        // Try to find JSON object boundaries
-        const firstBrace = content.indexOf('{');
-        const lastBrace = content.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-          jsonStr = content.substring(firstBrace, lastBrace + 1);
-        }
-      }
-
-      // Clean up common JSON issues
-      jsonStr = jsonStr
-        .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
-        .replace(/\n/g, ' ')           // Remove newlines that might break strings
-        .trim();
-
-      optimizationData = JSON.parse(jsonStr);
-      
-      // Validate required structure
-      if (!optimizationData.optimizedWorkflow || !optimizationData.suggestions) {
-        throw new Error('Missing required fields in response');
-      }
-
-      // Automatically inject guardrail nodes and role contracts if missing
-      if (optimizationData.optimizedWorkflow.nodes) {
-        const existingGuardrails = optimizationData.optimizedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length;
-        if (existingGuardrails === 0) {
-          const injectionResult = injectGuardrailNodes(optimizationData.optimizedWorkflow.nodes);
-          optimizationData.optimizedWorkflow.nodes = injectionResult.nodes;
-          optimizationData.guardrailExplanations = injectionResult.explanations;
-          optimizationData.complianceStandards = injectionResult.complianceStandards;
-          optimizationData.guardrailsAdded = injectionResult.guardrailsAdded;
-          optimizationData.roleAssignments = injectionResult.roleAssignments;
-          optimizationData.roleViolations = injectionResult.roleViolations;
-          optimizationData.roleContractExplanation = injectionResult.roleContractExplanation;
-          console.log('Guardrail nodes and role contracts auto-injected during optimization');
-        }
-      }
-    } catch (parseError) {
-      console.error('Failed to parse AI response as JSON:', parseError);
-      console.error('Raw content:', content);
-      throw new Error('AI returned invalid JSON format. Please try again.');
+      optimizationData = JSON.parse(toolCall.function.arguments);
+    } catch (e) {
+      console.error('Failed to parse tool_call arguments:', e);
+      console.error('Raw args (first 1k):', String(toolCall.function.arguments).slice(0, 1000));
+      throw new Error('AI returned malformed structured output. Please try again.');
     }
+
+    if (!optimizationData.optimizedWorkflow?.nodes || !Array.isArray(optimizationData.suggestions)) {
+      throw new Error('AI response missing required fields.');
+    }
+
+    // Auto-inject guardrails + role contracts if missing
+    const existingGuardrails = optimizationData.optimizedWorkflow.nodes.filter((n: any) => n.type === 'guardrail').length;
+    if (existingGuardrails === 0) {
+      const injectionResult = injectGuardrailNodes(optimizationData.optimizedWorkflow.nodes);
+      optimizationData.optimizedWorkflow.nodes = injectionResult.nodes;
+      optimizationData.guardrailExplanations = injectionResult.explanations;
+      optimizationData.complianceStandards = injectionResult.complianceStandards;
+      optimizationData.guardrailsAdded = injectionResult.guardrailsAdded;
+      optimizationData.roleAssignments = injectionResult.roleAssignments;
+      optimizationData.roleViolations = injectionResult.roleViolations;
+      optimizationData.roleContractExplanation = injectionResult.roleContractExplanation;
+      console.log('Guardrail nodes and role contracts auto-injected during optimization');
+    }
+
 
     return new Response(
       JSON.stringify(optimizationData),
