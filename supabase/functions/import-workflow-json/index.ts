@@ -34,12 +34,14 @@ serve(async (req) => {
     // ---- Jerry Specify pass (auto-concretize underspecified nodes) ----
     let processedWorkflow: any = { ...workflow };
     let specifyChanges: any[] = [];
+    let placeholders: any[] = [];
     if (!skipSpecify) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const specified = await specifyWorkflow(processedWorkflow, LOVABLE_API_KEY);
       processedWorkflow = specified.workflow;
       specifyChanges = specified.changes;
-      console.log(`Jerry Specify applied ${specifyChanges.length} change(s)`);
+      placeholders = specified.placeholders || [];
+      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), ${placeholders.length} placeholder(s) flagged`);
     }
 
     // ---- Guardrail injection ----
