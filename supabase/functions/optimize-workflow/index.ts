@@ -81,8 +81,14 @@ ${GUARDRAIL_SYSTEM_PROMPT}
 
 ${ROLE_CONTRACT_SYSTEM_PROMPT}
 
-Focus on: error handling/retries, missing critical steps, security, performance.
-Return the FULL optimized node array (preserve every existing node id unless removing is justified) and a concise suggestions list. Keep node descriptions brief to fit the response budget.`,
+CRITICAL OUTPUT RULES — violating these makes your response unusable:
+1. Return the EXACT SAME nodes that were given to you, preserving every "id" verbatim.
+2. DO NOT add new nodes. DO NOT remove nodes. DO NOT split or duplicate nodes.
+3. You may only edit a node's "description" or "config" — never invent placeholder nodes.
+4. optimizedWorkflow.nodes.length MUST equal the input nodes.length.
+5. Put all recommendations for new steps, refactors, or removals into "suggestions" as text — never materialize them as nodes.
+
+Focus on: error handling/retries, missing critical steps, security, performance. Keep node descriptions brief.`,
             },
             {
               role: 'user',
