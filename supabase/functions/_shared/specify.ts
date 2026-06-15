@@ -10,10 +10,18 @@
 
 export interface SpecifyChange {
   nodeId: string;
-  field: "type" | "title" | "config" | "prompt" | "trigger" | "removed_field" | "placeholder";
+  field: "type" | "title" | "config" | "prompt" | "trigger" | "removed_field" | "placeholder" | "auto_resolved";
   before: unknown;
   after: unknown;
   reason: string;
+}
+
+export interface AutoResolution {
+  nodeId: string;
+  nodeTitle: string;
+  field: string;
+  secretName: string;
+  service: string;
 }
 
 export interface PlaceholderFlag {
