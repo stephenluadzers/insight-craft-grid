@@ -65,7 +65,9 @@ serve(async (req) => {
         specifyCount: specifyChanges.length,
         placeholders,
         placeholderCount: placeholders.length,
-        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, flagged ${placeholders.length} placeholder${placeholders.length === 1 ? '' : 's'}${existingGuardrails.length === 0 ? ', and added guardrail protection' : ''}.`,
+        autoResolved,
+        autoResolvedCount: autoResolved.length,
+        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, auto-wired ${autoResolved.length} credential${autoResolved.length === 1 ? '' : 's'} from your secrets, ${placeholders.length === 0 ? 'and nothing left to fill in' : `${placeholders.length} placeholder${placeholders.length === 1 ? '' : 's'} still need attention`}${existingGuardrails.length === 0 ? '. Guardrails added.' : '.'}`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
