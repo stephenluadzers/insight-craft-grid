@@ -183,22 +183,30 @@ function setByPath(obj: any, path: string, value: unknown) {
   cur[parts[parts.length - 1]] = value;
 }
 
-/** For each placeholder flag, check if a matching env var (project secret) is
- *  already configured. If so, rewrite the node config to reference it via
- *  `{{secrets.NAME}}` and drop the flag. Returns the resolved + remaining
- *  flags so the caller can report exactly what Jerry did autonomously. */
+/** For each placeholder flag, pick a canonical shell env var name and rewrite
+ *  the node config to reference it via `${VAR_NAME}` — the standard POSIX
+ *  shell expansion the runner will already understand. We DO NOT require the
+ *  var to be present in our edge runtime; the target environment is the
+ *  shell runner, not us. Returns the rewritten workflow plus an `envManifest`
+ *  the caller can emit as `.env.example` / required-env list. */
 export function autoResolvePlaceholders(
   workflow: any,
   flags: PlaceholderFlag[],
-): { workflow: any; resolved: AutoResolution[]; remaining: PlaceholderFlag[] } {
+): {
+  workflow: any;
+  resolved: AutoResolution[];
+  remaining: PlaceholderFlag[];
+  envManifest: Array<{ name: string; service: string; field: string; nodeId: string; presentInRuntime: boolean }>;
+} {
   const resolved: AutoResolution[] = [];
   const remaining: PlaceholderFlag[] = [];
+  const envManifest: Array<{ name: string; service: string; field: string; nodeId: string; presentInRuntime: boolean }> = [];
   const nodes = [...(workflow.nodes || [])];
   const indexById: Record<string, number> = {};
   nodes.forEach((n, i) => { indexById[n.id] = i; });
 
   for (const f of flags) {
-    let secretName: string | null = null;
+    let envName: string | null = null;
     let service = "";
 
     if (f.kind === "credential") {
@@ -206,41 +214,76 @@ export function autoResolvePlaceholders(
         (h) => h.match.test(f.nodeTitle) || h.match.test(f.field),
       );
       service = hint?.service ?? "";
-      if (service && SERVICE_ENV_CANDIDATES[service]) {
-        secretName = pickAvailableEnv(SERVICE_ENV_CANDIDATES[service]);
+      const cands = service ? SERVICE_ENV_CANDIDATES[service] : null;
+      // Prefer one that's already in the runtime (consistency with operator's
+      // existing env naming); otherwise just pick the canonical first option.
+      envName = cands ? (pickAvailableEnv(cands) ?? cands[0]) : null;
+      if (!envName && service) {
+        // Last-ditch: derive a sane uppercase name from the service.
+        envName = service.toUpperCase().replace(/[^A-Z0-9]+/g, "_") + "_API_KEY";
       }
     } else if (f.kind === "bucket" || f.kind === "template_id") {
       const fieldKey = f.field.replace(/^config\./, "");
       const cands = FIELD_ENV_CANDIDATES[fieldKey];
-      if (cands) secretName = pickAvailableEnv(cands);
+      envName = cands ? (pickAvailableEnv(cands) ?? cands[0]) : null;
       service = f.kind === "bucket" ? "Storage bucket" : "Template ID";
     }
 
-    if (!secretName) { remaining.push(f); continue; }
+    if (!envName) { remaining.push(f); continue; }
 
     const idx = indexById[f.nodeId];
     if (idx == null) { remaining.push(f); continue; }
     const node = { ...nodes[idx], config: { ...(nodes[idx].config || {}) } };
-    // strip the existing placeholder annotation for this field
     if (Array.isArray(node.config._placeholders)) {
       node.config._placeholders = node.config._placeholders.filter(
         (p: PlaceholderFlag) => p.field !== f.field,
       );
       if (node.config._placeholders.length === 0) delete node.config._placeholders;
     }
-    setByPath(node, f.field, `{{secrets.${secretName}}}`);
+    // Shell-runner-portable reference. Bash / sh / docker compose / k8s
+    // ConfigMaps / GitHub Actions all expand `${VAR}` natively.
+    setByPath(node, f.field, `\${${envName}}`);
     nodes[idx] = node;
+
+    const presentInRuntime = (() => {
+      try { const v = Deno.env.get(envName!); return !!(v && v.trim().length); }
+      catch { return false; }
+    })();
+
     resolved.push({
       nodeId: f.nodeId,
       nodeTitle: f.nodeTitle,
       field: f.field,
-      secretName,
+      secretName: envName,
       service: service || "credential",
+    });
+    envManifest.push({
+      name: envName,
+      service: service || "credential",
+      field: f.field,
+      nodeId: f.nodeId,
+      presentInRuntime,
     });
   }
 
-  return { workflow: { ...workflow, nodes }, resolved, remaining };
+  // De-dupe envManifest by name (keep first occurrence + OR presentInRuntime).
+  const seen = new Map<string, typeof envManifest[number]>();
+  for (const e of envManifest) {
+    const prev = seen.get(e.name);
+    if (!prev) seen.set(e.name, e);
+    else prev.presentInRuntime = prev.presentInRuntime || e.presentInRuntime;
+  }
+  const dedupedManifest = Array.from(seen.values());
+
+  return {
+    workflow: { ...workflow, nodes, requiredEnv: dedupedManifest },
+    resolved,
+    remaining,
+    envManifest: dedupedManifest,
+  };
 }
+
+
 
 
 const FOREIGN_ROLE_KEYS = new Set([
