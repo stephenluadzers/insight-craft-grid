@@ -35,13 +35,15 @@ serve(async (req) => {
     let processedWorkflow: any = { ...workflow };
     let specifyChanges: any[] = [];
     let placeholders: any[] = [];
+    let autoResolved: any[] = [];
     if (!skipSpecify) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const specified = await specifyWorkflow(processedWorkflow, LOVABLE_API_KEY);
       processedWorkflow = specified.workflow;
       specifyChanges = specified.changes;
       placeholders = specified.placeholders || [];
-      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), ${placeholders.length} placeholder(s) flagged`);
+      autoResolved = specified.autoResolved || [];
+      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), auto-resolved ${autoResolved.length} credential(s), ${placeholders.length} placeholder(s) still need attention`);
     }
 
     // ---- Guardrail injection ----
@@ -63,7 +65,9 @@ serve(async (req) => {
         specifyCount: specifyChanges.length,
         placeholders,
         placeholderCount: placeholders.length,
-        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, flagged ${placeholders.length} placeholder${placeholders.length === 1 ? '' : 's'}${existingGuardrails.length === 0 ? ', and added guardrail protection' : ''}.`,
+        autoResolved,
+        autoResolvedCount: autoResolved.length,
+        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, auto-wired ${autoResolved.length} credential${autoResolved.length === 1 ? '' : 's'} from your secrets, ${placeholders.length === 0 ? 'and nothing left to fill in' : `${placeholders.length} placeholder${placeholders.length === 1 ? '' : 's'} still need attention`}${existingGuardrails.length === 0 ? '. Guardrails added.' : '.'}`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

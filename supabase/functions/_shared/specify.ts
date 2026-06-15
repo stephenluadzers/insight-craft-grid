@@ -10,10 +10,18 @@
 
 export interface SpecifyChange {
   nodeId: string;
-  field: "type" | "title" | "config" | "prompt" | "trigger" | "removed_field" | "placeholder";
+  field: "type" | "title" | "config" | "prompt" | "trigger" | "removed_field" | "placeholder" | "auto_resolved";
   before: unknown;
   after: unknown;
   reason: string;
+}
+
+export interface AutoResolution {
+  nodeId: string;
+  nodeTitle: string;
+  field: string;
+  secretName: string;
+  service: string;
 }
 
 export interface PlaceholderFlag {
@@ -130,6 +138,110 @@ export function annotatePlaceholders(workflow: any): {
   });
   return { workflow: { ...workflow, nodes, placeholders: allFlags }, flags: allFlags };
 }
+
+// Per-service candidate env var names that, if present in the edge runtime,
+// allow Jerry to wire credentials autonomously without bugging the user.
+const SERVICE_ENV_CANDIDATES: Record<string, string[]> = {
+  "Leonardo AI": ["LEONARDO_API_KEY", "LEONARDO_AUTH_TOKEN", "LEONARDO_TOKEN"],
+  "Runway": ["RUNWAY_API_KEY", "RUNWAY_AUTH_TOKEN", "RUNWAYML_API_KEY"],
+  "Creatomate": ["CREATOMATE_API_KEY", "CREATOMATE_TOKEN"],
+  "MinIO / S3": ["MINIO_ACCESS_KEY", "MINIO_SECRET_KEY", "S3_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"],
+  "OpenAI": ["OPENAI_API_KEY"],
+  "Anthropic": ["ANTHROPIC_API_KEY"],
+  "Google AI": ["GOOGLE_AI_API_KEY", "GEMINI_API_KEY"],
+  "Slack": ["SLACK_BOT_TOKEN", "SLACK_TOKEN"],
+  "Notion": ["NOTION_API_KEY", "NOTION_TOKEN"],
+  "Airtable": ["AIRTABLE_API_KEY", "AIRTABLE_TOKEN"],
+};
+
+// Bucket / template-id env candidates by field key.
+const FIELD_ENV_CANDIDATES: Record<string, string[]> = {
+  bucket: ["MINIO_BUCKET", "S3_BUCKET", "DEFAULT_BUCKET"],
+  bucketName: ["MINIO_BUCKET", "S3_BUCKET", "DEFAULT_BUCKET"],
+  templateId: ["CREATOMATE_TEMPLATE_ID", "DEFAULT_TEMPLATE_ID"],
+  template_id: ["CREATOMATE_TEMPLATE_ID", "DEFAULT_TEMPLATE_ID"],
+};
+
+function pickAvailableEnv(candidates: string[]): string | null {
+  for (const name of candidates) {
+    try {
+      const v = Deno.env.get(name);
+      if (v && v.trim().length > 0) return name;
+    } catch { /* env unavailable */ }
+  }
+  return null;
+}
+
+function setByPath(obj: any, path: string, value: unknown) {
+  const parts = path.split(".");
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const k = parts[i];
+    if (cur[k] == null || typeof cur[k] !== "object") cur[k] = {};
+    cur = cur[k];
+  }
+  cur[parts[parts.length - 1]] = value;
+}
+
+/** For each placeholder flag, check if a matching env var (project secret) is
+ *  already configured. If so, rewrite the node config to reference it via
+ *  `{{secrets.NAME}}` and drop the flag. Returns the resolved + remaining
+ *  flags so the caller can report exactly what Jerry did autonomously. */
+export function autoResolvePlaceholders(
+  workflow: any,
+  flags: PlaceholderFlag[],
+): { workflow: any; resolved: AutoResolution[]; remaining: PlaceholderFlag[] } {
+  const resolved: AutoResolution[] = [];
+  const remaining: PlaceholderFlag[] = [];
+  const nodes = [...(workflow.nodes || [])];
+  const indexById: Record<string, number> = {};
+  nodes.forEach((n, i) => { indexById[n.id] = i; });
+
+  for (const f of flags) {
+    let secretName: string | null = null;
+    let service = "";
+
+    if (f.kind === "credential") {
+      const hint = CREDENTIAL_HINTS.find(
+        (h) => h.match.test(f.nodeTitle) || h.match.test(f.field),
+      );
+      service = hint?.service ?? "";
+      if (service && SERVICE_ENV_CANDIDATES[service]) {
+        secretName = pickAvailableEnv(SERVICE_ENV_CANDIDATES[service]);
+      }
+    } else if (f.kind === "bucket" || f.kind === "template_id") {
+      const fieldKey = f.field.replace(/^config\./, "");
+      const cands = FIELD_ENV_CANDIDATES[fieldKey];
+      if (cands) secretName = pickAvailableEnv(cands);
+      service = f.kind === "bucket" ? "Storage bucket" : "Template ID";
+    }
+
+    if (!secretName) { remaining.push(f); continue; }
+
+    const idx = indexById[f.nodeId];
+    if (idx == null) { remaining.push(f); continue; }
+    const node = { ...nodes[idx], config: { ...(nodes[idx].config || {}) } };
+    // strip the existing placeholder annotation for this field
+    if (Array.isArray(node.config._placeholders)) {
+      node.config._placeholders = node.config._placeholders.filter(
+        (p: PlaceholderFlag) => p.field !== f.field,
+      );
+      if (node.config._placeholders.length === 0) delete node.config._placeholders;
+    }
+    setByPath(node, f.field, `{{secrets.${secretName}}}`);
+    nodes[idx] = node;
+    resolved.push({
+      nodeId: f.nodeId,
+      nodeTitle: f.nodeTitle,
+      field: f.field,
+      secretName,
+      service: service || "credential",
+    });
+  }
+
+  return { workflow: { ...workflow, nodes }, resolved, remaining };
+}
+
 
 const FOREIGN_ROLE_KEYS = new Set([
   "agentRole",
@@ -366,7 +478,12 @@ Respect the workflow's overall intent inferred from its name and surrounding nod
 export async function specifyWorkflow(
   workflow: any,
   apiKey: string | undefined,
-): Promise<{ workflow: any; changes: SpecifyChange[]; placeholders: PlaceholderFlag[] }> {
+): Promise<{
+  workflow: any;
+  changes: SpecifyChange[];
+  placeholders: PlaceholderFlag[];
+  autoResolved: AutoResolution[];
+}> {
   const phase1 = deterministicCleanup(workflow);
   let current = phase1.workflow;
   let changes = phase1.changes;
@@ -381,8 +498,22 @@ export async function specifyWorkflow(
     }
   }
 
+  // Detect placeholders, then try to auto-resolve them against project secrets
+  // already configured in the edge runtime. Anything resolved becomes a
+  // `{{secrets.NAME}}` reference; only truly missing ones get surfaced.
   const annotated = annotatePlaceholders(current);
-  for (const f of annotated.flags) {
+  const autoResolveResult = autoResolvePlaceholders(annotated.workflow, annotated.flags);
+
+  for (const r of autoResolveResult.resolved) {
+    changes.push({
+      nodeId: r.nodeId,
+      field: "auto_resolved",
+      before: null,
+      after: `{{secrets.${r.secretName}}}`,
+      reason: `${r.nodeTitle}: auto-wired ${r.service} via ${r.secretName} (no user input needed).`,
+    });
+  }
+  for (const f of autoResolveResult.remaining) {
     changes.push({
       nodeId: f.nodeId,
       field: "placeholder",
@@ -391,5 +522,18 @@ export async function specifyWorkflow(
       reason: `${f.nodeTitle}: ${f.hint} (field ${f.field})`,
     });
   }
-  return { workflow: annotated.workflow, changes, placeholders: annotated.flags };
+
+  // Re-sync the workflow-level placeholders array to the remaining set.
+  const finalWorkflow = {
+    ...autoResolveResult.workflow,
+    placeholders: autoResolveResult.remaining,
+  };
+
+  return {
+    workflow: finalWorkflow,
+    changes,
+    placeholders: autoResolveResult.remaining,
+    autoResolved: autoResolveResult.resolved,
+  };
 }
+
