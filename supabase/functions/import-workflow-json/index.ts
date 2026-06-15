@@ -35,13 +35,15 @@ serve(async (req) => {
     let processedWorkflow: any = { ...workflow };
     let specifyChanges: any[] = [];
     let placeholders: any[] = [];
+    let autoResolved: any[] = [];
     if (!skipSpecify) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const specified = await specifyWorkflow(processedWorkflow, LOVABLE_API_KEY);
       processedWorkflow = specified.workflow;
       specifyChanges = specified.changes;
       placeholders = specified.placeholders || [];
-      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), ${placeholders.length} placeholder(s) flagged`);
+      autoResolved = specified.autoResolved || [];
+      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), auto-resolved ${autoResolved.length} credential(s), ${placeholders.length} placeholder(s) still need attention`);
     }
 
     // ---- Guardrail injection ----
