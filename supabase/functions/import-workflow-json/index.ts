@@ -36,6 +36,7 @@ serve(async (req) => {
     let specifyChanges: any[] = [];
     let placeholders: any[] = [];
     let autoResolved: any[] = [];
+    let requiredEnv: any[] = [];
     if (!skipSpecify) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const specified = await specifyWorkflow(processedWorkflow, LOVABLE_API_KEY);
@@ -43,7 +44,8 @@ serve(async (req) => {
       specifyChanges = specified.changes;
       placeholders = specified.placeholders || [];
       autoResolved = specified.autoResolved || [];
-      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), auto-resolved ${autoResolved.length} credential(s), ${placeholders.length} placeholder(s) still need attention`);
+      requiredEnv = specified.requiredEnv || [];
+      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), wired ${autoResolved.length} env var(s), manifest=${requiredEnv.length}, ${placeholders.length} unresolved`);
     }
 
     // ---- Guardrail injection ----
@@ -67,7 +69,10 @@ serve(async (req) => {
         placeholderCount: placeholders.length,
         autoResolved,
         autoResolvedCount: autoResolved.length,
-        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, auto-wired ${autoResolved.length} credential${autoResolved.length === 1 ? '' : 's'} from your secrets, ${placeholders.length === 0 ? 'and nothing left to fill in' : `${placeholders.length} placeholder${placeholders.length === 1 ? '' : 's'} still need attention`}${existingGuardrails.length === 0 ? '. Guardrails added.' : '.'}`,
+        requiredEnv,
+        requiredEnvCount: requiredEnv.length,
+        envExample: requiredEnv.map((e: any) => `${e.name}=`).join('\n'),
+        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, wired ${autoResolved.length} field${autoResolved.length === 1 ? '' : 's'} to shell env vars (${requiredEnv.length} unique var${requiredEnv.length === 1 ? '' : 's'} required by the runner)${placeholders.length === 0 ? '. Nothing left to fill in.' : `, ${placeholders.length} non-credential placeholder${placeholders.length === 1 ? '' : 's'} still need attention.`}`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
