@@ -69,7 +69,10 @@ serve(async (req) => {
         placeholderCount: placeholders.length,
         autoResolved,
         autoResolvedCount: autoResolved.length,
-        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, auto-wired ${autoResolved.length} credential${autoResolved.length === 1 ? '' : 's'} from your secrets, ${placeholders.length === 0 ? 'and nothing left to fill in' : `${placeholders.length} placeholder${placeholders.length === 1 ? '' : 's'} still need attention`}${existingGuardrails.length === 0 ? '. Guardrails added.' : '.'}`,
+        requiredEnv,
+        requiredEnvCount: requiredEnv.length,
+        envExample: requiredEnv.map((e: any) => `${e.name}=`).join('\n'),
+        message: `Workflow imported. Jerry made ${specifyChanges.length} clarification${specifyChanges.length === 1 ? '' : 's'}, wired ${autoResolved.length} field${autoResolved.length === 1 ? '' : 's'} to shell env vars (${requiredEnv.length} unique var${requiredEnv.length === 1 ? '' : 's'} required by the runner)${placeholders.length === 0 ? '. Nothing left to fill in.' : `, ${placeholders.length} non-credential placeholder${placeholders.length === 1 ? '' : 's'} still need attention.`}`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
