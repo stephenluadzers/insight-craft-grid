@@ -478,7 +478,12 @@ Respect the workflow's overall intent inferred from its name and surrounding nod
 export async function specifyWorkflow(
   workflow: any,
   apiKey: string | undefined,
-): Promise<{ workflow: any; changes: SpecifyChange[]; placeholders: PlaceholderFlag[] }> {
+): Promise<{
+  workflow: any;
+  changes: SpecifyChange[];
+  placeholders: PlaceholderFlag[];
+  autoResolved: AutoResolution[];
+}> {
   const phase1 = deterministicCleanup(workflow);
   let current = phase1.workflow;
   let changes = phase1.changes;
@@ -493,8 +498,22 @@ export async function specifyWorkflow(
     }
   }
 
+  // Detect placeholders, then try to auto-resolve them against project secrets
+  // already configured in the edge runtime. Anything resolved becomes a
+  // `{{secrets.NAME}}` reference; only truly missing ones get surfaced.
   const annotated = annotatePlaceholders(current);
-  for (const f of annotated.flags) {
+  const autoResolveResult = autoResolvePlaceholders(annotated.workflow, annotated.flags);
+
+  for (const r of autoResolveResult.resolved) {
+    changes.push({
+      nodeId: r.nodeId,
+      field: "auto_resolved",
+      before: null,
+      after: `{{secrets.${r.secretName}}}`,
+      reason: `${r.nodeTitle}: auto-wired ${r.service} via ${r.secretName} (no user input needed).`,
+    });
+  }
+  for (const f of autoResolveResult.remaining) {
     changes.push({
       nodeId: f.nodeId,
       field: "placeholder",
@@ -503,5 +522,18 @@ export async function specifyWorkflow(
       reason: `${f.nodeTitle}: ${f.hint} (field ${f.field})`,
     });
   }
-  return { workflow: annotated.workflow, changes, placeholders: annotated.flags };
+
+  // Re-sync the workflow-level placeholders array to the remaining set.
+  const finalWorkflow = {
+    ...autoResolveResult.workflow,
+    placeholders: autoResolveResult.remaining,
+  };
+
+  return {
+    workflow: finalWorkflow,
+    changes,
+    placeholders: autoResolveResult.remaining,
+    autoResolved: autoResolveResult.resolved,
+  };
 }
+
