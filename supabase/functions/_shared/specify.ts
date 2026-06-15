@@ -526,6 +526,7 @@ export async function specifyWorkflow(
   changes: SpecifyChange[];
   placeholders: PlaceholderFlag[];
   autoResolved: AutoResolution[];
+  requiredEnv: Array<{ name: string; service: string; field: string; nodeId: string; presentInRuntime: boolean }>;
 }> {
   const phase1 = deterministicCleanup(workflow);
   let current = phase1.workflow;
@@ -541,9 +542,9 @@ export async function specifyWorkflow(
     }
   }
 
-  // Detect placeholders, then try to auto-resolve them against project secrets
-  // already configured in the edge runtime. Anything resolved becomes a
-  // `{{secrets.NAME}}` reference; only truly missing ones get surfaced.
+  // Detect placeholders, then rewrite as portable `${ENV_VAR}` references the
+  // downstream shell runner can expand. Produces a `requiredEnv` manifest so
+  // the runner / .env.example can be generated mechanically.
   const annotated = annotatePlaceholders(current);
   const autoResolveResult = autoResolvePlaceholders(annotated.workflow, annotated.flags);
 
@@ -552,8 +553,8 @@ export async function specifyWorkflow(
       nodeId: r.nodeId,
       field: "auto_resolved",
       before: null,
-      after: `{{secrets.${r.secretName}}}`,
-      reason: `${r.nodeTitle}: auto-wired ${r.service} via ${r.secretName} (no user input needed).`,
+      after: `\${${r.secretName}}`,
+      reason: `${r.nodeTitle}: wired ${r.service} to shell env var ${r.secretName} (runner expands at exec).`,
     });
   }
   for (const f of autoResolveResult.remaining) {
@@ -566,10 +567,10 @@ export async function specifyWorkflow(
     });
   }
 
-  // Re-sync the workflow-level placeholders array to the remaining set.
   const finalWorkflow = {
     ...autoResolveResult.workflow,
     placeholders: autoResolveResult.remaining,
+    requiredEnv: autoResolveResult.envManifest,
   };
 
   return {
@@ -577,6 +578,8 @@ export async function specifyWorkflow(
     changes,
     placeholders: autoResolveResult.remaining,
     autoResolved: autoResolveResult.resolved,
+    requiredEnv: autoResolveResult.envManifest,
   };
 }
+
 
