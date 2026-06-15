@@ -36,6 +36,7 @@ serve(async (req) => {
     let specifyChanges: any[] = [];
     let placeholders: any[] = [];
     let autoResolved: any[] = [];
+    let requiredEnv: any[] = [];
     if (!skipSpecify) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const specified = await specifyWorkflow(processedWorkflow, LOVABLE_API_KEY);
@@ -43,7 +44,8 @@ serve(async (req) => {
       specifyChanges = specified.changes;
       placeholders = specified.placeholders || [];
       autoResolved = specified.autoResolved || [];
-      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), auto-resolved ${autoResolved.length} credential(s), ${placeholders.length} placeholder(s) still need attention`);
+      requiredEnv = specified.requiredEnv || [];
+      console.log(`Jerry Specify applied ${specifyChanges.length} change(s), wired ${autoResolved.length} env var(s), manifest=${requiredEnv.length}, ${placeholders.length} unresolved`);
     }
 
     // ---- Guardrail injection ----
