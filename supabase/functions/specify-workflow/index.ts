@@ -25,7 +25,8 @@ serve(async (req) => {
     }
 
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    const { workflow: out, changes, placeholders, autoResolved } = await specifyWorkflow(workflow, apiKey);
+    const { workflow: out, changes, placeholders, autoResolved, requiredEnv } =
+      await specifyWorkflow(workflow, apiKey);
 
     return new Response(
       JSON.stringify({
@@ -36,6 +37,9 @@ serve(async (req) => {
         placeholderCount: placeholders.length,
         autoResolved,
         autoResolvedCount: autoResolved.length,
+        requiredEnv,
+        requiredEnvCount: requiredEnv.length,
+        envExample: requiredEnv.map((e: any) => `${e.name}=`).join('\n'),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
