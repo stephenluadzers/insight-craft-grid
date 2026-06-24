@@ -90,7 +90,9 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(p => p);
-    const workflowId = pathParts[pathParts.length - 1];
+    const lastPart = pathParts[pathParts.length - 1];
+    const isSubAction = lastPart === 'generate' || lastPart === 'import';
+    const workflowId = isSubAction ? undefined : lastPart;
 
     // Log usage
     const logUsage = async (statusCode: number) => {
@@ -102,6 +104,139 @@ serve(async (req) => {
         response_time_ms: Date.now() - startTime
       });
     };
+
+    // Helper: get owner user_id for the workspace (for workflow inserts)
+    const getOwnerUserId = async () => {
+      const { data: member } = await supabase
+        .from('workspace_members')
+        .select('user_id')
+        .eq('workspace_id', auth.workspace_id)
+        .eq('role', 'owner')
+        .single();
+      return member?.user_id;
+    };
+
+    // POST /workflows/generate - Generate a workflow from a natural-language prompt
+    if (req.method === 'POST' && lastPart === 'generate') {
+      const body = await req.json().catch(() => ({}));
+      const { prompt, description, name, save = true } = body;
+      const promptText = prompt || description;
+
+      if (!promptText || typeof promptText !== 'string') {
+        await logUsage(400);
+        return new Response(JSON.stringify({ error: '`prompt` (string) is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Invoke the existing generator
+      const { data: gen, error: genErr } = await supabase.functions.invoke(
+        'generate-workflow-from-text',
+        { body: { description: promptText } }
+      );
+      if (genErr) {
+        await logUsage(502);
+        return new Response(JSON.stringify({ error: 'Generation failed', details: genErr.message }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const workflow = gen?.workflow || gen;
+      if (!save) {
+        await logUsage(200);
+        return new Response(JSON.stringify({ data: { workflow } }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const user_id = await getOwnerUserId();
+      const { data: saved, error: saveErr } = await supabase
+        .from('workflows')
+        .insert({
+          workspace_id: auth.workspace_id,
+          user_id,
+          name: name || workflow?.name || 'Generated Workflow',
+          description: promptText.slice(0, 500),
+          nodes: workflow?.nodes ?? [],
+          connections: workflow?.connections ?? workflow?.edges ?? [],
+          status: 'draft',
+        })
+        .select()
+        .single();
+
+      if (saveErr) {
+        await logUsage(500);
+        return new Response(JSON.stringify({ error: saveErr.message, workflow }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      await logUsage(201);
+      return new Response(JSON.stringify({ data: saved, workflow }), {
+        status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // POST /workflows/import - Import a Remora JSON workflow into the catalog
+    if (req.method === 'POST' && lastPart === 'import') {
+      const body = await req.json().catch(() => ({}));
+      const { workflow, name, skipSpecify } = body;
+
+      if (!workflow || !Array.isArray(workflow.nodes)) {
+        await logUsage(400);
+        return new Response(JSON.stringify({ error: 'Invalid `workflow`: must include `nodes` array' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Run through the existing import pipeline (Jerry Specify + guardrails)
+      const { data: imp, error: impErr } = await supabase.functions.invoke(
+        'import-workflow-json',
+        { body: { workflow, skipSpecify } }
+      );
+      if (impErr) {
+        await logUsage(502);
+        return new Response(JSON.stringify({ error: 'Import pipeline failed', details: impErr.message }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const processed = imp?.workflow || workflow;
+      const user_id = await getOwnerUserId();
+
+      const { data: saved, error: saveErr } = await supabase
+        .from('workflows')
+        .insert({
+          workspace_id: auth.workspace_id,
+          user_id,
+          name: name || processed?.name || workflow?.name || 'Imported Workflow',
+          description: processed?.description || workflow?.description || null,
+          nodes: processed?.nodes ?? [],
+          connections: processed?.connections ?? processed?.edges ?? [],
+          status: 'draft',
+        })
+        .select()
+        .single();
+
+      if (saveErr) {
+        await logUsage(500);
+        return new Response(JSON.stringify({ error: saveErr.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      await logUsage(201);
+      return new Response(JSON.stringify({
+        data: saved,
+        specifyChanges: imp?.specifyChanges ?? [],
+        placeholders: imp?.placeholders ?? [],
+        autoResolved: imp?.autoResolved ?? [],
+        requiredEnv: imp?.requiredEnv ?? [],
+      }), {
+        status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
 
     // GET /workflows - List all workflows
     if (req.method === 'GET' && !workflowId) {
