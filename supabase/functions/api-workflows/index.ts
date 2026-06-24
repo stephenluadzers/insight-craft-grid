@@ -241,18 +241,22 @@ serve(async (req) => {
     }
 
 
-    // GET /workflows - List all workflows
+    // GET /workflows - List workflows (paginated)
     if (req.method === 'GET' && !workflowId) {
-      const { data, error } = await supabase
+      const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '100', 10) || 100, 1), 500);
+      const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 0);
+
+      const { data, error, count } = await supabase
         .from('workflows')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('workspace_id', auth.workspace_id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
       if (error) throw error;
       await logUsage(200);
 
-      return new Response(JSON.stringify({ data, count: data.length }), {
+      return new Response(JSON.stringify({ data, total: count ?? data.length, limit, offset }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
