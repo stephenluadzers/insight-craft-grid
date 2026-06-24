@@ -90,9 +90,12 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(p => p);
-    const lastPart = pathParts[pathParts.length - 1];
+    // Strip the function name itself ("api-workflows") so only sub-route segments remain
+    const fnIdx = pathParts.indexOf('api-workflows');
+    const subParts = fnIdx >= 0 ? pathParts.slice(fnIdx + 1) : pathParts;
+    const lastPart = subParts[subParts.length - 1];
     const isSubAction = lastPart === 'generate' || lastPart === 'import';
-    const workflowId = isSubAction ? undefined : lastPart;
+    const workflowId = !lastPart || isSubAction ? undefined : lastPart;
 
     // Log usage
     const logUsage = async (statusCode: number) => {
@@ -238,18 +241,22 @@ serve(async (req) => {
     }
 
 
-    // GET /workflows - List all workflows
+    // GET /workflows - List workflows (paginated)
     if (req.method === 'GET' && !workflowId) {
-      const { data, error } = await supabase
+      const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '100', 10) || 100, 1), 500);
+      const offset = Math.max(parseInt(url.searchParams.get('offset') || '0', 10) || 0, 0);
+
+      const { data, error, count } = await supabase
         .from('workflows')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('workspace_id', auth.workspace_id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
       if (error) throw error;
       await logUsage(200);
 
-      return new Response(JSON.stringify({ data, count: data.length }), {
+      return new Response(JSON.stringify({ data, total: count ?? data.length, limit, offset }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
