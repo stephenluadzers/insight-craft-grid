@@ -90,9 +90,12 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(p => p);
-    const lastPart = pathParts[pathParts.length - 1];
+    // Strip the function name itself ("api-workflows") so only sub-route segments remain
+    const fnIdx = pathParts.indexOf('api-workflows');
+    const subParts = fnIdx >= 0 ? pathParts.slice(fnIdx + 1) : pathParts;
+    const lastPart = subParts[subParts.length - 1];
     const isSubAction = lastPart === 'generate' || lastPart === 'import';
-    const workflowId = isSubAction ? undefined : lastPart;
+    const workflowId = !lastPart || isSubAction ? undefined : lastPart;
 
     // Log usage
     const logUsage = async (statusCode: number) => {
