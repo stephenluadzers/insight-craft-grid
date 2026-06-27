@@ -428,6 +428,54 @@ export type Database = {
           },
         ]
       }
+      cdc_triggers: {
+        Row: {
+          connection_secret_name: string
+          created_at: string | null
+          created_by: string | null
+          events: string[]
+          filter_expression: string | null
+          id: string
+          is_active: boolean | null
+          last_lsn: string | null
+          source_type: string
+          table_name: string
+          updated_at: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Insert: {
+          connection_secret_name: string
+          created_at?: string | null
+          created_by?: string | null
+          events?: string[]
+          filter_expression?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_lsn?: string | null
+          source_type: string
+          table_name: string
+          updated_at?: string | null
+          workflow_id: string
+          workspace_id: string
+        }
+        Update: {
+          connection_secret_name?: string
+          created_at?: string | null
+          created_by?: string | null
+          events?: string[]
+          filter_expression?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_lsn?: string | null
+          source_type?: string
+          table_name?: string
+          updated_at?: string | null
+          workflow_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       collaboration_activity: {
         Row: {
           activity_data: Json
@@ -535,6 +583,80 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      competitor_snapshots: {
+        Row: {
+          captured_at: string | null
+          diff_summary: string | null
+          id: string
+          signals: Json | null
+          snapshot: Json
+          source: string
+          target_id: string
+          workspace_id: string
+        }
+        Insert: {
+          captured_at?: string | null
+          diff_summary?: string | null
+          id?: string
+          signals?: Json | null
+          snapshot: Json
+          source: string
+          target_id: string
+          workspace_id: string
+        }
+        Update: {
+          captured_at?: string | null
+          diff_summary?: string | null
+          id?: string
+          signals?: Json | null
+          snapshot?: Json
+          source?: string
+          target_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitor_snapshots_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "competitor_targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitor_targets: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          domain: string | null
+          id: string
+          name: string
+          social_handles: Json | null
+          watch_keywords: string[] | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          domain?: string | null
+          id?: string
+          name: string
+          social_handles?: Json | null
+          watch_keywords?: string[] | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          domain?: string | null
+          id?: string
+          name?: string
+          social_handles?: Json | null
+          watch_keywords?: string[] | null
+          workspace_id?: string
+        }
+        Relationships: []
       }
       credential_rotation_log: {
         Row: {
@@ -702,6 +824,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fine_tune_jobs: {
+        Row: {
+          base_model: string
+          cost_cents: number | null
+          created_at: string | null
+          created_by: string | null
+          dataset_storage_path: string | null
+          dataset_url: string | null
+          error: string | null
+          fine_tuned_model: string | null
+          hyperparameters: Json | null
+          id: string
+          metrics: Json | null
+          provider: string
+          provider_job_id: string | null
+          status: string | null
+          updated_at: string | null
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          base_model: string
+          cost_cents?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          dataset_storage_path?: string | null
+          dataset_url?: string | null
+          error?: string | null
+          fine_tuned_model?: string | null
+          hyperparameters?: Json | null
+          id?: string
+          metrics?: Json | null
+          provider?: string
+          provider_job_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          base_model?: string
+          cost_cents?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          dataset_storage_path?: string | null
+          dataset_url?: string | null
+          error?: string | null
+          fine_tuned_model?: string | null
+          hyperparameters?: Json | null
+          id?: string
+          metrics?: Json | null
+          provider?: string
+          provider_job_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
       }
       flow_data_stores: {
         Row: {
@@ -881,6 +1063,51 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
+        }
+        Relationships: []
+      }
+      iot_devices: {
+        Row: {
+          auth_secret_name: string | null
+          broker_url: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          last_payload: Json | null
+          last_seen_at: string | null
+          name: string
+          protocol: string
+          topic: string | null
+          workspace_id: string
+        }
+        Insert: {
+          auth_secret_name?: string | null
+          broker_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_payload?: Json | null
+          last_seen_at?: string | null
+          name: string
+          protocol: string
+          topic?: string | null
+          workspace_id: string
+        }
+        Update: {
+          auth_secret_name?: string | null
+          broker_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_payload?: Json | null
+          last_seen_at?: string | null
+          name?: string
+          protocol?: string
+          topic?: string | null
+          workspace_id?: string
         }
         Relationships: []
       }
@@ -1155,6 +1382,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_gateways: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          credentials_secret_name: string
+          display_name: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          mode: string | null
+          provider: string
+          webhook_secret_name: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          credentials_secret_name: string
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          mode?: string | null
+          provider: string
+          webhook_secret_name?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          credentials_secret_name?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          mode?: string | null
+          provider?: string
+          webhook_secret_name?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
       }
       pii_scrubbing_rules: {
         Row: {
@@ -1615,6 +1884,99 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vision_jobs: {
+        Row: {
+          completed_at: string | null
+          cost_cents: number | null
+          created_at: string | null
+          created_by: string | null
+          error: string | null
+          id: string
+          input_storage_path: string | null
+          input_url: string | null
+          job_type: string
+          result: Json | null
+          status: string | null
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          cost_cents?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          input_storage_path?: string | null
+          input_url?: string | null
+          job_type: string
+          result?: Json | null
+          status?: string | null
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          cost_cents?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          input_storage_path?: string | null
+          input_url?: string | null
+          job_type?: string
+          result?: Json | null
+          status?: string | null
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
+      voice_sessions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          ended_at: string | null
+          id: string
+          metadata: Json | null
+          provider: string
+          started_at: string | null
+          status: string
+          transcript: Json | null
+          voice: string | null
+          workflow_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          started_at?: string | null
+          status?: string
+          transcript?: Json | null
+          voice?: string | null
+          workflow_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          ended_at?: string | null
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          started_at?: string | null
+          status?: string
+          transcript?: Json | null
+          voice?: string | null
+          workflow_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
       }
       webhook_access_logs: {
         Row: {
