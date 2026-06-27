@@ -87,6 +87,7 @@ export function FloatingBottomMenu({
     { id: 'pipeline', label: 'AI Pipeline', icon: Play, description: 'Create → Optimize → Export → Sell' },
     { id: 'cost', label: 'Cost', icon: DollarSign, description: 'Cost estimation' },
     { id: 'remote-agent', label: 'Remote Agent (MCP)', icon: Bot, description: 'Connect external AI assistants' },
+    { id: 'wave5', label: 'Advanced Capabilities', icon: Sparkles, description: 'Voice, Vision, CDC, Payments, IoT, Fine-tune, Competitor Intel' },
   ];
 
   const currentItem = menuItems.find(item => item.id === currentView);
