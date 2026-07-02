@@ -3,7 +3,7 @@
  * Comprehensive export including all formats, documentation, and business metrics
  */
 
-import { WorkflowInputType, WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
+import { WorkflowConnectionData, WorkflowInputType, WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import JSZip from "jszip";
 import { exportWorkflowToYAML } from "./workflowExportYAML";
 import { 
@@ -756,7 +756,8 @@ export async function exportWorkflowComprehensive(
   originalInput?: string,
   inputType?: WorkflowInputType,
   aiReasoning?: string,
-  originMetadata?: WorkflowOriginMetadata
+  originMetadata?: WorkflowOriginMetadata,
+  connections?: WorkflowConnectionData[]
 ): Promise<Blob> {
   const effectiveOrigin: WorkflowOriginMetadata = {
     originalInput,
@@ -831,7 +832,7 @@ export async function exportWorkflowComprehensive(
   // n8n — emit a real, importable workflow.json
   try {
     const n8nFolder = platformsFolder.folder("n8n")!;
-    const n8nWorkflow = generateN8NWorkflow(nodes, smartName);
+    const n8nWorkflow = generateN8NWorkflow(nodes, smartName, connections);
     const n8nFilename = `${smartName}.json`;
     n8nFolder.file(n8nFilename, JSON.stringify(n8nWorkflow, null, 2));
     // Keep a stable alias so docs/scripts can rely on it
