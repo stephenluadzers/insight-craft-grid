@@ -264,6 +264,18 @@ function rewriteGuardrailMetadataIds(
   return { ...metadata, explanations };
 }
 
+function rewriteConnectionIds(
+  connections: WorkflowConnectionData[] | undefined,
+  idMap: Map<string, string>,
+): WorkflowConnectionData[] | undefined {
+  if (!connections?.length) return connections;
+  return connections.map((connection) => ({
+    ...connection,
+    from: idMap.get(String(connection.from)) ?? String(connection.from),
+    to: idMap.get(String(connection.to)) ?? String(connection.to),
+  }));
+}
+
 function isGenericName(name?: string): boolean {
   const slug = normalizeWorkflowSlug(name);
   return !slug || slug === 'workflow' || slug === 'untitled' || slug === 'untitled-workflow' || slug === 'optimized' || slug.startsWith('new-workflow');
@@ -774,6 +786,7 @@ export async function exportWorkflowComprehensive(
   // export package refers to the same IDs.
   const { nodes: normalizedNodes, idMap } = normalizeNodeIds(nodes);
   nodes = normalizedNodes;
+  connections = rewriteConnectionIds(connections, idMap);
   guardrailMetadata = rewriteGuardrailMetadataIds(guardrailMetadata, idMap);
 
   const zip = new JSZip();
@@ -821,7 +834,7 @@ export async function exportWorkflowComprehensive(
   addGovernmentComplianceDocs(zip, nodes, smartName);
   
   // YAML export
-  const yamlContent = exportWorkflowToYAML(nodes, smartName);
+  const yamlContent = exportWorkflowToYAML(nodes, smartName, connections);
   zip.file(`${smartName}.yaml`, yamlContent);
   
   // Platform-specific exports folder
