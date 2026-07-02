@@ -42,7 +42,7 @@ export interface ExportOptions {
 }
 
 // === n8n Export ===
-export function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: string, connections?: unknown) {
+export function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: string, connections?: WorkflowConnectionData[]) {
   const nodeNames = createUniqueNodeNames(nodes);
   const workflow = {
     name: workflowName,
@@ -56,9 +56,6 @@ export function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: str
         Number.isFinite(node.y) ? node.y : 120 + index * 180,
       ],
       id: String(node.id),
-      notes: [node.description, node.config?.operation ? `Operation: ${node.config.operation}` : undefined]
-        .filter(Boolean)
-        .join("\n"),
     })),
     connections: buildN8NConnections(nodes, connections, nodeNames),
     active: false,
@@ -110,9 +107,9 @@ function mapToN8NNodeType(node: WorkflowNodeData): string {
 
 function getN8NTypeVersion(node: WorkflowNodeData): number {
   const type = mapToN8NNodeType(node);
-  if (type === "n8n-nodes-base.httpRequest") return 4.2;
-  if (type === "n8n-nodes-base.set") return 3.4;
-  if (type === "n8n-nodes-base.if") return 2.2;
+  if (type === "n8n-nodes-base.httpRequest") return 4;
+  if (type === "n8n-nodes-base.set") return 3;
+  if (type === "n8n-nodes-base.if") return 2;
   if (type === "n8n-nodes-base.webhook") return 2;
   return 1;
 }
@@ -1406,6 +1403,13 @@ export async function exportWorkflowForBusiness(
   
   // Config file for optional connectors
   zip.file('config.yaml', generateConfigYAML(nodes));
+
+  // Always include a raw n8n import file so any package downloaded from the
+  // canvas has a file that works with n8n → Import from File. Users should not
+  // upload the ZIP itself or the Remora workflow JSON into n8n.
+  const n8nImportWorkflow = generateN8NWorkflow(nodes, workflowName, options.connections);
+  zip.file('n8n-import.json', JSON.stringify(n8nImportWorkflow, null, 2));
+  zip.file('deploy/n8n/workflow.json', JSON.stringify(n8nImportWorkflow, null, 2));
   
   // Always include original FlowFuse workflow
   zip.file('flowfuse-workflow.json', JSON.stringify({
