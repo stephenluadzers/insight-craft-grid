@@ -126,13 +126,31 @@ export function buildN8NConnections(
 ): Record<string, { main: Array<Array<{ node: string; type: "main"; index: number }>> }> {
   const connections = normalizeWorkflowConnections(rawConnections, nodes);
   const output: Record<string, { main: Array<Array<{ node: string; type: "main"; index: number }>> }> = {};
+  const nodeById = new Map(nodes.map((node) => [String(node.id), node]));
+
+  const parseOutputIndex = (connection: WorkflowConnection): number => {
+    const source = nodeById.get(String(connection.from));
+    const raw = connection.sourceOutput ?? connection.label ?? connection.condition;
+    const value = raw === undefined || raw === null ? "" : String(raw).trim().toLowerCase();
+
+    if (source?.type === "condition") {
+      if (["false", "no", "else", "otherwise", "fail", "failed", "failure", "error", "invalid"].includes(value)) return 1;
+      if (["true", "yes", "then", "success", "passed", "valid"].includes(value)) return 0;
+    }
+
+    const numeric = Number(connection.sourceOutput);
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
+  };
 
   connections.forEach((connection) => {
     const sourceName = nodeNames[String(connection.from)];
     const targetName = nodeNames[String(connection.to)];
     if (!sourceName || !targetName) return;
-    const outputIndex = Number(connection.sourceOutput ?? 0) || 0;
+    const outputIndex = parseOutputIndex(connection);
     output[sourceName] ??= { main: [] };
+    for (let i = 0; i <= outputIndex; i += 1) {
+      output[sourceName].main[i] ??= [];
+    }
     output[sourceName].main[outputIndex] ??= [];
     output[sourceName].main[outputIndex].push({
       node: targetName,
