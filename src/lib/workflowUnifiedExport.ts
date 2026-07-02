@@ -3,7 +3,7 @@
  * Comprehensive export including all formats, documentation, and business metrics
  */
 
-import { WorkflowInputType, WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
+import { WorkflowConnectionData, WorkflowInputType, WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import JSZip from "jszip";
 import { exportWorkflowToYAML } from "./workflowExportYAML";
 import { 
@@ -20,6 +20,7 @@ import {
   generateCredentialGuide 
 } from "./workflowCredentialManifest";
 import { addGovernmentComplianceDocs } from "./workflowGovCompliance";
+import { normalizeWorkflowConnections } from "./workflowConnections";
 
 
 // Robust AI detection — covers all AI node variants and agent-configured nodes
@@ -504,8 +505,9 @@ function generateBusinessMetricsReport(roi: ROIMetrics, nodes: WorkflowNodeData[
   return md;
 }
 
-function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string, originMetadata?: WorkflowOriginMetadata): string {
+function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string, originMetadata?: WorkflowOriginMetadata, connections?: WorkflowConnectionData[]): string {
   const credentialManifest = extractCredentials(nodes, workflowName);
+  const normalizedConnections = normalizeWorkflowConnections(connections, nodes);
   
   return JSON.stringify({
     name: workflowName,
@@ -521,10 +523,7 @@ function generateWorkflowJSON(nodes: WorkflowNodeData[], workflowName: string, o
       order: index,
       config: node.config || {}
     })),
-    connections: nodes.slice(0, -1).map((node, index) => ({
-      from: node.id,
-      to: nodes[index + 1].id
-    })),
+    connections: normalizedConnections,
     metadata: {
       nodeCount: nodes.length,
       hasAI: hasAIInWorkflow(nodes, originMetadata),
@@ -756,7 +755,8 @@ export async function exportWorkflowComprehensive(
   originalInput?: string,
   inputType?: WorkflowInputType,
   aiReasoning?: string,
-  originMetadata?: WorkflowOriginMetadata
+  originMetadata?: WorkflowOriginMetadata,
+  connections?: WorkflowConnectionData[]
 ): Promise<Blob> {
   const effectiveOrigin: WorkflowOriginMetadata = {
     originalInput,
@@ -805,7 +805,7 @@ export async function exportWorkflowComprehensive(
   }
   
   // Workflow JSON (now includes embedded credential manifest)
-  const workflowJSON = generateWorkflowJSON(nodes, smartName, effectiveOrigin);
+  const workflowJSON = generateWorkflowJSON(nodes, smartName, effectiveOrigin, connections);
   zip.file(`${smartName}.json`, workflowJSON);
   
   // Credential manifest — portable key mapping for any platform
@@ -831,7 +831,7 @@ export async function exportWorkflowComprehensive(
   // n8n — emit a real, importable workflow.json
   try {
     const n8nFolder = platformsFolder.folder("n8n")!;
-    const n8nWorkflow = generateN8NWorkflow(nodes, smartName);
+    const n8nWorkflow = generateN8NWorkflow(nodes, smartName, connections);
     const n8nFilename = `${smartName}.json`;
     n8nFolder.file(n8nFilename, JSON.stringify(n8nWorkflow, null, 2));
     // Keep a stable alias so docs/scripts can rely on it

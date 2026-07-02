@@ -176,6 +176,16 @@ export interface WorkflowNodeData {
   color?: string;
 }
 
+export interface WorkflowConnectionData {
+  from: string;
+  to: string;
+  type?: string;
+  condition?: string;
+  label?: string;
+  sourceOutput?: number | string;
+  targetInput?: number | string;
+}
+
 export type WorkflowInputType = 'text' | 'video' | 'image' | 'json' | 'github';
 
 export interface WorkflowOriginMetadata {
@@ -293,7 +303,7 @@ export interface WorkflowWithMemory {
   id?: string;
   name?: string;
   nodes: WorkflowNodeData[];
-  connections: { from: string; to: string }[];
+  connections: WorkflowConnectionData[];
   context?: WorkflowContext;
   short_term_memory?: ShortTermMemory;
   long_term_memory?: LongTermMemory;

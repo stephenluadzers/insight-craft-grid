@@ -1,18 +1,20 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { WorkflowNodeData } from '@/types/workflow';
+import { WorkflowConnectionData, WorkflowNodeData } from '@/types/workflow';
 
 interface UseWorkflowPersistenceProps {
   workflowId?: string;
   nodes: WorkflowNodeData[];
+  connections?: WorkflowConnectionData[];
   workflowName: string;
-  onWorkflowLoaded?: (nodes: WorkflowNodeData[], workflowId: string) => void;
+  onWorkflowLoaded?: (nodes: WorkflowNodeData[], workflowId: string, connections?: WorkflowConnectionData[]) => void;
 }
 
 export const useWorkflowPersistence = ({ 
   workflowId, 
   nodes, 
+  connections = [],
   workflowName,
   onWorkflowLoaded 
 }: UseWorkflowPersistenceProps) => {
@@ -22,10 +24,10 @@ export const useWorkflowPersistence = ({
 
   // Auto-save workflow every 3 seconds if there are changes
   useEffect(() => {
-    const nodesJson = JSON.stringify(nodes);
+    const workflowJson = JSON.stringify({ nodes, connections });
     
     // Skip if no changes
-    if (nodesJson === lastSavedNodes.current || nodes.length === 0) {
+    if (workflowJson === lastSavedNodes.current || nodes.length === 0) {
       return;
     }
 
@@ -47,12 +49,13 @@ export const useWorkflowPersistence = ({
             .update({
               name: workflowName,
               nodes: nodes as any,
+              connections: connections as any,
               updated_at: new Date().toISOString(),
             })
             .eq('id', workflowId);
 
           if (error) throw error;
-          lastSavedNodes.current = nodesJson;
+          lastSavedNodes.current = workflowJson;
         } else {
           // Create new workflow
           const { data, error } = await supabase
@@ -61,6 +64,7 @@ export const useWorkflowPersistence = ({
               name: workflowName,
               description: `Workflow with ${nodes.length} nodes`,
               nodes: nodes as any,
+              connections: connections as any,
               user_id: user.id,
               status: 'draft',
             })
@@ -70,9 +74,9 @@ export const useWorkflowPersistence = ({
           if (error) throw error;
           
           if (data && onWorkflowLoaded) {
-            onWorkflowLoaded(nodes, data.id);
+            onWorkflowLoaded(nodes, data.id, connections);
           }
-          lastSavedNodes.current = nodesJson;
+          lastSavedNodes.current = workflowJson;
         }
       } catch (error: any) {
         console.error('Auto-save failed:', error);
@@ -84,7 +88,7 @@ export const useWorkflowPersistence = ({
         clearTimeout(autoSaveTimeout.current);
       }
     };
-  }, [nodes, workflowId, workflowName, onWorkflowLoaded]);
+  }, [nodes, connections, workflowId, workflowName, onWorkflowLoaded]);
 
   // Load workflow on mount
   useEffect(() => {
@@ -102,8 +106,9 @@ export const useWorkflowPersistence = ({
 
         if (data && onWorkflowLoaded) {
           const loadedNodes = (data.nodes as unknown as WorkflowNodeData[]) || [];
-          onWorkflowLoaded(loadedNodes, data.id);
-          lastSavedNodes.current = JSON.stringify(data.nodes);
+          const loadedConnections = (data.connections as unknown as WorkflowConnectionData[]) || [];
+          onWorkflowLoaded(loadedNodes, data.id, loadedConnections);
+          lastSavedNodes.current = JSON.stringify({ nodes: loadedNodes, connections: loadedConnections });
         }
       } catch (error: any) {
         console.error('Failed to load workflow:', error);
@@ -129,6 +134,7 @@ export const useWorkflowPersistence = ({
           .update({
             name: workflowName,
             nodes: nodes as any,
+            connections: connections as any,
             updated_at: new Date().toISOString(),
           })
           .eq('id', workflowId);
@@ -141,6 +147,7 @@ export const useWorkflowPersistence = ({
             name: workflowName,
             description: `Workflow with ${nodes.length} nodes`,
             nodes: nodes as any,
+            connections: connections as any,
             user_id: user.id,
             status: 'draft',
           })
@@ -150,11 +157,11 @@ export const useWorkflowPersistence = ({
         if (error) throw error;
         
         if (data && onWorkflowLoaded) {
-          onWorkflowLoaded(nodes, data.id);
+          onWorkflowLoaded(nodes, data.id, connections);
         }
       }
 
-      lastSavedNodes.current = JSON.stringify(nodes);
+      lastSavedNodes.current = JSON.stringify({ nodes, connections });
       
       toast({
         title: 'Workflow saved',
@@ -167,7 +174,7 @@ export const useWorkflowPersistence = ({
         variant: 'destructive',
       });
     }
-  }, [workflowId, nodes, workflowName, onWorkflowLoaded, toast]);
+  }, [workflowId, nodes, connections, workflowName, onWorkflowLoaded, toast]);
 
   return { saveWorkflow };
 };

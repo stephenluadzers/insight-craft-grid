@@ -13,12 +13,13 @@ interface Workflow {
   description: string | null;
   status: string;
   nodes: any;
+  connections?: any;
   created_at: string;
   updated_at: string;
 }
 
 interface WorkflowListProps {
-  onLoadWorkflow: (nodes: any[]) => void;
+  onLoadWorkflow: (nodes: any[], connections?: any[]) => void;
 }
 
 export const WorkflowList = ({ onLoadWorkflow }: WorkflowListProps) => {
@@ -92,6 +93,7 @@ export const WorkflowList = ({ onLoadWorkflow }: WorkflowListProps) => {
           name: `${workflow.name} (Copy)`,
           description: workflow.description,
           nodes: workflow.nodes,
+          connections: workflow.connections,
           user_id: user.id,
           status: 'draft',
         });
@@ -152,7 +154,7 @@ export const WorkflowList = ({ onLoadWorkflow }: WorkflowListProps) => {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onLoadWorkflow(workflow.nodes)}
+                onClick={() => onLoadWorkflow(workflow.nodes, workflow.connections || [])}
               >
                 <Edit className="w-4 h-4 mr-1" />
                 Edit

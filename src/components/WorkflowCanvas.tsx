@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useImperativeHandle, forwardRef, useCallback } from "react";
 import { WorkflowNode } from "./WorkflowNode";
-import { WorkflowNodeData, NodeType, WorkflowOriginMetadata } from "@/types/workflow";
+import { WorkflowConnectionData, WorkflowNodeData, NodeType, WorkflowOriginMetadata } from "@/types/workflow";
 import { ExecutionPanel } from "./ExecutionPanel";
 import { SaveWorkflowDialog } from "./SaveWorkflowDialog";
 import { NodeConfigDialog } from "./NodeConfigDialog";
@@ -24,14 +24,16 @@ import { validateWorkflow, ValidationResult } from "@/lib/workflowValidation";
 import { useWorkflowPersistence } from "@/hooks/useWorkflowPersistence";
 import { useCollaboration } from "@/hooks/useCollaboration";
 import { downloadBlob, openDownloadWindow, withExportTimeout } from "@/lib/downloadFile";
+import { normalizeWorkflowConnections } from "@/lib/workflowConnections";
 
 interface WorkflowCanvasProps {
   initialNodes?: WorkflowNodeData[];
-  onWorkflowChange?: (workflow: { nodes: WorkflowNodeData[]; name?: string; originMetadata?: WorkflowOriginMetadata }) => void;
+  initialConnections?: WorkflowConnectionData[];
+  onWorkflowChange?: (workflow: { nodes: WorkflowNodeData[]; connections: WorkflowConnectionData[]; name?: string; originMetadata?: WorkflowOriginMetadata }) => void;
   onOptimizingChange?: (isOptimizing: boolean) => void;
 }
 
-export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNodes = [], onWorkflowChange, onOptimizingChange }, ref) => {
+export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNodes = [], initialConnections = [], onWorkflowChange, onOptimizingChange }, ref) => {
   const defaultNodes: WorkflowNodeData[] = [
     {
       id: "1",
@@ -61,6 +63,9 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
   const [nodes, setNodes] = useState<WorkflowNodeData[]>(
     initialNodes.length > 0 ? initialNodes : defaultNodes
+  );
+  const [connections, setConnections] = useState<WorkflowConnectionData[]>(() =>
+    normalizeWorkflowConnections(initialConnections, initialNodes.length > 0 ? initialNodes : defaultNodes)
   );
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -115,8 +120,9 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   } = useCollaboration(currentWorkflowId, workspaceId);
 
   // Memoize callbacks to prevent infinite loops
-  const handleWorkflowLoaded = useCallback((loadedNodes: WorkflowNodeData[], loadedId: string) => {
+  const handleWorkflowLoaded = useCallback((loadedNodes: WorkflowNodeData[], loadedId: string, loadedConnections?: WorkflowConnectionData[]) => {
     setNodes(loadedNodes);
+    setConnections(normalizeWorkflowConnections(loadedConnections, loadedNodes));
     setCurrentWorkflowId(loadedId);
   }, []);
 
@@ -124,14 +130,15 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const { saveWorkflow } = useWorkflowPersistence({
     workflowId: currentWorkflowId || undefined,
     nodes,
+    connections,
     workflowName: currentWorkflowName,
     onWorkflowLoaded: handleWorkflowLoaded
   });
 
   // Notify parent of workflow changes (memoized)
   const notifyWorkflowChange = useCallback(() => {
-    onWorkflowChange?.({ nodes, name: currentWorkflowName, originMetadata: workflowOriginMetadata });
-  }, [nodes, currentWorkflowName, workflowOriginMetadata, onWorkflowChange]);
+    onWorkflowChange?.({ nodes, connections, name: currentWorkflowName, originMetadata: workflowOriginMetadata });
+  }, [nodes, connections, currentWorkflowName, workflowOriginMetadata, onWorkflowChange]);
 
   useEffect(() => {
     notifyWorkflowChange();
@@ -149,6 +156,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   const handleGitHubImport = (importedNodes: WorkflowNodeData[], name: string) => {
     console.log('📥 Importing workflow from GitHub:', name, importedNodes.length, 'nodes');
     setNodes(importedNodes);
+    setConnections(normalizeWorkflowConnections(undefined, importedNodes));
     setCurrentWorkflowName(name);
     setWorkflowOriginMetadata({ originalInput: name, inputType: 'github', aiGenerated: false });
     toast({
@@ -160,15 +168,16 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
   // Expose methods to parent via ref
   useImperativeHandle(ref, () => ({
     handleAddNode,
-    workflow: { nodes, name: currentWorkflowName, originMetadata: workflowOriginMetadata },
+    workflow: { nodes, connections, name: currentWorkflowName, originMetadata: workflowOriginMetadata },
     handleWorkflowOptimized,
     handleOpenAIGenerator: () => setShowTextGeneration(true),
     handleOpenAPIImport: () => setShowAPIImport(true),
     handleSave: saveWorkflow,
     handleGitHubImport,
     isOptimizing,
-    loadWorkflow: (loadedNodes: WorkflowNodeData[]) => {
+    loadWorkflow: (loadedNodes: WorkflowNodeData[], loadedConnections?: WorkflowConnectionData[]) => {
       setNodes(loadedNodes);
+      setConnections(normalizeWorkflowConnections(loadedConnections, loadedNodes));
       toast({
         title: "Workflow Loaded",
         description: `Loaded ${loadedNodes.length} nodes`,
@@ -196,7 +205,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
         const { data, error } = await supabase.functions.invoke('optimize-workflow', {
           body: { 
-            workflow: { nodes },
+            workflow: { nodes, connections },
             userContext: "General workflow automation"
           }
         });
@@ -217,7 +226,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
         if (data?.optimizedWorkflow?.nodes) {
           console.log('✨ Optimization successful! New nodes:', data.optimizedWorkflow.nodes.length);
-          handleWorkflowOptimized(data.optimizedWorkflow.nodes);
+          handleWorkflowOptimized(data.optimizedWorkflow.nodes, data.optimizedWorkflow.connections);
           toast({
             title: "Workflow Optimized!",
             description: data.optimizedWorkflow.insights || "AI Genius enhanced your workflow",
@@ -258,6 +267,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           platform: 'supabase-function',
           includeDocs: true,
           includeTests: false,
+          connections,
         }), 'Workflow package export');
 
         const filename = `${currentWorkflowName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_complete_export.zip`;
@@ -428,7 +438,13 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       y: Math.random() * 300 + 100,
       config: config || {},
     };
-    setNodes([...nodes, newNode]);
+    const nextNodes = [...nodes, newNode];
+    setNodes(nextNodes);
+    if (nodes.length > 0) {
+      setConnections([...connections, { from: nodes[nodes.length - 1].id, to: newNode.id, type: "data_flow" }]);
+    } else {
+      setConnections([]);
+    }
   };
 
   const handleWorkflowGenerated = (generatedNodes: WorkflowNodeData[], metadata?: {
@@ -438,6 +454,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     policyAnalysis?: any;
     workflowName?: string;
     originMetadata?: WorkflowOriginMetadata;
+    connections?: WorkflowConnectionData[];
   }): void => {
     console.log('handleWorkflowGenerated called with:', {
       nodeCount: generatedNodes?.length || 0,
@@ -478,6 +495,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     
     console.log('Setting positioned nodes:', positionedNodes);
     setNodes(positionedNodes);
+    setConnections(normalizeWorkflowConnections(metadata?.connections, positionedNodes));
     setSelectedNodeId(null);
     if (metadata?.workflowName && currentNameIsGeneric) setCurrentWorkflowName(metadata.workflowName);
     if (metadata?.originMetadata) setWorkflowOriginMetadata(metadata.originMetadata);
@@ -499,7 +517,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     setPanOffset({ x: 0, y: 0 });
   };
 
-  const handleWorkflowOptimized = (optimizedNodes: WorkflowNodeData[]): void => {
+  const handleWorkflowOptimized = (optimizedNodes: WorkflowNodeData[], optimizedConnections?: WorkflowConnectionData[]): void => {
     // Position new/updated nodes in visible area
     const viewportWidth = window.innerWidth;
     const startX = Math.max(100, (viewportWidth - 280) / 2);
@@ -514,6 +532,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
       };
     });
     setNodes(updatedNodes);
+    setConnections(normalizeWorkflowConnections(optimizedConnections || connections, updatedNodes));
     setSelectedNodeId(null);
     
     // Clear current workflow ID to force "Save As New" for optimized workflow
@@ -531,6 +550,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     await logActivity('node_deleted', { nodeId: selectedNodeId });
     
     setNodes(nodes.filter(n => n.id !== selectedNodeId));
+    setConnections(connections.filter((connection) => connection.from !== selectedNodeId && connection.to !== selectedNodeId));
     setSelectedNodeId(null);
     updateSelectedNode(null);
   };
@@ -568,6 +588,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         name,
         description,
         nodes: nodes,
+        connections: connections,
         workspace_id: workspaceId,
         updated_by: user.id,
       };
@@ -617,6 +638,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
   const handleImportWorkflow = (importedNodes: WorkflowNodeData[]): void => {
     setNodes(importedNodes);
+    setConnections(normalizeWorkflowConnections(undefined, importedNodes));
     setSelectedNodeId(null);
     setPanOffset({ x: 0, y: 0 });
     setShowTextGeneration(false); // Close the dialog
@@ -860,13 +882,14 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
           
           {/* Connection Lines */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-            {nodes.map((node, index) => {
-              if (index === nodes.length - 1) return null;
-              const nextNode = nodes[index + 1];
+            {connections.map((connection, index) => {
+              const node = nodes.find((n) => n.id === connection.from);
+              const nextNode = nodes.find((n) => n.id === connection.to);
+              if (!node || !nextNode) return null;
               
               return (
                 <line
-                  key={`line-${node.id}`}
+                  key={`line-${connection.from}-${connection.to}-${index}`}
                   x1={node.x + 128}
                   y1={node.y + 60}
                   x2={nextNode.x + 128}
@@ -947,6 +970,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
         onOpenChange={setShowTextGeneration}
         onWorkflowGenerated={handleWorkflowGenerated}
         nodes={nodes}
+        connections={connections}
         workflowName={currentWorkflowName}
         guardrailMetadata={{
           guardrailExplanations,
