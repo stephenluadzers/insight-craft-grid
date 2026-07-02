@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2, Sparkles } from "lucide-react";
 import { WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
-import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
+import { exportWorkflowForBusiness, ExportPlatform, generateN8NWorkflow } from "@/lib/workflowExport";
 import { exportWorkflowToYAML } from "@/lib/workflowExportYAML";
 import { exportWorkflowComprehensive } from "@/lib/workflowUnifiedExport";
 import { downloadBlob, openDownloadWindow, sanitizeDownloadFilename, withExportTimeout } from "@/lib/downloadFile";
