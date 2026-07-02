@@ -40,11 +40,11 @@ const PLATFORM_OPTIONS: PlatformOption[] = [
   {
     id: 'n8n',
     name: 'n8n',
-    description: 'Self-hosted workflow automation',
+    description: 'Raw importable n8n workflow JSON',
     icon: Workflow,
     category: 'no-code',
     difficulty: 'easy',
-    useCase: 'Best for self-hosted automation with visual editor'
+    useCase: 'Downloads a .n8n.json file for n8n → Import from File'
   },
   {
     id: 'make',
@@ -122,6 +122,20 @@ export function WorkflowBusinessExport({
     setIsExporting(true);
     
     try {
+      if (platform === 'n8n') {
+        const n8n = generateN8NWorkflow(nodes, workflowName, connections);
+        const filename = `${sanitizeDownloadFilename(workflowName)}.n8n.json`;
+        const blob = new Blob([JSON.stringify(n8n, null, 2)], { type: "application/json;charset=utf-8" });
+        const url = downloadBlob(blob, filename, popup);
+        setLastDownload({ url, filename });
+
+        toast({
+          title: "n8n JSON Ready",
+          description: "Import this JSON file directly in n8n. Do not upload a ZIP.",
+        });
+        return;
+      }
+
       const blob = await withExportTimeout(exportWorkflowForBusiness(nodes, workflowName, {
         platform,
         includeDocs: true,
