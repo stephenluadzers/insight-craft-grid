@@ -60,9 +60,9 @@ const Index = (): JSX.Element => {
               />
             )}
             {currentView === 'workflows' && (
-              <WorkflowList onLoadWorkflow={(nodes) => {
+              <WorkflowList onLoadWorkflow={(nodes, connections) => {
                 setCurrentView('canvas');
-                setTimeout(() => canvasRef.current?.loadWorkflow?.(nodes), 100);
+                setTimeout(() => canvasRef.current?.loadWorkflow?.(nodes, connections), 100);
               }} />
             )}
             {currentView === 'ai-builder' && <AIAgentBuilder onWorkflowGenerated={handleAIWorkflowGenerated} />}
