@@ -63,7 +63,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-workflow-from-text', {
-        body: { description: validation.data, existingWorkflow: nodes.length > 0 ? { nodes, connections: [] } : undefined }
+        body: { description: validation.data, existingWorkflow: nodes.length > 0 ? { nodes, connections } : undefined }
       });
       
       console.log('Generate response:', { data, error, fullData: JSON.stringify(data) });
@@ -300,21 +300,36 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     else if (Array.isArray(data?.steps)) raw = data.steps;
     if (!raw) return [];
 
-    const VALID_TYPES = new Set([
-      'trigger', 'action', 'condition', 'delay', 'webhook',
-      'transform', 'loop', 'parallel', 'error_handler',
-      'guardrail', 'ai_agent', 'integration',
+    const VALID_TYPES = new Set<WorkflowNodeData['type']>([
+      'trigger', 'action', 'condition', 'data', 'ai', 'utility', 'security', 'storage',
+      'agent_handoff', 'connector', 'checkpointer', 'error_handler', 'circuit_breaker',
+      'guardrail', 'ai_orchestrator', 'ai_reasoner', 'ai_planner', 'ai_executor',
+      'ai_monitor', 'ai_communicator', 'ai_integrator', 'ai_transformer', 'ai_validator',
+      'ai_learner', 'text_generation', 'text_to_image', 'image_to_image', 'image_to_video',
+      'text_to_video', 'upscale_image', 'style_transfer', 'audio_synthesis', 'transcription',
     ]);
+
+    const mapImportedType = (rawType: string, original: any): WorkflowNodeData['type'] | '__unknown__' => {
+      const type = rawType.toLowerCase();
+      if (VALID_TYPES.has(type as WorkflowNodeData['type'])) return type as WorkflowNodeData['type'];
+      if (type.includes('manualtrigger') || type.includes('webhook') || type === 'start') return 'trigger';
+      if (type.includes('.if') || type.includes('switch') || type.includes('condition')) return 'condition';
+      if (type.includes('.set') || type.includes('code') || type.includes('function')) return 'data';
+      if (type.includes('openai') || type.includes('anthropic') || type.includes('gemini') || type.includes('lmchat')) return 'ai';
+      if (type.includes('http') || original?.parameters?.url) return 'action';
+      if (type.includes('email') || type.includes('gmail') || type.includes('slack') || type.includes('notion')) return 'connector';
+      return '__unknown__';
+    };
 
     return raw.map((n: any, i: number) => {
       // Support n8n-style position arrays.
       const posX = Array.isArray(n?.position) ? n.position[0] : n?.x ?? n?.position?.x;
       const posY = Array.isArray(n?.position) ? n.position[1] : n?.y ?? n?.position?.y;
       const rawType = (n?.type ?? n?.kind ?? 'action').toString().toLowerCase();
-      const isKnown = VALID_TYPES.has(rawType);
+      const mappedType = mapImportedType(rawType, n);
       return {
         id: n?.id ?? `imported-${i}-${Date.now()}`,
-        type: isKnown ? rawType : '__unknown__',
+        type: mappedType,
         rawType,
         title: n?.title ?? n?.name ?? n?.label ?? `Step ${i + 1}`,
         description: n?.description ?? n?.notes ?? '',
@@ -388,7 +403,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         // Fallback if AI was unavailable
         return {
           id: n.id,
-          type: 'integration',
+            type: 'connector',
           title: n.title,
           description: n.description || `Imported "${n.rawType}" node`,
           x: n.x,
