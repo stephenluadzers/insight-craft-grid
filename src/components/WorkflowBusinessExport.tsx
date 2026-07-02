@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2, Sparkles } from "lucide-react";
 import { WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
-import { exportWorkflowForBusiness, ExportPlatform } from "@/lib/workflowExport";
+import { exportWorkflowForBusiness, ExportPlatform, generateN8NWorkflow } from "@/lib/workflowExport";
 import { exportWorkflowToYAML } from "@/lib/workflowExportYAML";
 import { exportWorkflowComprehensive } from "@/lib/workflowUnifiedExport";
 import { downloadBlob, openDownloadWindow, sanitizeDownloadFilename, withExportTimeout } from "@/lib/downloadFile";
@@ -298,12 +298,28 @@ export function WorkflowBusinessExport({
                 Export to YAML
               </Button>
               <Button
-                onClick={() => handleExport('n8n')}
+                onClick={() => {
+                  const popup = openDownloadWindow(`${workflowName} n8n JSON export`);
+                  const n8n = generateN8NWorkflow(nodes, workflowName);
+                  if (!n8n.nodes?.length || !n8n.connections || Object.keys(n8n.connections).length === 0 && n8n.nodes.length > 1) {
+                    toast({ title: "Nothing to export", description: "Add nodes and connections first.", variant: "destructive" });
+                    if (popup && !popup.closed) popup.close();
+                    return;
+                  }
+                  const filename = `${sanitizeDownloadFilename(workflowName)}.n8n.json`;
+                  const blob = new Blob([JSON.stringify(n8n, null, 2)], { type: "application/json;charset=utf-8" });
+                  const url = downloadBlob(blob, filename, popup);
+                  setLastDownload({ url, filename });
+                  toast({
+                    title: "n8n JSON Ready",
+                    description: "Drop this file straight into n8n → Import from File.",
+                  });
+                }}
                 disabled={isExporting}
                 variant="outline"
                 className="flex-1"
               >
-                {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Workflow className="w-4 h-4 mr-2" />}
+                <Workflow className="w-4 h-4 mr-2" />
                 Export to n8n JSON
               </Button>
             </div>
