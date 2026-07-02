@@ -158,7 +158,7 @@ function buildN8NParameters(node: WorkflowNodeData, index: number): Record<strin
         assignments: [
           { id: `${node.id}-title`, name: "step", value: title, type: "string" },
           { id: `${node.id}-description`, name: "description", value: description, type: "string" },
-          { id: `${node.id}-config", name: "remoraConfig", value: JSON.stringify(config), type: "string" },
+          { id: `${node.id}-config`, name: "remoraConfig", value: JSON.stringify(config), type: "string" },
         ],
       },
       options: {},
