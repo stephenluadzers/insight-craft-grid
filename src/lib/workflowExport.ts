@@ -6,6 +6,7 @@
 import { WorkflowNodeData } from "@/types/workflow";
 import JSZip from "jszip";
 import { generateSmartWorkflowName, generateExportPackageNames, analyzeWorkflowSignature, NamingContext } from "./workflowNaming";
+import { buildN8NConnections, createUniqueNodeNames, validateN8NWorkflow } from "./workflowConnections";
 
 export type ExportPlatform = 
   | 'n8n'
@@ -40,41 +41,163 @@ export interface ExportOptions {
 }
 
 // === n8n Export ===
-export function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: string) {
-  return {
+export function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: string, connections?: unknown) {
+  const nodeNames = createUniqueNodeNames(nodes);
+  const workflow = {
     name: workflowName,
     nodes: nodes.map((node, index) => ({
-      parameters: node.config || {},
-      name: node.title,
-      type: mapToN8NNodeType(node.type),
-      typeVersion: 1,
-      position: [node.x, node.y],
-      id: node.id,
-      ...(index > 0 && {
-        webhookId: undefined,
-      }),
+      parameters: buildN8NParameters(node, index),
+      name: nodeNames[String(node.id)],
+      type: mapToN8NNodeType(node),
+      typeVersion: getN8NTypeVersion(node),
+      position: [
+        Number.isFinite(node.x) ? node.x : 300,
+        Number.isFinite(node.y) ? node.y : 120 + index * 180,
+      ],
+      id: String(node.id),
+      notes: [node.description, node.config?.operation ? `Operation: ${node.config.operation}` : undefined]
+        .filter(Boolean)
+        .join("\n"),
     })),
-    connections: nodes.slice(0, -1).reduce((acc, node, index) => {
-      acc[node.id] = {
-        main: [[{ node: nodes[index + 1].id, type: 'main', index: 0 }]]
-      };
-      return acc;
-    }, {} as any),
+    connections: buildN8NConnections(nodes, connections, nodeNames),
     active: false,
-    settings: {},
+    settings: { executionOrder: "v1" },
+    pinData: {},
     versionId: "1",
+    meta: {
+      templateCredsSetupCompleted: false,
+      exportedFrom: "Remora Flow",
+    },
   };
+
+  const validation = validateN8NWorkflow(workflow);
+  if (!validation.valid) {
+    throw new Error(`Invalid n8n export: ${validation.reason}`);
+  }
+
+  return workflow;
 }
 
-function mapToN8NNodeType(type: string): string {
-  const typeMap: Record<string, string> = {
-    trigger: 'n8n-nodes-base.webhook',
-    action: 'n8n-nodes-base.httpRequest',
-    condition: 'n8n-nodes-base.if',
-    data: 'n8n-nodes-base.set',
-    ai: 'n8n-nodes-base.openAi',
+function mapToN8NNodeType(node: WorkflowNodeData): string {
+  const operation = `${node.config?.operation ?? node.config?.action ?? node.title ?? ""}`.toLowerCase();
+  if (node.type === "trigger") {
+    if (operation.includes("webhook") || node.config?.event_source === "webhook") return "n8n-nodes-base.webhook";
+    return "n8n-nodes-base.manualTrigger";
+  }
+
+  const typeMap: Partial<Record<string, string>> = {
+    action: "n8n-nodes-base.httpRequest",
+    connector: "n8n-nodes-base.httpRequest",
+    condition: "n8n-nodes-base.if",
+    data: "n8n-nodes-base.set",
+    storage: "n8n-nodes-base.set",
+    ai: "n8n-nodes-base.httpRequest",
+    text_generation: "n8n-nodes-base.httpRequest",
+    ai_orchestrator: "n8n-nodes-base.httpRequest",
+    ai_reasoner: "n8n-nodes-base.httpRequest",
+    ai_planner: "n8n-nodes-base.httpRequest",
+    ai_executor: "n8n-nodes-base.httpRequest",
+    ai_monitor: "n8n-nodes-base.httpRequest",
+    ai_communicator: "n8n-nodes-base.httpRequest",
+    ai_integrator: "n8n-nodes-base.httpRequest",
+    ai_transformer: "n8n-nodes-base.httpRequest",
+    ai_validator: "n8n-nodes-base.httpRequest",
+    ai_learner: "n8n-nodes-base.httpRequest",
   };
-  return typeMap[type] || 'n8n-nodes-base.noOp';
+  return typeMap[node.type] || "n8n-nodes-base.noOp";
+}
+
+function getN8NTypeVersion(node: WorkflowNodeData): number {
+  const type = mapToN8NNodeType(node);
+  if (type === "n8n-nodes-base.httpRequest") return 4.2;
+  if (type === "n8n-nodes-base.set") return 3.4;
+  if (type === "n8n-nodes-base.if") return 2.2;
+  if (type === "n8n-nodes-base.webhook") return 2;
+  return 1;
+}
+
+function buildN8NParameters(node: WorkflowNodeData, index: number): Record<string, any> {
+  const config = node.config || {};
+  const title = node.title || `Step ${index + 1}`;
+  const description = node.description || `Imported from Remora Flow as ${node.type}`;
+  const operation = `${config.operation ?? config.action ?? title}`.toLowerCase();
+
+  if (node.type === "trigger" && (operation.includes("webhook") || config.event_source === "webhook")) {
+    return {
+      path: config.path || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `remora-flow-${index + 1}`,
+      httpMethod: config.method || "POST",
+      responseMode: "onReceived",
+      options: {},
+    };
+  }
+
+  if (node.type === "trigger") return {};
+
+  if (node.type === "condition") {
+    return {
+      conditions: {
+        options: { caseSensitive: true, leftValue: "", typeValidation: "strict" },
+        conditions: [
+          {
+            leftValue: config.leftValue || config.field || "={{ $json.value }}",
+            rightValue: config.rightValue || config.value || true,
+            operator: { type: "string", operation: config.operator || "exists" },
+          },
+        ],
+        combinator: "and",
+      },
+      options: {},
+    };
+  }
+
+  if (node.type === "data" || node.type === "storage") {
+    return {
+      mode: "manual",
+      duplicateItem: false,
+      assignments: {
+        assignments: [
+          { id: `${node.id}-title`, name: "step", value: title, type: "string" },
+          { id: `${node.id}-description`, name: "description", value: description, type: "string" },
+          { id: `${node.id}-config", name: "remoraConfig", value: JSON.stringify(config), type: "string" },
+        ],
+      },
+      options: {},
+    };
+  }
+
+  const isAI = node.type === "ai" || node.type.startsWith("ai_") || node.type === "text_generation";
+  if (isAI) {
+    const prompt = config.prompt || config.user_prompt_template || description || title;
+    return {
+      method: "POST",
+      url: config.url || "={{ $env.OPENAI_BASE_URL || 'https://api.openai.com/v1/chat/completions' }}",
+      authentication: "predefinedCredentialType",
+      nodeCredentialType: "openAiApi",
+      sendBody: true,
+      specfyBody: "json",
+      jsonBody: JSON.stringify({
+        model: config.model || "gpt-4o-mini",
+        messages: [
+          { role: "system", content: config.system_message || "You are executing a Remora Flow workflow step." },
+          { role: "user", content: prompt },
+        ],
+      }, null, 2),
+      options: {},
+    };
+  }
+
+  if (node.type === "action" || node.type === "connector") {
+    return {
+      method: config.method || (operation.includes("read") || operation.includes("get") || operation.includes("list") ? "GET" : "POST"),
+      url: config.url || config.endpoint || `={{ $env.${String(config.envVar || config.service || "REMORA_FLOW_ENDPOINT").toUpperCase().replace(/[^A-Z0-9]+/g, "_")} }}`,
+      sendBody: !["GET", "HEAD"].includes(String(config.method || "POST").toUpperCase()),
+      specfyBody: "json",
+      jsonBody: JSON.stringify(config.body || { step: title, input: "={{ $json }}" }, null, 2),
+      options: {},
+    };
+  }
+
+  return { configured: true, title, description, remoraConfig: config };
 }
 
 // === Make.com Export ===
