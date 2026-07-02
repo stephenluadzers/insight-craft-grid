@@ -3,7 +3,7 @@
  * Exports FlowFuse workflows to multiple platforms and formats
  */
 
-import { WorkflowNodeData } from "@/types/workflow";
+import { WorkflowConnectionData, WorkflowNodeData } from "@/types/workflow";
 import JSZip from "jszip";
 import { generateSmartWorkflowName, generateExportPackageNames, analyzeWorkflowSignature, NamingContext } from "./workflowNaming";
 import { buildN8NConnections, createUniqueNodeNames, validateN8NWorkflow } from "./workflowConnections";
@@ -38,6 +38,7 @@ export interface ExportOptions {
   includeTests?: boolean;
   deploymentTarget?: 'cloud' | 'self-hosted' | 'hybrid';
   guardrailMetadata?: GuardrailMetadata;
+  connections?: WorkflowConnectionData[];
 }
 
 // === n8n Export ===
@@ -174,7 +175,7 @@ function buildN8NParameters(node: WorkflowNodeData, index: number): Record<strin
       authentication: "predefinedCredentialType",
       nodeCredentialType: "openAiApi",
       sendBody: true,
-      specfyBody: "json",
+      specifyBody: "json",
       jsonBody: JSON.stringify({
         model: config.model || "gpt-4o-mini",
         messages: [
@@ -191,7 +192,7 @@ function buildN8NParameters(node: WorkflowNodeData, index: number): Record<strin
       method: config.method || (operation.includes("read") || operation.includes("get") || operation.includes("list") ? "GET" : "POST"),
       url: config.url || config.endpoint || `={{ $env.${String(config.envVar || config.service || "REMORA_FLOW_ENDPOINT").toUpperCase().replace(/[^A-Z0-9]+/g, "_")} }}`,
       sendBody: !["GET", "HEAD"].includes(String(config.method || "POST").toUpperCase()),
-      specfyBody: "json",
+      specifyBody: "json",
       jsonBody: JSON.stringify(config.body || { step: title, input: "={{ $json }}" }, null, 2),
       options: {},
     };
@@ -1364,7 +1365,7 @@ export async function exportWorkflowForBusiness(
   // Platform-specific files
   switch (options.platform) {
     case 'n8n':
-      zip.file('deploy/n8n/workflow.json', JSON.stringify(generateN8NWorkflow(nodes, workflowName), null, 2));
+      zip.file('deploy/n8n/workflow.json', JSON.stringify(generateN8NWorkflow(nodes, workflowName, options.connections), null, 2));
       break;
     
     case 'make':
