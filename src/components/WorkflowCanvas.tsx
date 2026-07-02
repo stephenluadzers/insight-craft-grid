@@ -205,8 +205,7 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
         const { data, error } = await supabase.functions.invoke('optimize-workflow', {
           body: { 
-            workflow: { nodes },
-            connections,
+            workflow: { nodes, connections },
             userContext: "General workflow automation"
           }
         });
