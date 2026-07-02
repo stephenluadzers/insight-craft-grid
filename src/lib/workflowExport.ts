@@ -1403,6 +1403,13 @@ export async function exportWorkflowForBusiness(
   
   // Config file for optional connectors
   zip.file('config.yaml', generateConfigYAML(nodes));
+
+  // Always include a raw n8n import file so any package downloaded from the
+  // canvas has a file that works with n8n → Import from File. Users should not
+  // upload the ZIP itself or the Remora workflow JSON into n8n.
+  const n8nImportWorkflow = generateN8NWorkflow(nodes, workflowName, options.connections);
+  zip.file('n8n-import.json', JSON.stringify(n8nImportWorkflow, null, 2));
+  zip.file('deploy/n8n/workflow.json', JSON.stringify(n8nImportWorkflow, null, 2));
   
   // Always include original FlowFuse workflow
   zip.file('flowfuse-workflow.json', JSON.stringify({
