@@ -10,13 +10,13 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { WorkflowNodeData } from "@/types/workflow";
+import { WorkflowConnectionData, WorkflowNodeData } from "@/types/workflow";
 import { Link2, Upload, Library, Loader2, Globe, Key, Zap, ArrowRight } from "lucide-react";
 
 interface APIImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWorkflowGenerated: (nodes: WorkflowNodeData[], metadata?: any) => void;
+  onWorkflowGenerated: (nodes: WorkflowNodeData[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; connections?: WorkflowConnectionData[] }) => void;
 }
 
 const POPULAR_APIS = [
@@ -91,6 +91,7 @@ export const APIImportDialog = ({ open, onOpenChange, onWorkflowGenerated }: API
       onWorkflowGenerated(generatedNodes, {
         guardrailExplanations: data.guardrails?.explanations || [],
         complianceStandards: data.guardrails?.compliance || [],
+        connections: data.workflow?.connections || data.connections || [],
       });
 
       toast({

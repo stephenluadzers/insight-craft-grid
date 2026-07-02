@@ -10,6 +10,8 @@ export interface WorkflowConnection {
   targetInput?: number | string;
 }
 
+export type WorkflowIdMap = Map<string, string> | Record<string, string>;
+
 const asId = (value: unknown): string | null => {
   if (value === null || value === undefined) return null;
   const id = String(value).trim();
@@ -36,6 +38,24 @@ export const inferSequentialConnections = (nodes: WorkflowNodeData[]): WorkflowC
     to: String(nodes[index + 1].id),
     type: "data_flow",
   }));
+
+const getMappedId = (idMap: WorkflowIdMap, value: unknown): string | undefined => {
+  const id = asId(value);
+  if (!id) return undefined;
+  return idMap instanceof Map ? idMap.get(id) : idMap[id];
+};
+
+export function rewriteWorkflowConnectionIds(
+  connections: WorkflowConnection[] | undefined,
+  idMap: WorkflowIdMap,
+): WorkflowConnection[] | undefined {
+  if (!connections?.length) return connections;
+  return connections.map((connection) => ({
+    ...connection,
+    from: getMappedId(idMap, connection.from) ?? String(connection.from),
+    to: getMappedId(idMap, connection.to) ?? String(connection.to),
+  }));
+}
 
 export function normalizeWorkflowConnections(
   rawConnections: unknown,
@@ -126,13 +146,31 @@ export function buildN8NConnections(
 ): Record<string, { main: Array<Array<{ node: string; type: "main"; index: number }>> }> {
   const connections = normalizeWorkflowConnections(rawConnections, nodes);
   const output: Record<string, { main: Array<Array<{ node: string; type: "main"; index: number }>> }> = {};
+  const nodeById = new Map(nodes.map((node) => [String(node.id), node]));
+
+  const parseOutputIndex = (connection: WorkflowConnection): number => {
+    const source = nodeById.get(String(connection.from));
+    const raw = connection.sourceOutput ?? connection.label ?? connection.condition;
+    const value = raw === undefined || raw === null ? "" : String(raw).trim().toLowerCase();
+
+    if (source?.type === "condition") {
+      if (["false", "no", "else", "otherwise", "fail", "failed", "failure", "error", "invalid"].includes(value)) return 1;
+      if (["true", "yes", "then", "success", "passed", "valid"].includes(value)) return 0;
+    }
+
+    const numeric = Number(connection.sourceOutput);
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
+  };
 
   connections.forEach((connection) => {
     const sourceName = nodeNames[String(connection.from)];
     const targetName = nodeNames[String(connection.to)];
     if (!sourceName || !targetName) return;
-    const outputIndex = Number(connection.sourceOutput ?? 0) || 0;
+    const outputIndex = parseOutputIndex(connection);
     output[sourceName] ??= { main: [] };
+    for (let i = 0; i <= outputIndex; i += 1) {
+      output[sourceName].main[i] ??= [];
+    }
     output[sourceName].main[outputIndex] ??= [];
     output[sourceName].main[outputIndex].push({
       node: targetName,
@@ -169,6 +207,10 @@ export function validateN8NWorkflow(workflow: any): { valid: boolean; reason?: s
         if (!nodeNames.has(target?.node)) return { valid: false, reason: `Connection target not found: ${target?.node}` };
       }
     }
+  }
+
+  if (workflow.nodes.length > 1 && Object.keys(workflow.connections).length === 0) {
+    return { valid: false, reason: "Workflow has multiple nodes but no edges" };
   }
 
   return { valid: true };

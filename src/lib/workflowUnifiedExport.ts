@@ -20,7 +20,7 @@ import {
   generateCredentialGuide 
 } from "./workflowCredentialManifest";
 import { addGovernmentComplianceDocs } from "./workflowGovCompliance";
-import { normalizeWorkflowConnections } from "./workflowConnections";
+import { normalizeWorkflowConnections, rewriteWorkflowConnectionIds } from "./workflowConnections";
 
 
 // Robust AI detection — covers all AI node variants and agent-configured nodes
@@ -774,6 +774,7 @@ export async function exportWorkflowComprehensive(
   // export package refers to the same IDs.
   const { nodes: normalizedNodes, idMap } = normalizeNodeIds(nodes);
   nodes = normalizedNodes;
+  connections = rewriteWorkflowConnectionIds(connections, idMap) as WorkflowConnectionData[] | undefined;
   guardrailMetadata = rewriteGuardrailMetadataIds(guardrailMetadata, idMap);
 
   const zip = new JSZip();
@@ -821,7 +822,7 @@ export async function exportWorkflowComprehensive(
   addGovernmentComplianceDocs(zip, nodes, smartName);
   
   // YAML export
-  const yamlContent = exportWorkflowToYAML(nodes, smartName);
+  const yamlContent = exportWorkflowToYAML(nodes, smartName, connections);
   zip.file(`${smartName}.yaml`, yamlContent);
   
   // Platform-specific exports folder

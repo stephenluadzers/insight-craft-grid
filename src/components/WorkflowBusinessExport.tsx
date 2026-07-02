@@ -284,7 +284,7 @@ export function WorkflowBusinessExport({
               <Button
                 onClick={() => {
                   const popup = openDownloadWindow(`${workflowName} YAML export`);
-                  const yaml = exportWorkflowToYAML(nodes, workflowName);
+                  const yaml = exportWorkflowToYAML(nodes, workflowName, connections);
                   const filename = `${sanitizeDownloadFilename(workflowName)}.yaml`;
                   const blob = new Blob([yaml], { type: "text/yaml;charset=utf-8" });
                   const url = downloadBlob(blob, filename, popup);
