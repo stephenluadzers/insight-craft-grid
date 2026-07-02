@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Code, Container, Cloud, Workflow, FileCode2, Package, FileJson, Loader2, Sparkles } from "lucide-react";
-import { WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
+import { WorkflowConnectionData, WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import { exportWorkflowForBusiness, ExportPlatform, generateN8NWorkflow } from "@/lib/workflowExport";
 import { exportWorkflowToYAML } from "@/lib/workflowExportYAML";
 import { exportWorkflowComprehensive } from "@/lib/workflowUnifiedExport";
@@ -15,6 +15,7 @@ interface WorkflowBusinessExportProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nodes: WorkflowNodeData[];
+  connections?: WorkflowConnectionData[];
   workflowName: string;
   originMetadata?: WorkflowOriginMetadata;
   guardrailMetadata?: {
@@ -105,6 +106,7 @@ export function WorkflowBusinessExport({
   open, 
   onOpenChange, 
   nodes, 
+  connections = [],
   workflowName,
   originMetadata,
   guardrailMetadata
@@ -125,6 +127,7 @@ export function WorkflowBusinessExport({
         includeDocs: true,
         includeTests: false,
         guardrailMetadata,
+        connections,
       }), "Platform export");
 
       const filename = `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${platform}.zip`;
@@ -153,7 +156,7 @@ export function WorkflowBusinessExport({
     setIsExporting(true);
     
     try {
-      const blob = await withExportTimeout(exportWorkflowComprehensive(nodes, workflowName, guardrailMetadata, undefined, undefined, undefined, originMetadata), "Complete package export");
+      const blob = await withExportTimeout(exportWorkflowComprehensive(nodes, workflowName, guardrailMetadata, undefined, undefined, undefined, originMetadata, connections), "Complete package export");
 
       // Use smart filename if available, otherwise fallback to sanitized name
       const smartFilename = (blob as any).smartFilename || `${workflowName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-complete-package.zip`;
@@ -300,7 +303,7 @@ export function WorkflowBusinessExport({
               <Button
                 onClick={() => {
                   const popup = openDownloadWindow(`${workflowName} n8n JSON export`);
-                  const n8n = generateN8NWorkflow(nodes, workflowName);
+                  const n8n = generateN8NWorkflow(nodes, workflowName, connections);
                   if (!n8n.nodes?.length || !n8n.connections || Object.keys(n8n.connections).length === 0 && n8n.nodes.length > 1) {
                     toast({ title: "Nothing to export", description: "Add nodes and connections first.", variant: "destructive" });
                     if (popup && !popup.closed) popup.close();
