@@ -20,7 +20,7 @@ import {
   generateCredentialGuide 
 } from "./workflowCredentialManifest";
 import { addGovernmentComplianceDocs } from "./workflowGovCompliance";
-import { normalizeWorkflowConnections } from "./workflowConnections";
+import { normalizeWorkflowConnections, rewriteWorkflowConnectionIds } from "./workflowConnections";
 
 
 // Robust AI detection — covers all AI node variants and agent-configured nodes
@@ -262,18 +262,6 @@ function rewriteGuardrailMetadataIds(
     return mapped ? { ...exp, nodeId: mapped, originalNodeId: exp.nodeId } : exp;
   });
   return { ...metadata, explanations };
-}
-
-function rewriteConnectionIds(
-  connections: WorkflowConnectionData[] | undefined,
-  idMap: Map<string, string>,
-): WorkflowConnectionData[] | undefined {
-  if (!connections?.length) return connections;
-  return connections.map((connection) => ({
-    ...connection,
-    from: idMap.get(String(connection.from)) ?? String(connection.from),
-    to: idMap.get(String(connection.to)) ?? String(connection.to),
-  }));
 }
 
 function isGenericName(name?: string): boolean {
@@ -786,7 +774,7 @@ export async function exportWorkflowComprehensive(
   // export package refers to the same IDs.
   const { nodes: normalizedNodes, idMap } = normalizeNodeIds(nodes);
   nodes = normalizedNodes;
-  connections = rewriteConnectionIds(connections, idMap);
+  connections = rewriteWorkflowConnectionIds(connections, idMap) as WorkflowConnectionData[] | undefined;
   guardrailMetadata = rewriteGuardrailMetadataIds(guardrailMetadata, idMap);
 
   const zip = new JSZip();
