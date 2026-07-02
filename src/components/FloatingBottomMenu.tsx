@@ -102,7 +102,7 @@ export function FloatingBottomMenu({
     try {
       const { exportWorkflowComprehensive } = await import("@/lib/workflowUnifiedExport");
       const blob = await withExportTimeout(
-        exportWorkflowComprehensive(workflowNodes, exportName, undefined, undefined, undefined, undefined, workflow?.originMetadata),
+        exportWorkflowComprehensive(workflowNodes, exportName, undefined, undefined, undefined, undefined, workflow?.originMetadata, workflow?.connections || []),
         "Complete package export"
       );
       const filename = (blob as Blob & { smartFilename?: string }).smartFilename || `${sanitizeDownloadFilename(exportName)}-complete-package.zip`;
