@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Mic, MicOff, Sparkles, Upload, ImageIcon, FileText, Download, Package, X, Github, FolderOpen } from "lucide-react";
-import { WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
+import { WorkflowConnectionData, WorkflowNodeData, WorkflowOriginMetadata } from "@/types/workflow";
 import { z } from "zod";
 import { generateWorkflowName } from "@/lib/workflowUtils";
 import { WorkflowBusinessExport } from "./WorkflowBusinessExport";
@@ -18,8 +18,9 @@ const workflowIdeaSchema = z.string().trim().min(10, "Description must be at lea
 interface WorkflowGenerationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number; policyAnalysis?: any; workflowName?: string; originMetadata?: WorkflowOriginMetadata }) => void;
+  onWorkflowGenerated: (nodes: any[], metadata?: { guardrailExplanations?: any[]; complianceStandards?: string[]; riskScore?: number; policyAnalysis?: any; workflowName?: string; originMetadata?: WorkflowOriginMetadata; connections?: WorkflowConnectionData[] }) => void;
   nodes: WorkflowNodeData[];
+  connections?: WorkflowConnectionData[];
   workflowName: string;
   originMetadata?: WorkflowOriginMetadata;
   guardrailMetadata?: {
@@ -30,7 +31,7 @@ interface WorkflowGenerationDialogProps {
   };
 }
 
-export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, workflowName, originMetadata, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
+export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerated, nodes, connections = [], workflowName, originMetadata, guardrailMetadata }: WorkflowGenerationDialogProps): JSX.Element => {
   const [workflowIdea, setWorkflowIdea] = useState("");
   const [videoUrlsText, setVideoUrlsText] = useState("");
   const [githubRepoUrlsText, setGithubRepoUrlsText] = useState("");
@@ -86,6 +87,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             riskScore: data.workflows[0].riskScore,
             policyAnalysis: data.workflows[0].policyAnalysis,
             workflowName: data.workflows[0].workflowName || data.workflows[0].name,
+            connections: data.workflows[0].connections,
             originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.workflows[0].explanation || data.workflows[0].insights, aiModel: data.workflows[0].model })
           });
           toast({ title: "Workflow Created!", description: data.workflows[0].name || "Workflow generated successfully" });
@@ -98,6 +100,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
             riskScore: data.workflows[0].riskScore,
             policyAnalysis: data.workflows[0].policyAnalysis,
             workflowName: data.workflows[0].workflowName || data.workflows[0].name,
+            connections: data.workflows[0].connections,
             originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.workflows[0].explanation || data.workflows[0].insights, aiModel: data.workflows[0].model })
           });
           toast({ title: "Workflow Created!", description: `Generated ${data.workflows.length} workflows, applied first one` });
@@ -111,6 +114,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           riskScore: data.riskScore,
           policyAnalysis: data.policyAnalysis,
           workflowName: data.workflowName || data.name,
+          connections: data.connections,
           originMetadata: buildOriginMetadata({ originalInput: validation.data, inputType: 'text', aiReasoning: data.explanation || data.insights, aiModel: data.model })
         });
         toast({ title: "Workflow Created!", description: `Created ${data.nodes.length} nodes` });
@@ -176,12 +180,12 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
       if (data.workflows && Array.isArray(data.workflows)) {
         if (data.workflows.length === 1) {
           console.log('Auto-applying single workflow');
-          onWorkflowGenerated(data.workflows[0].nodes, data.workflows[0].metadata);
+          onWorkflowGenerated(data.workflows[0].nodes, { ...data.workflows[0].metadata, connections: data.workflows[0].connections });
           toast({ title: "Workflow Created!", description: data.workflows[0].name || "Workflow generated successfully" });
           onOpenChange(false);
         } else if (data.workflows.length > 1) {
           console.warn('Multiple workflows returned, only applying first one');
-          onWorkflowGenerated(data.workflows[0].nodes, data.workflows[0].metadata);
+          onWorkflowGenerated(data.workflows[0].nodes, { ...data.workflows[0].metadata, connections: data.workflows[0].connections });
           toast({ title: "Workflow Created!", description: `Generated ${data.workflows.length} workflows, applied first one` });
           onOpenChange(false);
         }
@@ -191,7 +195,8 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           guardrailExplanations: data.guardrailExplanations,
           complianceStandards: data.complianceStandards,
           riskScore: data.riskScore,
-          policyAnalysis: data.policyAnalysis
+          policyAnalysis: data.policyAnalysis,
+          connections: data.connections,
         });
         toast({ title: "Workflow Created!", description: `Generated from ${validUrls.length + validGithubUrls.length + ideProjects.length} sources` });
         onOpenChange(false);
@@ -249,6 +254,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
           riskScore: data.riskScore,
           policyAnalysis: data.policyAnalysis,
           workflowName: data.workflowName || data.name,
+          connections: data.connections,
           originMetadata: buildOriginMetadata({
             originalInput: selectedImages.map((file, index) => `${index + 1}. ${file.name} (${file.type || 'image'}, ${Math.round(file.size / 1024)} KB)`).join('\n'),
             inputType: 'image',
@@ -391,7 +397,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
         };
       });
 
-      onWorkflowGenerated(finalNodes, data?.metadata);
+      onWorkflowGenerated(finalNodes, { ...(data?.metadata || {}), connections: data?.connections || data?.workflow?.connections });
       onOpenChange(false);
       toast({
         title: "Workflow Imported",
@@ -414,7 +420,7 @@ export const WorkflowGenerationDialog = ({ open, onOpenChange, onWorkflowGenerat
     const popup = openDownloadWindow(`${workflowName} JSON export`);
     setIsExporting(true);
     try {
-      const workflowData = { nodes, metadata: guardrailMetadata, name: workflowName };
+      const workflowData = { nodes, connections, metadata: guardrailMetadata, name: workflowName };
       const blob = new Blob([JSON.stringify(workflowData, null, 2)], { type: 'application/json' });
       const filename = `${generateWorkflowName(nodes)}.json`;
       const url = downloadBlob(blob, filename, popup);
