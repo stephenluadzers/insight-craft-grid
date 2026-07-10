@@ -226,7 +226,12 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
 
         if (data?.optimizedWorkflow?.nodes) {
           console.log('✨ Optimization successful! New nodes:', data.optimizedWorkflow.nodes.length);
-          handleWorkflowOptimized(data.optimizedWorkflow.nodes, data.optimizedWorkflow.connections);
+          handleWorkflowOptimized(data.optimizedWorkflow.nodes, data.optimizedWorkflow.connections, {
+            guardrailExplanations: data.guardrailExplanations,
+            complianceStandards: data.complianceStandards,
+            riskScore: data.riskScore,
+            policyAnalysis: data.policyAnalysis,
+          });
           toast({
             title: "Workflow Optimized!",
             description: data.optimizedWorkflow.insights || "AI Genius enhanced your workflow",
@@ -517,7 +522,16 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     setPanOffset({ x: 0, y: 0 });
   };
 
-  const handleWorkflowOptimized = (optimizedNodes: WorkflowNodeData[], optimizedConnections?: WorkflowConnectionData[]): void => {
+  const handleWorkflowOptimized = (
+    optimizedNodes: WorkflowNodeData[],
+    optimizedConnections?: WorkflowConnectionData[],
+    metadata?: {
+      guardrailExplanations?: any[];
+      complianceStandards?: string[];
+      riskScore?: number;
+      policyAnalysis?: any;
+    }
+  ): void => {
     // Position new/updated nodes in visible area
     const viewportWidth = window.innerWidth;
     const startX = Math.max(100, (viewportWidth - 280) / 2);
@@ -534,6 +548,12 @@ export const WorkflowCanvas = forwardRef<any, WorkflowCanvasProps>(({ initialNod
     setNodes(updatedNodes);
     setConnections(normalizeWorkflowConnections(optimizedConnections || connections, updatedNodes));
     setSelectedNodeId(null);
+
+    if (metadata?.guardrailExplanations) {
+      setGuardrailExplanations(metadata.guardrailExplanations);
+      setComplianceStandards(metadata.complianceStandards || []);
+      setRiskScore(metadata.riskScore);
+    }
     
     // Clear current workflow ID to force "Save As New" for optimized workflow
     setCurrentWorkflowId(null);

@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { injectGuardrailNodes, GUARDRAIL_SYSTEM_PROMPT } from "../_shared/guardrails.ts";
 import { ROLE_CONTRACT_SYSTEM_PROMPT } from "../_shared/role-contracts.ts";
+import { finalizeWorkflowConnections } from "../_shared/workflow-graph.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -229,11 +230,18 @@ Focus on: error handling/retries, missing critical steps, security, performance.
       optimizationData.guardrailExplanations = injectionResult.explanations;
       optimizationData.complianceStandards = injectionResult.complianceStandards;
       optimizationData.guardrailsAdded = injectionResult.guardrailsAdded;
+      optimizationData.riskScore = injectionResult.riskScore;
       optimizationData.roleAssignments = injectionResult.roleAssignments;
       optimizationData.roleViolations = injectionResult.roleViolations;
       optimizationData.roleContractExplanation = injectionResult.roleContractExplanation;
       console.log('Guardrail nodes and role contracts auto-injected during optimization');
     }
+
+    optimizationData.optimizedWorkflow.connections = finalizeWorkflowConnections(
+      optimizationData.optimizedWorkflow.nodes,
+      optimizationData.optimizedWorkflow.connections ?? workflow.connections,
+    );
+    optimizationData.optimizedWorkflow.finalizedForExport = true;
 
 
     return new Response(

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { injectGuardrailNodes } from "../_shared/guardrails.ts";
 import { specifyWorkflow } from "../_shared/specify.ts";
+import { finalizeWorkflowConnections } from "../_shared/workflow-graph.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,6 +58,12 @@ serve(async (req) => {
       processedWorkflow.complianceStandards = injectionResult.complianceStandards;
       console.log('Auto-injected guardrails. New total:', injectionResult.guardrailsAdded);
     }
+
+    processedWorkflow.connections = finalizeWorkflowConnections(
+      processedWorkflow.nodes,
+      processedWorkflow.connections ?? workflow.connections,
+    );
+    processedWorkflow.finalizedForExport = true;
 
     return new Response(
       JSON.stringify({

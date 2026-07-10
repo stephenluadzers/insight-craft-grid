@@ -9,6 +9,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { injectGuardrailNodes, GUARDRAIL_SYSTEM_PROMPT } from "../_shared/guardrails.ts";
 import { ROLE_CONTRACT_SYSTEM_PROMPT } from "../_shared/role-contracts.ts";
+import { finalizeWorkflowConnections } from "../_shared/workflow-graph.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -419,6 +420,8 @@ Additional context: Complexity level detected as "${complexity.level}" (score: $
           workflow.guardrailsAdded = injectionResult.guardrailsAdded;
           workflow.riskScore = injectionResult.riskScore;
           workflow.roleAssignments = injectionResult.roleAssignments;
+          workflow.connections = finalizeWorkflowConnections(workflow.nodes, workflow.connections);
+          workflow.finalizedForExport = true;
         }
         return workflow;
       });
@@ -440,6 +443,8 @@ Additional context: Complexity level detected as "${complexity.level}" (score: $
       parsed.guardrailsAdded = injectionResult.guardrailsAdded;
       parsed.riskScore = injectionResult.riskScore;
       parsed.roleAssignments = injectionResult.roleAssignments;
+      parsed.connections = finalizeWorkflowConnections(parsed.nodes, parsed.connections);
+      parsed.finalizedForExport = true;
     }
 
     // Add metadata

@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { injectGuardrailNodes } from "../_shared/guardrails.ts";
+import { finalizeWorkflowConnections } from "../_shared/workflow-graph.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -173,6 +174,10 @@ serve(async (req) => {
     // --- STEP 3: Inject guardrails ---
     const injected = injectGuardrailNodes(optimized.nodes);
     optimized.nodes = injected.nodes;
+    optimized.connections = finalizeWorkflowConnections(
+      optimized.nodes,
+      optimized.connections || workflow.connections || [],
+    );
 
     // --- STEP 4: Build export package ---
     const exportPackage = {
@@ -184,7 +189,7 @@ serve(async (req) => {
       optimizationSummary,
       workflow: {
         nodes: optimized.nodes,
-        connections: optimized.connections || workflow.connections || [],
+        connections: optimized.connections,
       },
       suggestions,
       guardrails: {
