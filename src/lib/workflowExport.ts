@@ -46,17 +46,7 @@ export function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: str
   const nodeNames = createUniqueNodeNames(nodes);
   const workflow = {
     name: workflowName,
-    nodes: nodes.map((node, index) => ({
-      parameters: buildN8NParameters(node, index),
-      name: nodeNames[String(node.id)],
-      type: mapToN8NNodeType(node),
-      typeVersion: getN8NTypeVersion(node),
-      position: [
-        Number.isFinite(node.x) ? node.x : 300,
-        Number.isFinite(node.y) ? node.y : 120 + index * 180,
-      ],
-      id: String(node.id),
-    })),
+    nodes: nodes.map((node, index) => buildN8NNode(node, index, nodeNames)),
     connections: buildN8NConnections(nodes, connections, nodeNames),
     active: false,
     settings: { executionOrder: "v1" },
@@ -76,9 +66,53 @@ export function generateN8NWorkflow(nodes: WorkflowNodeData[], workflowName: str
   return workflow;
 }
 
+function buildN8NNode(node: WorkflowNodeData, index: number, nodeNames: Record<string, string>) {
+  const anyNode = node as any;
+  const type = mapToN8NNodeType(node);
+  const position = normalizeN8NPosition(node, index);
+  const parameters = buildN8NParameters(node, index);
+
+  return {
+    parameters,
+    name: nodeNames[String(node.id)],
+    type,
+    typeVersion: getN8NTypeVersion(node),
+    position,
+    id: String(node.id || anyNode.name || `remora-node-${index + 1}`),
+    notes: buildN8NNotes(node),
+    notesInFlow: Boolean(node.description || anyNode.config?.roleContract),
+  };
+}
+
+function normalizeN8NPosition(node: WorkflowNodeData, index: number): [number, number] {
+  const anyNode = node as any;
+  const position = anyNode.position;
+  const x = Array.isArray(position) ? position[0] : position?.x ?? node.x;
+  const y = Array.isArray(position) ? position[1] : position?.y ?? node.y;
+  return [
+    Number.isFinite(Number(x)) ? Number(x) : 300,
+    Number.isFinite(Number(y)) ? Number(y) : 120 + index * 180,
+  ];
+}
+
+function buildN8NNotes(node: WorkflowNodeData): string {
+  const anyNode = node as any;
+  const lines = [
+    node.description || anyNode.description,
+    anyNode.config?.roleContract ? `Role contract: ${JSON.stringify(anyNode.config.roleContract)}` : "",
+    anyNode.config?.agentRole ? `Agent role: ${anyNode.config.agentRole}` : "",
+  ].filter(Boolean);
+  return lines.join("\n\n");
+}
+
 function mapToN8NNodeType(node: WorkflowNodeData): string {
+  const rawType = String((node as any).type || "");
+  if (rawType.startsWith("n8n-nodes-base.") || rawType.startsWith("@n8n/")) {
+    return rawType;
+  }
+
   const operation = `${node.config?.operation ?? node.config?.action ?? node.title ?? ""}`.toLowerCase();
-  if (node.type === "trigger") {
+  if (["trigger", "manual", "manual_trigger"].includes(rawType)) {
     if (operation.includes("webhook") || node.config?.event_source === "webhook") return "n8n-nodes-base.webhook";
     return "n8n-nodes-base.manualTrigger";
   }
@@ -101,11 +135,29 @@ function mapToN8NNodeType(node: WorkflowNodeData): string {
     ai_transformer: "n8n-nodes-base.httpRequest",
     ai_validator: "n8n-nodes-base.httpRequest",
     ai_learner: "n8n-nodes-base.httpRequest",
+    guardrail: "n8n-nodes-base.if",
+    security: "n8n-nodes-base.if",
+    utility: "n8n-nodes-base.set",
+    checkpointer: "n8n-nodes-base.set",
+    error_handler: "n8n-nodes-base.noOp",
+    circuit_breaker: "n8n-nodes-base.if",
+    agent_handoff: "n8n-nodes-base.noOp",
+    transcription: "n8n-nodes-base.httpRequest",
+    text_to_image: "n8n-nodes-base.httpRequest",
+    image_to_image: "n8n-nodes-base.httpRequest",
+    image_to_video: "n8n-nodes-base.httpRequest",
+    text_to_video: "n8n-nodes-base.httpRequest",
+    upscale_image: "n8n-nodes-base.httpRequest",
+    style_transfer: "n8n-nodes-base.httpRequest",
+    audio_synthesis: "n8n-nodes-base.httpRequest",
   };
-  return typeMap[node.type] || "n8n-nodes-base.noOp";
+  return typeMap[rawType] || "n8n-nodes-base.noOp";
 }
 
 function getN8NTypeVersion(node: WorkflowNodeData): number {
+  const explicit = Number((node as any).typeVersion);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+
   const type = mapToN8NNodeType(node);
   if (type === "n8n-nodes-base.httpRequest") return 4;
   if (type === "n8n-nodes-base.set") return 3;
@@ -115,12 +167,18 @@ function getN8NTypeVersion(node: WorkflowNodeData): number {
 }
 
 function buildN8NParameters(node: WorkflowNodeData, index: number): Record<string, any> {
+  const anyNode = node as any;
+  if (anyNode.parameters && typeof anyNode.parameters === "object" && !Array.isArray(anyNode.parameters)) {
+    return stripUndefined(anyNode.parameters);
+  }
+
   const config = node.config || {};
-  const title = node.title || `Step ${index + 1}`;
-  const description = node.description || `Imported from Remora Flow as ${node.type}`;
+  const rawType = String(anyNode.type || node.type || "");
+  const title = node.title || anyNode.name || `Step ${index + 1}`;
+  const description = node.description || anyNode.description || `Imported from Remora Flow as ${rawType}`;
   const operation = `${config.operation ?? config.action ?? title}`.toLowerCase();
 
-  if (node.type === "trigger" && (operation.includes("webhook") || config.event_source === "webhook")) {
+  if (["trigger", "manual", "manual_trigger"].includes(rawType) && (operation.includes("webhook") || config.event_source === "webhook")) {
     return {
       path: config.path || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `remora-flow-${index + 1}`,
       httpMethod: config.method || "POST",
@@ -129,9 +187,9 @@ function buildN8NParameters(node: WorkflowNodeData, index: number): Record<strin
     };
   }
 
-  if (node.type === "trigger") return {};
+  if (["trigger", "manual", "manual_trigger"].includes(rawType)) return {};
 
-  if (node.type === "condition") {
+  if (node.type === "condition" || node.type === "guardrail" || node.type === "security" || node.type === "circuit_breaker") {
     return {
       conditions: {
         options: { caseSensitive: true, leftValue: "", typeValidation: "strict" },
@@ -148,7 +206,7 @@ function buildN8NParameters(node: WorkflowNodeData, index: number): Record<strin
     };
   }
 
-  if (node.type === "data" || node.type === "storage") {
+  if (node.type === "data" || node.type === "storage" || node.type === "utility" || node.type === "checkpointer") {
     return {
       mode: "manual",
       duplicateItem: false,
@@ -195,7 +253,11 @@ function buildN8NParameters(node: WorkflowNodeData, index: number): Record<strin
     };
   }
 
-  return { configured: true, title, description, remoraConfig: config };
+  return { title, description, remoraConfig: JSON.stringify(config || {}) };
+}
+
+function stripUndefined(value: Record<string, any>): Record<string, any> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined));
 }
 
 // === Make.com Export ===
